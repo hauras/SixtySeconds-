@@ -1,0 +1,55 @@
+# ==========================================
+# Unreal Engine 5 — SixtySeconds .gitignore
+# ==========================================
+
+# 빌드 산출물
+Binaries/
+Build/
+Intermediate/
+DerivedDataCache/
+
+# Saved (로그, 스크린샷, 세이브게임 등)
+Saved/
+
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+
+# Rider
+.idea/
+*.DotSettings.user
+
+# OS
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# UE 패키징 산출물
+*.pak
+*.sig
+*.ucas
+*.utoc
+
+# 로컬 ini (사용자별 에디터 설정)
+Config/DefaultEditorPerProjectUserSettings.ini
+Saved/Config/
+
+# 플러그인 빌드 (직접 빌드하는 플러그인만 제외)
+Plugins/*/Binaries/
+Plugins/*/Intermediate/
+
+# 소스 파일은 추적
+!Source/
+!Config/
+!Content/
+!Plugins/
+
+# Content — 대용량 바이너리 에셋은 Git LFS 사용 권장
+# (LFS 설정 전까지는 일단 포함)
+# *.uasset
+# *.umap
