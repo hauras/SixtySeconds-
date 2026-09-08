@@ -6,6 +6,42 @@
       "Read(**)",
       "Glob(**)",
       "Grep(**)"
+    ],
+    "deny": [
+      "Write(**/*.generated.h)",
+      "Edit(**/*.generated.h)",
+      "Write(**/Intermediate/**)",
+      "Edit(**/Intermediate/**)",
+      "Write(**/Binaries/**)",
+      "Edit(**/Binaries/**)",
+      "Write(**/*.uasset)",
+      "Edit(**/*.uasset)",
+      "Write(**/*.umap)",
+      "Edit(**/*.umap)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NonInteractive -File .claude/hooks/guard-generated.ps1 -ToolName \"$TOOL_NAME\" -ToolInput \"$TOOL_INPUT\""
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NonInteractive -File .claude/hooks/format-source.ps1 -ToolName \"$TOOL_NAME\" -ToolInput \"$TOOL_INPUT\""
+          }
+        ]
+      }
     ]
   }
 }

@@ -1,0 +1,27 @@
+import unreal as u
+ROOT='/Game/SSLabPrototype'
+bp=u.load_asset(ROOT+'/BP_SSLabWalker')
+u.BlueprintEditorLibrary.reparent_blueprint(bp,u.DefaultPawn)
+u.BlueprintEditorLibrary.compile_blueprint(bp)
+cdo=u.get_default_object(bp.generated_class())
+cdo.get_component_by_class(u.FloatingPawnMovement).set_editor_property('max_speed',600.0)
+u.EditorAssetLibrary.save_loaded_asset(bp)
+f=u.BlueprintFactory()
+f.set_editor_property('parent_class',u.GameModeBase)
+gm=u.AssetToolsHelpers.get_asset_tools().create_asset('BP_SSLabGameMode',ROOT,u.Blueprint,f)
+u.BlueprintEditorLibrary.compile_blueprint(gm)
+u.get_default_object(gm.generated_class()).set_editor_property('default_pawn_class',bp.generated_class())
+u.EditorAssetLibrary.save_loaded_asset(gm)
+world=u.get_editor_subsystem(u.UnrealEditorSubsystem).get_editor_world()
+world.get_world_settings().set_editor_property('default_game_mode',gm.generated_class())
+# Close the corridor edges beyond the southern rooms.
+cube=u.load_asset('/Engine/BasicShapes/Cube')
+for x in [-200,200]:
+    a=u.get_editor_subsystem(u.EditorActorSubsystem).spawn_actor_from_class(u.StaticMeshActor,u.Vector(x,-1650,180))
+    a.set_actor_label('SS_Corridor_SouthWall')
+    a.static_mesh_component.set_static_mesh(cube)
+    a.static_mesh_component.set_material(0,u.load_asset(ROOT+'/Materials/M_SSWall'))
+    a.set_actor_scale3d(u.Vector(.2,5,3.6))
+assert u.get_editor_subsystem(u.LevelEditorSubsystem).save_current_level()
+u.AutomationLibrary.take_high_res_screenshot(1280,720,'D:/Unreal Projects/SixtySeconds/Saved/SSLabPreview.png')
+print('Exploration pawn and map-specific GameMode configured')
