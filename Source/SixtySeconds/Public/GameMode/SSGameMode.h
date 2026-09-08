@@ -2,7 +2,8 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameModeBase.h"
-#include "ASSGameMode.generated.h"
+#include "Item/SSDepositZone.h"
+#include "SSGameMode.generated.h"
 
 UENUM(BlueprintType)
 enum class ESSGamePhase : uint8
@@ -14,12 +15,12 @@ enum class ESSGamePhase : uint8
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPhaseChanged, ESSGamePhase, NewPhase);
 
 UCLASS()
-class SIXTYSECONDS_API AASSGameMode : public AGameModeBase
+class SIXTYSECONDS_API ASSGameMode : public AGameModeBase
 {
 	GENERATED_BODY()
 
 public:
-	AASSGameMode();
+	ASSGameMode();
 
 	// 스크램블 페이즈 시작 (60초 타이머 가동)
 	UFUNCTION(BlueprintCallable, Category="SS|Phase")
@@ -39,6 +40,13 @@ public:
 	UPROPERTY(BlueprintAssignable, Category="SS|Phase")
 	FOnPhaseChanged OnPhaseChanged;
 
+	// 사망 처리 (존 밖에서 타이머 종료)
+	UFUNCTION(BlueprintCallable, Category="SS|Phase")
+	void StartDeath();
+
+	UPROPERTY(BlueprintAssignable, Category="SS|Phase")
+	FOnPhaseChanged OnPlayerDied;
+
 protected:
 	virtual void BeginPlay() override;
 
@@ -50,5 +58,9 @@ private:
 	ESSGamePhase CurrentPhase = ESSGamePhase::Scramble;
 	FTimerHandle ScrambleTimerHandle;
 
+	UPROPERTY()
+	TObjectPtr<ASSDepositZone> DepositZone;
+
 	void OnScrambleTimeUp();
+	void CacheDepositZone();
 };

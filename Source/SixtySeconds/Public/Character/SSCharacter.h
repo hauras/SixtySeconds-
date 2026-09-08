@@ -6,6 +6,7 @@
 
 class USSCharacterStats;
 class USSStatusComponent;
+class USSCarryComponent;
 class USpringArmComponent;
 class UCameraComponent;
 class UInputMappingContext;
@@ -48,13 +49,23 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="SS|Input")
 	TObjectPtr<UInputAction> IA_Look;
 
-UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="SS|Character")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="SS|Input")
+	TObjectPtr<UInputAction> IA_Interact;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="SS|Character")
 	TObjectPtr<USSCharacterStats> CharacterStats;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="SS|Character")
 	TObjectPtr<USSStatusComponent> StatusComponent;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="SS|Character")
+	TObjectPtr<USSCarryComponent> CarryComponent;
+
+	UFUNCTION(BlueprintPure, Category="SS|Character")
+	USSCarryComponent* GetCarryComponent() const { return CarryComponent; }
+
 private:
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
+	void Interact();
 };

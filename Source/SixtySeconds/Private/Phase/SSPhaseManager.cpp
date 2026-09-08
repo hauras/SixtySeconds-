@@ -11,7 +11,7 @@ void USSPhaseManager::BeginPlay()
 	Super::BeginPlay();
 
 	// GameMode의 페이즈 전환 델리게이트 구독
-	if (AASSGameMode* GM = Cast<AASSGameMode>(UGameplayStatics::GetGameMode(this)))
+	if (ASSGameMode* GM = Cast<ASSGameMode>(UGameplayStatics::GetGameMode(this)))
 	{
 		GM->OnPhaseChanged.AddDynamic(this, &USSPhaseManager::OnPhaseChanged);
 	}

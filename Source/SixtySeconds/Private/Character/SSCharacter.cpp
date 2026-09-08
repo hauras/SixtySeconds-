@@ -1,6 +1,9 @@
 #include "Character/SSCharacter.h"
 #include "Character/SSCharacterStats.h"
 #include "Character/SSStatusComponent.h"
+#include "Item/SSCarryComponent.h"
+#include "Item/SSPickupActor.h"
+#include "Controller/SSRPlayerController.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -26,6 +29,7 @@ ASSCharacter::ASSCharacter()
 
 	CharacterStats = CreateDefaultSubobject<USSCharacterStats>(TEXT("CharacterStats"));
 	StatusComponent = CreateDefaultSubobject<USSStatusComponent>(TEXT("StatusComponent"));
+	CarryComponent = CreateDefaultSubobject<USSCarryComponent>(TEXT("CarryComponent"));
 }
 
 void ASSCharacter::BeginPlay()
@@ -33,13 +37,15 @@ void ASSCharacter::BeginPlay()
 	Super::BeginPlay();
 
 	// Input Mapping Context 등록
-	if (APlayerController* PC = Cast<APlayerController>(Controller))
+	if (ASSRPlayerController* PC = Cast<ASSRPlayerController>(Controller))
 	{
 		if (UEnhancedInputLocalPlayerSubsystem* Subsystem =
 			ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer()))
 		{
 			Subsystem->AddMappingContext(DefaultMappingContext, 0);
 		}
+
+		PC->ShowScrambleHUD(CarryComponent);
 	}
 }
 
@@ -51,6 +57,7 @@ void ASSCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 	{
 		EIC->BindAction(IA_Move, ETriggerEvent::Triggered, this, &ASSCharacter::Move);
 		EIC->BindAction(IA_Look, ETriggerEvent::Triggered, this, &ASSCharacter::Look);
+		EIC->BindAction(IA_Interact, ETriggerEvent::Started, this, &ASSCharacter::Interact);
 	}
 }
 
@@ -70,4 +77,28 @@ void ASSCharacter::Look(const FInputActionValue& Value)
 	const FVector2D Axis = Value.Get<FVector2D>();
 	AddControllerYawInput(Axis.X);
 	AddControllerPitchInput(Axis.Y);
+}
+
+void ASSCharacter::Interact()
+{
+	// 반경 150cm 내 SSPickupActor 탐색
+	TArray<AActor*> Overlapping;
+	GetOverlappingActors(Overlapping, ASSPickupActor::StaticClass());
+
+	float Closest = MAX_FLT;
+	ASSPickupActor* Target = nullptr;
+	for (AActor* Actor : Overlapping)
+	{
+		const float Dist = FVector::Dist(GetActorLocation(), Actor->GetActorLocation());
+		if (Dist < Closest)
+		{
+			Closest = Dist;
+			Target = Cast<ASSPickupActor>(Actor);
+		}
+	}
+
+	if (Target)
+	{
+		Target->TryPickup(CarryComponent);
+	}
 }

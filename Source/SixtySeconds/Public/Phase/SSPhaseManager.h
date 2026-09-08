@@ -2,7 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include "GameMode/ASSGameMode.h"
+#include "GameMode/SSGameMode.h"
 #include "SSPhaseManager.generated.h"
 
 UCLASS(ClassGroup=(SixtySeconds), meta=(BlueprintSpawnableComponent))
