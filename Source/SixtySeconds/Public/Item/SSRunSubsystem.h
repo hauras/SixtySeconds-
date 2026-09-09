@@ -27,7 +27,32 @@ public:
 	UFUNCTION(BlueprintCallable, Category="SS|Run")
 	void ResetRun();
 
+	void InitializeShelterStats(float InHealth, float InSatiety, float InHydration);
+	
+	int32 GetCurrentDay() const { return CurrentDay; }
+	float GetHealth() const { return Health; }
+	float GetSatiety() const { return Satiety; }
+	float GetHydration() const { return Hydration; }
+
+	bool AdvanceDay(bool bGiveFood, bool bGiveWater);
+
+	int32 GetStoredQuantityById(FName ItemId) const;
 private:
+	bool ConsumeItem(FName ItemID);
+
 	UPROPERTY()
 	TArray<FSSItemStack> StoredItems;
+
+	UPROPERTY(Transient)
+	int32 CurrentDay = 1;
+
+	UPROPERTY(Transient)
+	float Health = 100.f;
+
+	UPROPERTY(Transient)
+	float Satiety = 100.f;
+
+	UPROPERTY(Transient)
+	float Hydration = 100.f;
+
 };

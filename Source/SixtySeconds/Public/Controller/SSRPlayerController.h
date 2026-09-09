@@ -4,9 +4,11 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
+#include "GameMode/SSGameMode.h"
 #include "SSRPlayerController.generated.h"
 
 class USSScrambleHUD;
+class USSShelterHUD;
 class USSCarryComponent;
 
 UCLASS()
@@ -23,7 +25,20 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category="SS|UI")
 	TSubclassOf<USSScrambleHUD> ScrambleHUDClass;
 
+	UPROPERTY(EditDefaultsOnly, Category="SS|UI")
+	TSubclassOf<USSShelterHUD> ShelterHUDClass;
+
 private:
+	UFUNCTION()
+	void HandlePhaseChanged(ESSGamePhase NewPhase);
+
+	void CreateShelterHUD();
+
+	bool bScrambleInputBlocked = false;
+
 	UPROPERTY()
 	TObjectPtr<USSScrambleHUD> ScrambleHUD;
+
+	UPROPERTY(Transient)
+	TObjectPtr<USSShelterHUD> ShelterHUD;
 };

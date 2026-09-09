@@ -9,7 +9,8 @@ UENUM(BlueprintType)
 enum class ESSGamePhase : uint8
 {
 	Scramble,  // 60초 스크램블 (3D 실시간)
-	Shelter    // 은신처 생존 (2D 턴제)
+	Shelter,   // 은신처 생존 (2D 턴제)
+	Dead       // 사망
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPhaseChanged, ESSGamePhase, NewPhase);
