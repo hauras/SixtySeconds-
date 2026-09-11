@@ -1,4 +1,5 @@
 #include "UI/SSShelterHUD.h"
+#include "UI/SSExpeditionWidget.h"
 #include "Components/TextBlock.h"
 #include "Components/Button.h"
 #include "Item/SSRunSubsystem.h"
@@ -86,9 +87,11 @@ void USSShelterHUD::RefreshDisplay()
 
     int32 WaterCount = 0;
     int32 FoodCount = 0;
+    int32 BatteryCount = 0;
 
     static const FName WaterItemId(TEXT("Water"));
     static const FName FoodItemId(TEXT("Food"));
+    static const FName BatteryItemId(TEXT("Battery"));
 
     if (IsValid(RunSubsystem))
     {
@@ -107,6 +110,10 @@ void USSShelterHUD::RefreshDisplay()
             {
                 FoodCount += Stack.Quantity;
             }
+            else if (Stack.Item->ItemId == BatteryItemId)
+            {
+                BatteryCount += Stack.Quantity;
+            }
         }
     }
 
@@ -123,6 +130,13 @@ void USSShelterHUD::RefreshDisplay()
             NSLOCTEXT("SS", "ShelterFoodCount", "식량 x{0}"),
             FoodCount));
     }
+
+    if (BatteryCountText)
+    {
+        BatteryCountText->SetText(FText::Format(
+            NSLOCTEXT("SS", "ShelterBatteryCount", "배터리 x{0}"),
+            BatteryCount));
+    }
 }
 
 void USSShelterHUD::OnStorageClicked()
@@ -132,7 +146,14 @@ void USSShelterHUD::OnStorageClicked()
 
 void USSShelterHUD::OnComputerClicked()
 {
-    // TODO: 탐색 지도 UI 열기
+	// 이미 열려 있으면 중복 생성 방지
+	if (IsValid(ExpeditionWidget) && ExpeditionWidget->IsInViewport()) return;
+
+	if (!ExpeditionWidgetClass) return;
+
+	ExpeditionWidget = CreateWidget<USSExpeditionWidget>(this, ExpeditionWidgetClass);
+	if (IsValid(ExpeditionWidget))
+		ExpeditionWidget->AddToViewport(1);
 }
 
 void USSShelterHUD::OnNextDayClicked()

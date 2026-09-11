@@ -9,6 +9,7 @@ class UImage;
 class UTextBlock;
 class UButton;
 class USSRunSubsystem;
+class USSExpeditionWidget;
 
 UCLASS(Abstract)
 class SIXTYSECONDS_API USSShelterHUD : public UUserWidget
@@ -44,6 +45,9 @@ protected:
 	TObjectPtr<UTextBlock> FoodCountText;
 
 	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UTextBlock> BatteryCountText;
+
+	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UButton> StorageButton;
 
 	UPROPERTY(meta=(BindWidget))
@@ -72,6 +76,14 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<USSRunSubsystem> RunSubsystem;
+
+	// 탐사 위젯 클래스 — BP에서 지정
+	UPROPERTY(EditDefaultsOnly, Category="SS|UI")
+	TSubclassOf<USSExpeditionWidget> ExpeditionWidgetClass;
+
+	// 현재 열린 탐사 위젯 참조
+	UPROPERTY(Transient)
+	TObjectPtr<USSExpeditionWidget> ExpeditionWidget;
 
 	int32 CurrentDay = 1;
 	float CachedHealth = 0.f;
