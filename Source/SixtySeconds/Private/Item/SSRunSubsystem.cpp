@@ -4,9 +4,11 @@
 
 void USSRunSubsystem::DepositItems(const TArray<FSSItemStack>& CarriedItems)
 {
+	bool bChanged = false;
 	for (const FSSItemStack& Incoming : CarriedItems)
 	{
 		if (!IsValid(Incoming.Item) || Incoming.Quantity <= 0) continue;
+		bChanged = true;
 
 		FSSItemStack* Existing = StoredItems.FindByPredicate([&Incoming](const FSSItemStack& S)
 		{
@@ -18,6 +20,7 @@ void USSRunSubsystem::DepositItems(const TArray<FSSItemStack>& CarriedItems)
 		else
 			StoredItems.Add(Incoming);
 	}
+	if (bChanged) OnStoredItemsChanged.Broadcast();
 }
 
 int32 USSRunSubsystem::GetStoredQuantity(USSItemDefinition* Item) const
@@ -42,7 +45,9 @@ void USSRunSubsystem::ResetRun()
 	RobotState = ESSRobotState::Idle;
 	ActiveExpedition = nullptr;
 	RemainingExpeditionDays = 0;
+	RepairDaysRemaining = 0;
 	LastExpeditionResult = FSSExpeditionResult{};
+	OnStoredItemsChanged.Broadcast();
 }
 
 void USSRunSubsystem::InitializeShelterStats(float InHealth, float InSatiety, float InHydration)
@@ -76,6 +81,7 @@ bool USSRunSubsystem::ConsumeStoredItems(FName ItemId, int32 Quantity)
 		if (Stack.Quantity == 0)
 			StoredItems.RemoveAt(Index);
 	}
+	if (Remaining == 0) OnStoredItemsChanged.Broadcast();
 	return Remaining == 0;
 }
 
@@ -119,8 +125,11 @@ ESSExpeditionStartResult USSRunSubsystem::StartExpedition(USSExpeditionDefinitio
 	if (Health <= 0.f)
 		return ESSExpeditionStartResult::PlayerDead;
 
-	if (RobotState != ESSRobotState::Idle)
+	if (RobotState == ESSRobotState::Exploring)
 		return ESSExpeditionStartResult::RobotBusy;
+
+	if (RobotState == ESSRobotState::Broken || RobotState == ESSRobotState::Repairing)
+		return ESSExpeditionStartResult::RobotBroken;
 
 	if (!IsValid(Expedition) || Expedition->DurationDays < 1)
 		return ESSExpeditionStartResult::InvalidExpedition;
@@ -133,9 +142,9 @@ ESSExpeditionStartResult USSRunSubsystem::StartExpedition(USSExpeditionDefinitio
 	}
 
 	// 보상 유효성 검사 — 출발 전에 확인해서 비용만 내고 보상 없는 상황 방지
-	for (const FSSItemStack& Reward : Expedition->Rewards)
+	for (const FSSItemStackRange& Reward : Expedition->Rewards)
 	{
-		if (!IsValid(Reward.Item) || Reward.Item->ItemId.IsNone() || Reward.Quantity <= 0)
+		if (!IsValid(Reward.Item) || Reward.Item->ItemId.IsNone() || Reward.MaxQuantity <= 0)
 			return ESSExpeditionStartResult::InvalidExpedition;
 	}
 
@@ -184,25 +193,26 @@ void USSRunSubsystem::FulfillExpedition()
 	Result.ReturnDay = CurrentDay;
 	Result.RegionName = ActiveExpedition->RegionName;
 
-	// TODO: 성공 확률 적용. 아래 주석 해제 후 SuccessRate 필드 추가 시 사용.
-	// if (FMath::FRand() > ActiveExpedition->SuccessRate)
-	// {
-	// 	UE_LOG(LogTemp, Log, TEXT("[Expedition] 탐사 실패 — 보상 없음"));
-	// 	ActiveExpedition = nullptr;
-	// 	RemainingExpeditionDays = 0;
-	// 	RobotState = ESSRobotState::Idle;
-	// 	OnRobotReturned.Broadcast(Result);
-	// 	return;
-	// }
-
-	for (const FSSItemStack& Reward : ActiveExpedition->Rewards)
+	// 성공 확률 판정
+	if (FMath::FRand() > ActiveExpedition->SuccessRate)
 	{
-		if (!IsValid(Reward.Item) || Reward.Quantity <= 0) continue;
+		UE_LOG(LogTemp, Log, TEXT("[Expedition] 탐사 실패 — 보상 없음"));
+		const float BreakChance = ActiveExpedition->BreakdownChance;
+		ActiveExpedition = nullptr;
+		RemainingExpeditionDays = 0;
+		RobotState = (FMath::FRand() < BreakChance) ? ESSRobotState::Broken : ESSRobotState::Idle;
+		if (RobotState == ESSRobotState::Broken)
+			UE_LOG(LogTemp, Log, TEXT("[Robot] 귀환 후 고장 발생"));
+		OnRobotReturned.Broadcast(Result);
+		return;
+	}
 
-		// TODO: 수량 범위 적용. FSSItemStackRange로 교체 시 아래처럼 사용.
-		// const int32 Qty = FMath::RandRange(Reward.MinQty, Reward.MaxQty);
-		// if (Qty <= 0) continue;
-		// 그 아래 Existing 찾아서 Qty만큼 추가하는 코드 동일하게 사용.
+	for (const FSSItemStackRange& Reward : ActiveExpedition->Rewards)
+	{
+		if (!IsValid(Reward.Item)) continue;
+
+		const int32 Qty = FMath::RandRange(Reward.MinQuantity, Reward.MaxQuantity);
+		if (Qty <= 0) continue;
 
 		FSSItemStack* Existing = StoredItems.FindByPredicate([&Reward](const FSSItemStack& S)
 		{
@@ -210,24 +220,36 @@ void USSRunSubsystem::FulfillExpedition()
 		});
 
 		if (Existing)
-			Existing->Quantity += Reward.Quantity;
+			Existing->Quantity += Qty;
 		else
-			StoredItems.Add(Reward);
+		{
+			FSSItemStack NewStack;
+			NewStack.Item = Reward.Item;
+			NewStack.Quantity = Qty;
+			StoredItems.Add(NewStack);
+		}
 
-		Result.ReceivedItems.Add(Reward);
+		FSSItemStack ResultStack;
+		ResultStack.Item = Reward.Item;
+		ResultStack.Quantity = Qty;
+		Result.ReceivedItems.Add(ResultStack);
 
 		UE_LOG(LogTemp, Log, TEXT("[Expedition] 보상 지급 — %s x%d"),
-			*Reward.Item->ItemId.ToString(), Reward.Quantity);
+			*Reward.Item->ItemId.ToString(), Qty);
 	}
 
+	const float BreakChance = ActiveExpedition->BreakdownChance;
 	LastExpeditionResult = Result;
 	ActiveExpedition = nullptr;
 	RemainingExpeditionDays = 0;
-	RobotState = ESSRobotState::Idle;
+	RobotState = (FMath::FRand() < BreakChance) ? ESSRobotState::Broken : ESSRobotState::Idle;
 
 	UE_LOG(LogTemp, Log, TEXT("[Expedition] 귀환 완료 — Day %d"), CurrentDay);
+	if (RobotState == ESSRobotState::Broken)
+		UE_LOG(LogTemp, Log, TEXT("[Robot] 귀환 후 고장 발생"));
 
 	OnRobotReturned.Broadcast(LastExpeditionResult);
+	OnStoredItemsChanged.Broadcast();
 }
 
 bool USSRunSubsystem::AdvanceDay(bool bGiveFood, bool bGiveWater)
@@ -270,8 +292,38 @@ bool USSRunSubsystem::AdvanceDay(bool bGiveFood, bool bGiveWater)
 	if (Health <= 0.f) return true;
 
 	TickExpedition();
+	TickRepair();
 
 	return true;
+}
+
+bool USSRunSubsystem::RepairRobot()
+{
+	if (RobotState != ESSRobotState::Broken) return false;
+
+	static const FName RepairKitId(TEXT("RepairKit"));
+	if (!ConsumeItem(RepairKitId))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Robot] 수리키트 부족 — 수리 불가"));
+		return false;
+	}
+
+	RobotState = ESSRobotState::Repairing;
+	RepairDaysRemaining = 1;
+	UE_LOG(LogTemp, Log, TEXT("[Robot] 수리 시작 — 1일 후 복구"));
+	return true;
+}
+
+void USSRunSubsystem::TickRepair()
+{
+	if (RobotState != ESSRobotState::Repairing) return;
+
+	--RepairDaysRemaining;
+	if (RepairDaysRemaining <= 0)
+	{
+		RobotState = ESSRobotState::Idle;
+		UE_LOG(LogTemp, Log, TEXT("[Robot] 수리 완료 — 대기 상태 복귀"));
+	}
 }
 
 int32 USSRunSubsystem::GetStoredQuantityById(FName ItemId) const

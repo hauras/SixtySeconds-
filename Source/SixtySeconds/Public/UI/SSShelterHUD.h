@@ -22,6 +22,7 @@ public:
 
 protected:
 	virtual void NativeConstruct() override;
+	virtual void NativeDestruct() override;
 
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UImage> BackgroundImage;
@@ -48,9 +49,6 @@ protected:
 	TObjectPtr<UTextBlock> BatteryCountText;
 
 	UPROPERTY(meta=(BindWidget))
-	TObjectPtr<UButton> StorageButton;
-
-	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UButton> ComputerButton;
 
 	UPROPERTY(meta=(BindWidget))
@@ -63,10 +61,8 @@ protected:
 	TObjectPtr<UCheckBox> WaterRationCheckBox;
 	
 private:
-	void RefreshDisplay();
-
 	UFUNCTION()
-	void OnStorageClicked();
+	void RefreshDisplay();
 
 	UFUNCTION()
 	void OnComputerClicked();

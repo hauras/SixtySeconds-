@@ -19,3 +19,19 @@ struct SIXTYSECONDS_API FSSItemStack
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="SS|Inventory", meta=(ClampMin="0", UIMin="0"))
 	int32 Quantity = 0;
 };
+
+// 탐사 보상처럼 수량이 범위로 지정되는 아이템 스택
+USTRUCT(BlueprintType)
+struct SIXTYSECONDS_API FSSItemStackRange
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="SS|Inventory")
+	TObjectPtr<USSItemDefinition> Item = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="SS|Inventory", meta=(ClampMin="0"))
+	int32 MinQuantity = 1;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="SS|Inventory", meta=(ClampMin="0"))
+	int32 MaxQuantity = 1;
+};

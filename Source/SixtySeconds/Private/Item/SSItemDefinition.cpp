@@ -1,6 +1,23 @@
 #include "Item/SSItemDefinition.h"
+#include "Engine/Texture2D.h"
 
 USSItemDefinition::USSItemDefinition() = default;
+
+UTexture2D* USSItemDefinition::GetStockTexture(int32 Quantity) const
+{
+	UTexture2D* Selected = nullptr;
+	int32 BestThreshold = 0;
+	for (const FSSStockVisual& Visual : ShelterVisuals)
+	{
+		if (Visual.MinQuantity > BestThreshold && Visual.MinQuantity <= Quantity
+			&& IsValid(Visual.Texture))
+		{
+			BestThreshold = Visual.MinQuantity;
+			Selected = Visual.Texture.Get();
+		}
+	}
+	return Selected;
+}
 
 void USSItemDefinition::PostLoad()
 {

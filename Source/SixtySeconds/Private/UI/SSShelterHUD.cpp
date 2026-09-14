@@ -1,6 +1,7 @@
 #include "UI/SSShelterHUD.h"
 #include "UI/SSExpeditionWidget.h"
 #include "Components/TextBlock.h"
+#include "Components/Image.h"
 #include "Components/Button.h"
 #include "Item/SSRunSubsystem.h"
 #include "Item/SSItemDefinition.h"
@@ -18,12 +19,6 @@ void USSShelterHUD::NativeConstruct()
         RunSubsystem = GameInstance->GetSubsystem<USSRunSubsystem>();
     }
 
-    if (StorageButton)
-    {
-        StorageButton->OnClicked.AddUniqueDynamic(
-            this, &USSShelterHUD::OnStorageClicked);
-    }
-
     if (ComputerButton)
     {
         ComputerButton->OnClicked.AddUniqueDynamic(
@@ -36,7 +31,16 @@ void USSShelterHUD::NativeConstruct()
             this, &USSShelterHUD::OnNextDayClicked);
     }
 
+    if (IsValid(RunSubsystem))
+        RunSubsystem->OnStoredItemsChanged.AddUniqueDynamic(this, &USSShelterHUD::RefreshDisplay);
     RefreshDisplay();
+}
+
+void USSShelterHUD::NativeDestruct()
+{
+    if (IsValid(RunSubsystem))
+        RunSubsystem->OnStoredItemsChanged.RemoveDynamic(this, &USSShelterHUD::RefreshDisplay);
+    Super::NativeDestruct();
 }
 
 void USSShelterHUD::InitHUD(int32 InDay)
@@ -137,11 +141,7 @@ void USSShelterHUD::RefreshDisplay()
             NSLOCTEXT("SS", "ShelterBatteryCount", "배터리 x{0}"),
             BatteryCount));
     }
-}
 
-void USSShelterHUD::OnStorageClicked()
-{
-    // TODO: 보관함 상세 UI 열기
 }
 
 void USSShelterHUD::OnComputerClicked()

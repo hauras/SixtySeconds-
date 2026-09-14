@@ -7,6 +7,18 @@
 class UStaticMesh;
 class UTexture2D;
 
+USTRUCT(BlueprintType)
+struct FSSStockVisual
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="SS|Stock", meta=(ClampMin="1"))
+	int32 MinQuantity = 1;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="SS|Stock")
+	TObjectPtr<UTexture2D> Texture = nullptr;
+};
+
 UENUM(BlueprintType)
 enum class ESSItemType : uint8
 {
@@ -34,6 +46,12 @@ class SIXTYSECONDS_API USSItemDefinition : public UDataAsset
 public:
 	USSItemDefinition();
 	virtual void PostLoad() override;
+
+	// Highest valid threshold <= Quantity; array order does not matter.
+	UTexture2D* GetStockTexture(int32 Quantity) const;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="SS|Item|Shelter")
+	TArray<FSSStockVisual> ShelterVisuals;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="SS|Item")
 	ESSItemType ItemType = ESSItemType::Consumable;

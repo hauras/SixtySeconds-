@@ -22,13 +22,17 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="SS|Expedition")
 	TArray<FSSItemStack> Cost;
 
-	// TODO: 성공 확률 추가 (0.0~1.0). 실패 시 보상 없이 귀환.
-	// float SuccessRate = 1.0f;
+	// 성공 확률 (0.0 = 항상 실패, 1.0 = 항상 성공)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="SS|Expedition",
+		meta=(ClampMin="0.0", ClampMax="1.0", UIMin="0.0", UIMax="1.0"))
+	float SuccessRate = 1.0f;
 
-	// TODO: 보상 수량을 고정값 대신 Min/Max 범위로 변경.
-	// FSSItemStack → FSSItemStackRange { MinQty, MaxQty } 로 교체 후 랜덤 지급.
+	// 귀환 후 로봇 고장 확률 (0.0 = 고장 없음, 1.0 = 항상 고장)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="SS|Expedition",
+		meta=(ClampMin="0.0", ClampMax="1.0", UIMin="0.0", UIMax="1.0"))
+	float BreakdownChance = 0.0f;
 
-	// 귀환 시 지급되는 보상 (현재 고정값)
+	// 귀환 시 지급되는 보상 (Min~Max 범위에서 랜덤 지급)
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="SS|Expedition")
-	TArray<FSSItemStack> Rewards;
+	TArray<FSSItemStackRange> Rewards;
 };

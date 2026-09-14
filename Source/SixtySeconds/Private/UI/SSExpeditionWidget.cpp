@@ -57,34 +57,48 @@ void USSExpeditionWidget::RefreshDisplay()
 					C.Item->DisplayName, C.Quantity));
 		}
 
-		// 보상 표시
+		// 보상 표시 (Min~Max 범위)
 		if (RewardsText)
 		{
 			FString RewardStr;
-			for (const FSSItemStack& R : ExpeditionDefinition->Rewards)
+			for (const FSSItemStackRange& R : ExpeditionDefinition->Rewards)
 			{
-				if (!IsValid(R.Item) || R.Quantity <= 0) continue;
+				if (!IsValid(R.Item)) continue;
 				if (!RewardStr.IsEmpty()) RewardStr += TEXT(", ");
-				RewardStr += FString::Printf(TEXT("%s ×%d"), *R.Item->DisplayName.ToString(), R.Quantity);
+				if (R.MinQuantity == R.MaxQuantity)
+					RewardStr += FString::Printf(TEXT("%s ×%d"), *R.Item->DisplayName.ToString(), R.MinQuantity);
+				else
+					RewardStr += FString::Printf(TEXT("%s ×%d~%d"), *R.Item->DisplayName.ToString(), R.MinQuantity, R.MaxQuantity);
 			}
+			FString RateStr = (ExpeditionDefinition->SuccessRate < 1.f)
+				? FString::Printf(TEXT(" (성공률 %d%%)"), FMath::RoundToInt(ExpeditionDefinition->SuccessRate * 100.f))
+				: FString();
 			RewardsText->SetText(FText::Format(
-				NSLOCTEXT("SS", "ExpRewards", "예상 보상: {0}"),
-				FText::FromString(RewardStr)));
+				NSLOCTEXT("SS", "ExpRewards", "예상 보상: {0}{1}"),
+				FText::FromString(RewardStr),
+				FText::FromString(RateStr)));
 		}
 	}
 
 	// 로봇 상태
 	if (RobotStatusText)
 	{
-		if (RunSubsystem->GetRobotState() == ESSRobotState::Idle)
+		switch (RunSubsystem->GetRobotState())
 		{
+		case ESSRobotState::Idle:
 			RobotStatusText->SetText(NSLOCTEXT("SS", "RobotIdle", "대기 중"));
-		}
-		else
-		{
+			break;
+		case ESSRobotState::Exploring:
 			RobotStatusText->SetText(FText::Format(
 				NSLOCTEXT("SS", "RobotExploring", "탐사 중 · 남은 {0}일"),
 				RunSubsystem->GetRemainingExpeditionDays()));
+			break;
+		case ESSRobotState::Broken:
+			RobotStatusText->SetText(NSLOCTEXT("SS", "RobotBroken", "고장 — 수리키트 필요"));
+			break;
+		case ESSRobotState::Repairing:
+			RobotStatusText->SetText(NSLOCTEXT("SS", "RobotRepairing", "수리 중 · 1일 후 복구"));
+			break;
 		}
 	}
 
@@ -117,6 +131,9 @@ void USSExpeditionWidget::OnDispatchClicked()
 		break;
 	case ESSExpeditionStartResult::RobotBusy:
 		Msg = NSLOCTEXT("SS", "ExpBusy", "이미 탐사 중입니다.");
+		break;
+	case ESSExpeditionStartResult::RobotBroken:
+		Msg = NSLOCTEXT("SS", "ExpBroken", "로봇이 고장났습니다. 수리키트로 수리하세요.");
 		break;
 	case ESSExpeditionStartResult::NotEnoughBattery:
 		Msg = NSLOCTEXT("SS", "ExpNoBattery", "배터리가 부족합니다.");

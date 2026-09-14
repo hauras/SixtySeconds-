@@ -7,11 +7,15 @@
 
 class USSExpeditionDefinition;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FSSOnStoredItemsChanged);
+
 UENUM(BlueprintType)
 enum class ESSRobotState : uint8
 {
 	Idle,
 	Exploring,
+	Broken,     // 고장 — 수리키트 필요
+	Repairing,  // 수리 중 — 1일 후 Idle 복귀
 };
 
 UENUM(BlueprintType)
@@ -20,6 +24,7 @@ enum class ESSExpeditionStartResult : uint8
 	Success,
 	PlayerDead,
 	RobotBusy,
+	RobotBroken,
 	InvalidExpedition,
 	NotEnoughBattery,
 };
@@ -48,6 +53,9 @@ class SIXTYSECONDS_API USSRunSubsystem : public UGameInstanceSubsystem
 	GENERATED_BODY()
 
 public:
+	UPROPERTY(BlueprintAssignable, Category="SS|Run")
+	FSSOnStoredItemsChanged OnStoredItemsChanged;
+
 	// 운반 목록을 은신처 보관함으로 이전
 	UFUNCTION(BlueprintCallable, Category="SS|Run")
 	void DepositItems(const TArray<FSSItemStack>& CarriedItems);
@@ -90,6 +98,10 @@ public:
 	UFUNCTION(BlueprintPure, Category="SS|Expedition")
 	const FSSExpeditionResult& GetLastExpeditionResult() const { return LastExpeditionResult; }
 
+	// 수리키트 1개 소모 후 수리 시작. 성공 시 true.
+	UFUNCTION(BlueprintCallable, Category="SS|Expedition")
+	bool RepairRobot();
+
 	// 귀환 시 브로드캐스트
 	UPROPERTY(BlueprintAssignable, Category="SS|Expedition")
 	FOnRobotReturned OnRobotReturned;
@@ -102,6 +114,7 @@ private:
 
 	void TickExpedition();
 	void FulfillExpedition();
+	void TickRepair();
 
 	UPROPERTY()
 	TArray<FSSItemStack> StoredItems;
@@ -126,6 +139,9 @@ private:
 
 	UPROPERTY(Transient)
 	int32 RemainingExpeditionDays = 0;
+
+	UPROPERTY(Transient)
+	int32 RepairDaysRemaining = 0;
 
 	UPROPERTY(Transient)
 	FSSExpeditionResult LastExpeditionResult;
