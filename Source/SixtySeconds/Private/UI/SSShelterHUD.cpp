@@ -1,5 +1,9 @@
 #include "UI/SSShelterHUD.h"
 #include "UI/SSExpeditionWidget.h"
+#include "UI/SSComputerWidget.h"
+#include "UI/SSInfoPanelWidget.h"
+#include "UI/SSRobotInfoContentWidget.h"
+#include "Engine/Texture2D.h"
 #include "Components/TextBlock.h"
 #include "Components/Image.h"
 #include "Components/Button.h"
@@ -9,6 +13,10 @@
 #include "GameMode/SSGameMode.h"
 #include "Kismet/GameplayStatics.h"
 #include "Components/CheckBox.h"
+#include "UI/SSSurvivorImageWidget.h"
+#include "UI/SSSurvivorInfoContentWidget.h"
+#include "Character/SSSurvivorDefinition.h"
+#include "Blueprint/WidgetTree.h"
 
 void USSShelterHUD::NativeConstruct()
 {
@@ -31,16 +39,145 @@ void USSShelterHUD::NativeConstruct()
             this, &USSShelterHUD::OnNextDayClicked);
     }
 
+    if (RobotButton)
+        RobotButton->OnClicked.AddUniqueDynamic(this, &USSShelterHUD::OnRobotClicked);
+    TArray<UWidget*> Widgets;
+    WidgetTree->GetAllWidgets(Widgets);
+    for (UWidget* Widget : Widgets)
+        if (USSSurvivorImageWidget* Person = Cast<USSSurvivorImageWidget>(Widget))
+            Person->OnSurvivorSelected.AddUniqueDynamic(this, &ThisClass::OnSurvivorSelected);
     if (IsValid(RunSubsystem))
+    {
         RunSubsystem->OnStoredItemsChanged.AddUniqueDynamic(this, &USSShelterHUD::RefreshDisplay);
+        RunSubsystem->OnRobotStateChanged.AddUniqueDynamic(this, &USSShelterHUD::RefreshRobotDisplay);
+        RunSubsystem->OnActionPointsChanged.AddUniqueDynamic(this, &USSShelterHUD::RefreshDisplay);
+        RunSubsystem->OnSurvivorsChanged.AddUniqueDynamic(this, &ThisClass::OnSurvivorsUpdated);
+    }
+    RefreshRobotDisplay();
     RefreshDisplay();
 }
 
 void USSShelterHUD::NativeDestruct()
 {
     if (IsValid(RunSubsystem))
+    {
         RunSubsystem->OnStoredItemsChanged.RemoveDynamic(this, &USSShelterHUD::RefreshDisplay);
+        RunSubsystem->OnRobotStateChanged.RemoveDynamic(this, &USSShelterHUD::RefreshRobotDisplay);
+        RunSubsystem->OnActionPointsChanged.RemoveDynamic(this, &USSShelterHUD::RefreshDisplay);
+        RunSubsystem->OnSurvivorsChanged.RemoveDynamic(this, &ThisClass::OnSurvivorsUpdated);
+    }
+    if (RobotButton)
+        RobotButton->OnClicked.RemoveDynamic(this, &USSShelterHUD::OnRobotClicked);
+    TArray<UWidget*> Widgets;
+    WidgetTree->GetAllWidgets(Widgets);
+    for (UWidget* Widget : Widgets)
+        if (USSSurvivorImageWidget* Person = Cast<USSSurvivorImageWidget>(Widget))
+            Person->OnSurvivorSelected.RemoveDynamic(this, &ThisClass::OnSurvivorSelected);
+    if (IsValid(InfoPanelWidget))
+        InfoPanelWidget->RemoveFromParent();
+    InfoPanelWidget = nullptr;
+    if (IsValid(ComputerWidget)) ComputerWidget->CloseWindows();
+    ComputerWidget = nullptr;
     Super::NativeDestruct();
+}
+
+void USSShelterHUD::RefreshRobotDisplay()
+{
+    const bool bShowRobot = IsValid(RunSubsystem)
+        && RunSubsystem->GetRobotState() != ESSRobotState::Exploring;
+    if (RobotButton)
+        RobotButton->SetVisibility(bShowRobot ? ESlateVisibility::Visible : ESlateVisibility::Hidden);
+    if (!bShowRobot && bShowingRobotInfo && IsValid(InfoPanelWidget))
+        InfoPanelWidget->RemoveFromParent();
+}
+
+void USSShelterHUD::OnRobotClicked()
+{
+    if (!IsValid(RunSubsystem) || RunSubsystem->GetRobotState() == ESSRobotState::Exploring)
+        return;
+    if (IsValid(InfoPanelWidget) && InfoPanelWidget->IsInViewport())
+        return;
+    if (!InfoPanelWidgetClass)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[UI] Set InfoPanelWidgetClass in the shelter HUD defaults."));
+        return;
+    }
+    if (!IsValid(InfoPanelWidget))
+        InfoPanelWidget = CreateWidget<USSInfoPanelWidget>(GetOwningPlayer(), InfoPanelWidgetClass);
+    if (!IsValid(InfoPanelWidget)) return;
+    bShowingRobotInfo = true;
+    InspectedSurvivorId = NAME_None;
+
+    // Reuse the button's image unless a separate portrait was assigned.
+    UTexture2D* Portrait = RobotInfoTexture;
+    if (!Portrait && RobotButton)
+    {
+        if (UImage* ButtonImage = Cast<UImage>(RobotButton->GetContent()))
+            Portrait = Cast<UTexture2D>(ButtonImage->GetBrush().GetResourceObject());
+    }
+    InfoPanelWidget->AddToViewport(20);
+    InfoPanelWidget->SetPanelInfo(NSLOCTEXT("SS", "RobotInfoTitle", "탐사로봇"), Portrait);
+    if (USSRobotInfoContentWidget* RobotContent = CreateWidget<USSRobotInfoContentWidget>(GetOwningPlayer()))
+    {
+        InfoPanelWidget->SetPanelContent(RobotContent);
+        InfoPanelWidget->SetPanelAction(RobotContent->GetActionWidget());
+    }
+}
+
+void USSShelterHUD::OnSurvivorSelected(FName SurvivorId)
+{
+    if (!IsValid(RunSubsystem) || !RunSubsystem->IsSurvivorRescued(SurvivorId)) return;
+    if (!InfoPanelWidgetClass || !SurvivorInfoContentClass)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[UI] Assign info panel and survivor content classes in shelter HUD defaults."));
+        return;
+    }
+    if (IsValid(InfoPanelWidget) && InfoPanelWidget->IsInViewport()) return;
+    const FSSSurvivorState* State = RunSubsystem->GetRescuedSurvivors().FindByPredicate(
+        [SurvivorId](const FSSSurvivorState& Entry)
+        {
+            return IsValid(Entry.Definition) && Entry.Definition->SurvivorId == SurvivorId;
+        });
+    if (!State) return;
+    if (!IsValid(InfoPanelWidget))
+        InfoPanelWidget = CreateWidget<USSInfoPanelWidget>(GetGameInstance(), InfoPanelWidgetClass);
+    USSSurvivorInfoContentWidget* Content = CreateWidget<USSSurvivorInfoContentWidget>(GetGameInstance(), SurvivorInfoContentClass);
+    if (!IsValid(InfoPanelWidget) || !IsValid(Content)) return;
+    bShowingRobotInfo = false;
+    InspectedSurvivorId = SurvivorId;
+    Content->InitSurvivor(SurvivorId);
+    InfoPanelWidget->AddToViewport(20);
+    InfoPanelWidget->SetPanelInfo(FText::Format(NSLOCTEXT("SS", "SurvivorPanelTitle", "동료 정보 · {0}"), State->Definition->DisplayName),
+        State->Definition->Portrait ? State->Definition->Portrait.Get() : State->Definition->ShelterImage.Get());
+    if (!State->Definition->Portrait)
+    {
+        TArray<UWidget*> Widgets;
+        WidgetTree->GetAllWidgets(Widgets);
+        for (UWidget* Widget : Widgets)
+        {
+            const USSSurvivorImageWidget* Person = Cast<USSSurvivorImageWidget>(Widget);
+            if (Person && IsValid(Person->SurvivorDefinition) && Person->SurvivorDefinition->SurvivorId == SurvivorId)
+            {
+                const FVector2D TopHalf(Person->ClickAreaMax.X, Person->ClickAreaMin.Y + (Person->ClickAreaMax.Y - Person->ClickAreaMin.Y) * .5);
+                InfoPanelWidget->SetPortraitRegion(Person->ClickAreaMin, TopHalf);
+                break;
+            }
+        }
+    }
+    InfoPanelWidget->SetPanelContent(Content);
+    // Build bindings before retrieving the observation section for the full-width slot.
+    Content->TakeWidget();
+    InfoPanelWidget->SetPanelObservation(Content->GetObservationWidget());
+}
+
+void USSShelterHUD::OnSurvivorsUpdated()
+{
+    if (!InspectedSurvivorId.IsNone() && IsValid(RunSubsystem)
+        && !RunSubsystem->IsSurvivorRescued(InspectedSurvivorId))
+    {
+        if (IsValid(InfoPanelWidget)) InfoPanelWidget->RemoveFromParent();
+        InspectedSurvivorId = NAME_None;
+    }
 }
 
 void USSShelterHUD::InitHUD(int32 InDay)
@@ -142,18 +279,23 @@ void USSShelterHUD::RefreshDisplay()
             BatteryCount));
     }
 
+    if (ActionPointsText && IsValid(RunSubsystem))
+    {
+        ActionPointsText->SetText(FText::Format(
+            NSLOCTEXT("SS", "ShelterAP", "행동력 {0}/{1}"),
+            RunSubsystem->GetActionPoints(),
+            USSRunSubsystem::MaxActionPoints));
+    }
+
 }
 
 void USSShelterHUD::OnComputerClicked()
 {
-	// 이미 열려 있으면 중복 생성 방지
-	if (IsValid(ExpeditionWidget) && ExpeditionWidget->IsInViewport()) return;
-
-	if (!ExpeditionWidgetClass) return;
-
-	ExpeditionWidget = CreateWidget<USSExpeditionWidget>(this, ExpeditionWidgetClass);
-	if (IsValid(ExpeditionWidget))
-		ExpeditionWidget->AddToViewport(1);
+	if (IsValid(ComputerWidget) && (ComputerWidget->IsInViewport() || ComputerWidget->HasOpenExpedition())) return;
+	ComputerWidget = CreateWidget<USSComputerWidget>(GetOwningPlayer());
+	if (!IsValid(ComputerWidget)) return;
+	ComputerWidget->SetExpeditionClass(ExpeditionWidgetClass);
+	ComputerWidget->AddToViewport(20);
 }
 
 void USSShelterHUD::OnNextDayClicked()

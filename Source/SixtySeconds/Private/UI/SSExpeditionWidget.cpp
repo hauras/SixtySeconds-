@@ -19,7 +19,13 @@ void USSExpeditionWidget::NativeConstruct()
 		CloseButton->OnClicked.AddUniqueDynamic(this, &USSExpeditionWidget::OnCloseClicked);
 
 	if (IsValid(RunSubsystem))
+	{
 		RunSubsystem->OnRobotReturned.AddUniqueDynamic(this, &USSExpeditionWidget::OnRobotReturnedHandler);
+		RunSubsystem->OnRobotStateChanged.AddUniqueDynamic(this, &USSExpeditionWidget::RefreshDisplay);
+		RunSubsystem->OnStoredItemsChanged.AddUniqueDynamic(this, &USSExpeditionWidget::RefreshDisplay);
+		RunSubsystem->OnActionPointsChanged.AddUniqueDynamic(this, &USSExpeditionWidget::RefreshDisplay);
+	}
+	if (MessageText) MessageText->SetText(FText::GetEmpty());
 
 	RefreshDisplay();
 }
@@ -27,13 +33,24 @@ void USSExpeditionWidget::NativeConstruct()
 void USSExpeditionWidget::NativeDestruct()
 {
 	if (IsValid(RunSubsystem))
+	{
 		RunSubsystem->OnRobotReturned.RemoveDynamic(this, &USSExpeditionWidget::OnRobotReturnedHandler);
+		RunSubsystem->OnRobotStateChanged.RemoveDynamic(this, &USSExpeditionWidget::RefreshDisplay);
+		RunSubsystem->OnStoredItemsChanged.RemoveDynamic(this, &USSExpeditionWidget::RefreshDisplay);
+		RunSubsystem->OnActionPointsChanged.RemoveDynamic(this, &USSExpeditionWidget::RefreshDisplay);
+	}
+	if (DispatchButton) DispatchButton->OnClicked.RemoveDynamic(this, &USSExpeditionWidget::OnDispatchClicked);
+	if (CloseButton) CloseButton->OnClicked.RemoveDynamic(this, &USSExpeditionWidget::OnCloseClicked);
 
 	Super::NativeDestruct();
 }
 
 void USSExpeditionWidget::RefreshDisplay()
 {
+	if (DispatchButton) DispatchButton->SetIsEnabled(IsValid(RunSubsystem)
+		&& IsValid(ExpeditionDefinition) && RunSubsystem->GetHealth() > 0.f
+		&& RunSubsystem->GetRobotState() == ESSRobotState::Idle
+		&& RunSubsystem->GetActionPoints() >= USSRunSubsystem::ExpeditionActionCost);
 	if (!IsValid(RunSubsystem)) return;
 
 	// 지역 정보
@@ -47,15 +64,27 @@ void USSExpeditionWidget::RefreshDisplay()
 				NSLOCTEXT("SS", "ExpDuration", "소요 기간: {0}일"),
 				ExpeditionDefinition->DurationDays));
 
-		// 비용 표시 (첫 번째 항목만 — 현재 배터리 1개)
-		if (CostText && ExpeditionDefinition->Cost.Num() > 0)
+		// 모든 비용과 실제 보유량을 함께 표시한다.
+		if (CostText)
 		{
-			const FSSItemStack& C = ExpeditionDefinition->Cost[0];
-			if (IsValid(C.Item))
-				CostText->SetText(FText::Format(
-					NSLOCTEXT("SS", "ExpCost", "{0} ×{1}"),
-					C.Item->DisplayName, C.Quantity));
+			TMap<FName, int32> Totals;
+			for (const FSSItemStack& Cost : ExpeditionDefinition->Cost)
+				if (IsValid(Cost.Item)) Totals.FindOrAdd(Cost.Item->ItemId) += Cost.Quantity;
+			TArray<FName> Shown;
+			FString CostLines;
+			for (const FSSItemStack& Cost : ExpeditionDefinition->Cost)
+			{
+				if (!IsValid(Cost.Item) || Shown.Contains(Cost.Item->ItemId)) continue;
+				Shown.Add(Cost.Item->ItemId);
+				if (!CostLines.IsEmpty()) CostLines += TEXT("\n");
+				CostLines += FString::Printf(TEXT("%s ×%d  /  보유 %d"), *Cost.Item->DisplayName.ToString(),
+					Totals[Cost.Item->ItemId], RunSubsystem->GetStoredQuantityById(Cost.Item->ItemId));
+			}
+			CostText->SetText(CostLines.IsEmpty() ? NSLOCTEXT("SSExpeditionUI", "Free", "필요한 물자가 없습니다.") : FText::FromString(CostLines));
 		}
+		if (RiskText) RiskText->SetText(FText::Format(NSLOCTEXT("SSExpeditionUI", "Risk", "탐사 성공률 {0}%  ·  귀환 후 고장 확률 {1}%"),
+			FMath::RoundToInt(FMath::Clamp(ExpeditionDefinition->SuccessRate, 0.f, 1.f) * 100),
+			FMath::RoundToInt(FMath::Clamp(ExpeditionDefinition->BreakdownChance, 0.f, 1.f) * 100)));
 
 		// 보상 표시 (Min~Max 범위)
 		if (RewardsText)
@@ -64,19 +93,13 @@ void USSExpeditionWidget::RefreshDisplay()
 			for (const FSSItemStackRange& R : ExpeditionDefinition->Rewards)
 			{
 				if (!IsValid(R.Item)) continue;
-				if (!RewardStr.IsEmpty()) RewardStr += TEXT(", ");
+				if (!RewardStr.IsEmpty()) RewardStr += TEXT("\n");
 				if (R.MinQuantity == R.MaxQuantity)
 					RewardStr += FString::Printf(TEXT("%s ×%d"), *R.Item->DisplayName.ToString(), R.MinQuantity);
 				else
 					RewardStr += FString::Printf(TEXT("%s ×%d~%d"), *R.Item->DisplayName.ToString(), R.MinQuantity, R.MaxQuantity);
 			}
-			FString RateStr = (ExpeditionDefinition->SuccessRate < 1.f)
-				? FString::Printf(TEXT(" (성공률 %d%%)"), FMath::RoundToInt(ExpeditionDefinition->SuccessRate * 100.f))
-				: FString();
-			RewardsText->SetText(FText::Format(
-				NSLOCTEXT("SS", "ExpRewards", "예상 보상: {0}{1}"),
-				FText::FromString(RewardStr),
-				FText::FromString(RateStr)));
+			RewardsText->SetText(RewardStr.IsEmpty() ? NSLOCTEXT("SSExpeditionUI", "NoRewards", "예상되는 물자가 없습니다.") : FText::FromString(RewardStr));
 		}
 	}
 
@@ -86,7 +109,7 @@ void USSExpeditionWidget::RefreshDisplay()
 		switch (RunSubsystem->GetRobotState())
 		{
 		case ESSRobotState::Idle:
-			RobotStatusText->SetText(NSLOCTEXT("SS", "RobotIdle", "대기 중"));
+			RobotStatusText->SetText(NSLOCTEXT("SSExpeditionUI", "Idle", "로봇 대기 중 · 파견 가능"));
 			break;
 		case ESSRobotState::Exploring:
 			RobotStatusText->SetText(FText::Format(
@@ -97,13 +120,11 @@ void USSExpeditionWidget::RefreshDisplay()
 			RobotStatusText->SetText(NSLOCTEXT("SS", "RobotBroken", "고장 — 수리키트 필요"));
 			break;
 		case ESSRobotState::Repairing:
-			RobotStatusText->SetText(NSLOCTEXT("SS", "RobotRepairing", "수리 중 · 1일 후 복구"));
+			RobotStatusText->SetText(FText::Format(NSLOCTEXT("SSExpeditionUI", "Repairing", "수리 중 · 완료까지 {0}일"), RunSubsystem->GetRemainingRepairDays()));
 			break;
 		}
 	}
 
-	if (MessageText)
-		MessageText->SetText(FText::GetEmpty());
 }
 
 void USSExpeditionWidget::OnDispatchClicked()
@@ -136,7 +157,10 @@ void USSExpeditionWidget::OnDispatchClicked()
 		Msg = NSLOCTEXT("SS", "ExpBroken", "로봇이 고장났습니다. 수리키트로 수리하세요.");
 		break;
 	case ESSExpeditionStartResult::NotEnoughBattery:
-		Msg = NSLOCTEXT("SS", "ExpNoBattery", "배터리가 부족합니다.");
+		Msg = NSLOCTEXT("SSExpeditionUI", "NotEnough", "파견에 필요한 물자가 부족합니다.");
+		break;
+	case ESSExpeditionStartResult::NotEnoughActionPoints:
+		Msg = NSLOCTEXT("SSExpeditionUI", "NoAP", "행동력이 부족합니다.");
 		break;
 	case ESSExpeditionStartResult::PlayerDead:
 		Msg = NSLOCTEXT("SS", "ExpDead", "행동 불가.");
@@ -147,7 +171,11 @@ void USSExpeditionWidget::OnDispatchClicked()
 	}
 
 	if (MessageText)
+	{
 		MessageText->SetText(Msg);
+		MessageText->SetColorAndOpacity(FSlateColor(FLinearColor::FromSRGBColor(
+			Result == ESSExpeditionStartResult::Success ? FColor(169, 191, 135) : FColor(242, 156, 117))));
+	}
 
 	RefreshDisplay();
 }
@@ -170,7 +198,7 @@ void USSExpeditionWidget::OnRobotReturnedHandler(const FSSExpeditionResult& Resu
 	if (MessageText)
 		MessageText->SetText(FText::Format(
 			NSLOCTEXT("SS", "ExpReturned", "귀환 완료 — {0}"),
-			FText::FromString(ItemStr)));
+			ItemStr.IsEmpty() ? NSLOCTEXT("SSExpeditionUI", "EmptyReturn", "가져온 물자 없음") : FText::FromString(ItemStr)));
 
 	RefreshDisplay();
 }

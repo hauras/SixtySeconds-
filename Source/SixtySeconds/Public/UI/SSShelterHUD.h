@@ -10,6 +10,10 @@ class UTextBlock;
 class UButton;
 class USSRunSubsystem;
 class USSExpeditionWidget;
+class USSComputerWidget;
+class USSInfoPanelWidget;
+class UTexture2D;
+class USSSurvivorInfoContentWidget;
 
 UCLASS(Abstract)
 class SIXTYSECONDS_API USSShelterHUD : public UUserWidget
@@ -19,10 +23,22 @@ class SIXTYSECONDS_API USSShelterHUD : public UUserWidget
 public:
 	void InitHUD(int32 InDay);
 	void RefreshStats(float Health, float Satiety, float Hydration);
+    USSInfoPanelWidget* GetOpenInfoPanel() const { return InfoPanelWidget; }
 
 protected:
 	virtual void NativeConstruct() override;
 	virtual void NativeDestruct() override;
+
+	UPROPERTY(meta=(BindWidgetOptional))
+	TObjectPtr<UButton> RobotButton;
+
+	UPROPERTY(EditDefaultsOnly, Category="SS|UI")
+	TSubclassOf<USSInfoPanelWidget> InfoPanelWidgetClass;
+    UPROPERTY(EditDefaultsOnly, Category="SS|UI")
+    TSubclassOf<USSSurvivorInfoContentWidget> SurvivorInfoContentClass;
+
+	UPROPERTY(EditDefaultsOnly, Category="SS|UI")
+	TObjectPtr<UTexture2D> RobotInfoTexture;
 
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UImage> BackgroundImage;
@@ -48,6 +64,9 @@ protected:
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UTextBlock> BatteryCountText;
 
+	UPROPERTY(meta=(BindWidgetOptional))
+	TObjectPtr<UTextBlock> ActionPointsText;
+
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UButton> ComputerButton;
 
@@ -61,6 +80,21 @@ protected:
 	TObjectPtr<UCheckBox> WaterRationCheckBox;
 	
 private:
+    UFUNCTION()
+    void OnSurvivorSelected(FName SurvivorId);
+    UFUNCTION()
+    void OnSurvivorsUpdated();
+    FName InspectedSurvivorId = NAME_None;
+    bool bShowingRobotInfo = false;
+	UFUNCTION()
+	void OnRobotClicked();
+
+	UFUNCTION()
+	void RefreshRobotDisplay();
+
+	UPROPERTY(Transient)
+	TObjectPtr<USSInfoPanelWidget> InfoPanelWidget;
+
 	UFUNCTION()
 	void RefreshDisplay();
 
@@ -77,9 +111,8 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category="SS|UI")
 	TSubclassOf<USSExpeditionWidget> ExpeditionWidgetClass;
 
-	// 현재 열린 탐사 위젯 참조
-	UPROPERTY(Transient)
-	TObjectPtr<USSExpeditionWidget> ExpeditionWidget;
+	// 컴퓨터가 기록 창과 탐사 창의 수명을 관리한다.
+	UPROPERTY(Transient) TObjectPtr<USSComputerWidget> ComputerWidget;
 
 	int32 CurrentDay = 1;
 	float CachedHealth = 0.f;

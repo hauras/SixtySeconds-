@@ -3,11 +3,17 @@
 #include "CoreMinimal.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "Item/SSInventoryTypes.h"
+#include "Item/SSJournalTypes.h"
+#include "Character/SSSurvivorTypes.h"
 #include "SSRunSubsystem.generated.h"
 
 class USSExpeditionDefinition;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FSSOnStoredItemsChanged);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FSSOnRobotStateChanged);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FSSOnJournalChanged);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FSSOnActionPointsChanged);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FSSOnSurvivorsChanged);
 
 UENUM(BlueprintType)
 enum class ESSRobotState : uint8
@@ -27,6 +33,7 @@ enum class ESSExpeditionStartResult : uint8
 	RobotBroken,
 	InvalidExpedition,
 	NotEnoughBattery,
+	NotEnoughActionPoints,
 };
 
 USTRUCT(BlueprintType)
@@ -53,6 +60,27 @@ class SIXTYSECONDS_API USSRunSubsystem : public UGameInstanceSubsystem
 	GENERATED_BODY()
 
 public:
+    UPROPERTY(BlueprintAssignable, Category="SS|Survivor")
+    FSSOnSurvivorsChanged OnSurvivorsChanged;
+
+    UFUNCTION(BlueprintPure, Category="SS|Survivor")
+    bool IsSurvivorRescued(FName SurvivorId) const;
+
+    bool RecruitSurvivor(USSSurvivorDefinition* Definition);
+    int32 RescueFollowingSurvivors();
+    void ClearFollowingSurvivors() { FollowingSurvivors.Reset(); }
+    UFUNCTION(BlueprintPure, Category="SS|Survivor")
+    int32 GetFollowingSurvivorCount() const { return FollowingSurvivors.Num(); }
+    UFUNCTION(BlueprintPure, Category="SS|Survivor")
+    const TArray<FSSSurvivorState>& GetRescuedSurvivors() const { return RescuedSurvivors; }
+	const TArray<FSSJournalEntry>& GetJournalEntries() const { return JournalEntries; }
+	UPROPERTY(BlueprintAssignable, Category="SS|Journal")
+	FSSOnJournalChanged OnJournalChanged;
+	UPROPERTY(BlueprintAssignable, Category="SS|Expedition")
+	FSSOnRobotStateChanged OnRobotStateChanged;
+	UPROPERTY(BlueprintAssignable, Category="SS|Run")
+	FSSOnActionPointsChanged OnActionPointsChanged;
+
 	UPROPERTY(BlueprintAssignable, Category="SS|Run")
 	FSSOnStoredItemsChanged OnStoredItemsChanged;
 
@@ -74,9 +102,13 @@ public:
 	void InitializeShelterStats(float InHealth, float InSatiety, float InHydration);
 
 	int32 GetCurrentDay() const { return CurrentDay; }
-	float GetHealth() const { return Health; }
-	float GetSatiety() const { return Satiety; }
-	float GetHydration() const { return Hydration; }
+	float GetHealth() const { return PlayerStats.Health; }
+	float GetSatiety() const { return PlayerStats.Satiety; }
+	float GetHydration() const { return PlayerStats.Hydration; }
+	int32 GetActionPoints() const { return ActionPoints; }
+	static constexpr int32 MaxActionPoints = 5;
+	static constexpr int32 ExpeditionActionCost = 2;
+	static constexpr int32 RepairActionCost = 4;
 
 	bool AdvanceDay(bool bGiveFood, bool bGiveWater);
 
@@ -98,15 +130,21 @@ public:
 	UFUNCTION(BlueprintPure, Category="SS|Expedition")
 	const FSSExpeditionResult& GetLastExpeditionResult() const { return LastExpeditionResult; }
 
-	// 수리키트 1개 소모 후 수리 시작. 성공 시 true.
+	// 수리키트 1개 + 행동력 4 소모 후 수리 시작. 성공 시 true.
 	UFUNCTION(BlueprintCallable, Category="SS|Expedition")
 	bool RepairRobot();
+	int32 GetRemainingRepairDays() const { return RepairDaysRemaining; }
 
 	// 귀환 시 브로드캐스트
 	UPROPERTY(BlueprintAssignable, Category="SS|Expedition")
 	FOnRobotReturned OnRobotReturned;
 
 private:
+    UPROPERTY(Transient) TArray<TObjectPtr<USSSurvivorDefinition>> FollowingSurvivors;
+    UPROPERTY(Transient) TArray<FSSSurvivorState> RescuedSurvivors;
+	void RecordEvent(ESSJournalEvent Event, const FText& Message);
+	void RecordExpeditionReturn(const FSSExpeditionResult& Result, bool bSuccess);
+	UPROPERTY(Transient) TArray<FSSJournalEntry> JournalEntries;
 	USSItemDefinition* FindStoredItem(FName ItemId) const;
 	bool ApplyItemEffect(USSItemDefinition* Item, bool bAllowFullStat);
 	bool ConsumeItem(FName ItemId);
@@ -123,14 +161,8 @@ private:
 	int32 CurrentDay = 1;
 
 	UPROPERTY(Transient)
-	float Health = 100.f;
-
-	UPROPERTY(Transient)
-	float Satiety = 100.f;
-
-	UPROPERTY(Transient)
-	float Hydration = 100.f;
-
+	FSSSurvivorStats PlayerStats;
+	
 	UPROPERTY(Transient)
 	ESSRobotState RobotState = ESSRobotState::Idle;
 
@@ -145,4 +177,9 @@ private:
 
 	UPROPERTY(Transient)
 	FSSExpeditionResult LastExpeditionResult;
+
+	UPROPERTY(Transient)
+	int32 ActionPoints = MaxActionPoints;
+
+	bool ConsumeActionPoints(int32 Cost);
 };

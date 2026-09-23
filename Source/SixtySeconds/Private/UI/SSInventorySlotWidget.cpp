@@ -18,8 +18,11 @@ void USSInventorySlotWidget::NativeConstruct()
 void USSInventorySlotWidget::RefreshDisplay()
 {
 	const bool bValid = IsValid(ItemStack.Item) && ItemStack.Quantity > 0;
-	if (ItemNameText) ItemNameText->SetText(bValid ? ItemStack.Item->DisplayName : FText::GetEmpty());
+	if (ItemNameText) ItemNameText->SetText(bValid ? ItemStack.Item->DisplayName : NSLOCTEXT("SS", "EmptyCarrySlot", "빈 칸"));
 	if (QuantityText) QuantityText->SetText(bValid ? FText::Format(NSLOCTEXT("SS", "SlotQty", "x{0}"), ItemStack.Quantity) : FText::GetEmpty());
+	if (QuantityText && bValid && ItemStack.Item->CarryCost > 1)
+		QuantityText->SetText(FText::Format(NSLOCTEXT("SS", "SlotQtyCost", "x{0} · {1}칸"), ItemStack.Quantity, ItemStack.Item->CarryCost));
+	SetRenderOpacity(bValid ? 1.f : 0.5f);
 	if (ItemIcon)
 	{
 		UTexture2D* Icon = bValid ? ItemStack.Item->Icon.Get() : nullptr;

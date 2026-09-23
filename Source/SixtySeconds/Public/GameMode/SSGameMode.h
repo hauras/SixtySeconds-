@@ -36,6 +36,7 @@ public:
 
 	UFUNCTION(BlueprintPure, Category="SS|Phase")
 	float GetScrambleTimeRemaining() const;
+	bool IsPlayerInShelter() const { return IsValid(DepositZone) && DepositZone->IsPlayerInside(); }
 
 	// 페이즈 전환 시 Blueprint에서 구독
 	UPROPERTY(BlueprintAssignable, Category="SS|Phase")

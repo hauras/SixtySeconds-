@@ -17,9 +17,12 @@ protected:
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UTextBlock> TimerText;
+	UPROPERTY(meta=(BindWidgetOptional))
+	TObjectPtr<UTextBlock> GuidanceText;
 private:
 	void UpdateTimerDisplay();
 	UPROPERTY(Transient)
 	TObjectPtr<ASSGameMode> GameMode;
 	int32 DisplayedSeconds = INDEX_NONE;
+	int32 DisplayedShelterState = INDEX_NONE;
 };

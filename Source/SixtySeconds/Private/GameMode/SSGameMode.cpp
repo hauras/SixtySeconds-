@@ -100,6 +100,9 @@ void ASSGameMode::OnScrambleTimeUp()
 
 void ASSGameMode::StartDeath()
 {
+    if (UGameInstance* Instance = GetGameInstance())
+        if (USSRunSubsystem* Run = Instance->GetSubsystem<USSRunSubsystem>())
+            Run->ClearFollowingSurvivors();
 	GetWorldTimerManager().ClearTimer(ScrambleTimerHandle);
 	CurrentPhase = ESSGamePhase::Dead;
 	OnPhaseChanged.Broadcast(CurrentPhase);

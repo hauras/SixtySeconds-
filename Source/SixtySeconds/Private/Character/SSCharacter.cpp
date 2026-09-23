@@ -3,6 +3,7 @@
 #include "Character/SSStatusComponent.h"
 #include "Item/SSCarryComponent.h"
 #include "Item/SSPickupActor.h"
+#include "Character/SSSurvivorPickup.h"
 #include "Controller/SSRPlayerController.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
@@ -10,6 +11,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
+#include "Engine/World.h"
 
 ASSCharacter::ASSCharacter()
 {
@@ -81,24 +83,36 @@ void ASSCharacter::Look(const FInputActionValue& Value)
 
 void ASSCharacter::Interact()
 {
-	// 반경 150cm 내 SSPickupActor 탐색
+	const ASSGameMode* GameMode = GetWorld()->GetAuthGameMode<ASSGameMode>();
+	if (!IsValid(GameMode) || GameMode->GetCurrentPhase() != ESSGamePhase::Scramble)
+	{
+		return;
+	}
+
+	// 현재 겹쳐 있는 SSPickupActor 중 가장 가까운 액터 탐색
 	TArray<AActor*> Overlapping;
-	GetOverlappingActors(Overlapping, ASSPickupActor::StaticClass());
+	GetOverlappingActors(Overlapping);
 
 	float Closest = MAX_FLT;
-	ASSPickupActor* Target = nullptr;
+	AActor* Target = nullptr;
 	for (AActor* Actor : Overlapping)
 	{
+        if (!IsValid(Actor) || Actor->IsHidden()
+            || (!Actor->IsA<ASSPickupActor>() && !Actor->IsA<ASSSurvivorPickup>())) continue;
 		const float Dist = FVector::Dist(GetActorLocation(), Actor->GetActorLocation());
 		if (Dist < Closest)
 		{
 			Closest = Dist;
-			Target = Cast<ASSPickupActor>(Actor);
+			Target = Actor;
 		}
 	}
 
-	if (Target)
+	if (ASSSurvivorPickup* Survivor = Cast<ASSSurvivorPickup>(Target))
+    {
+        Survivor->TryRecruit(this);
+    }
+    else if (ASSPickupActor* Pickup = Cast<ASSPickupActor>(Target))
 	{
-		Target->TryPickup(CarryComponent);
+		Pickup->TryPickup(CarryComponent);
 	}
 }

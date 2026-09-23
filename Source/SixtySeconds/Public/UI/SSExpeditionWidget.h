@@ -16,6 +16,7 @@ class SIXTYSECONDS_API USSExpeditionWidget : public UUserWidget
 	GENERATED_BODY()
 
 public:
+	UFUNCTION()
 	void RefreshDisplay();
 
 protected:
@@ -32,6 +33,7 @@ protected:
 	UPROPERTY(meta=(BindWidget)) TObjectPtr<UTextBlock> RewardsText;
 	UPROPERTY(meta=(BindWidget)) TObjectPtr<UTextBlock> RobotStatusText;
 	UPROPERTY(meta=(BindWidget)) TObjectPtr<UTextBlock> MessageText;
+	UPROPERTY(meta=(BindWidgetOptional)) TObjectPtr<UTextBlock> RiskText;
 	UPROPERTY(meta=(BindWidget)) TObjectPtr<UButton>    DispatchButton;
 	UPROPERTY(meta=(BindWidget)) TObjectPtr<UButton>    CloseButton;
 
