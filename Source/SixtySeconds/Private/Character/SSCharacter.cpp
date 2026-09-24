@@ -90,15 +90,16 @@ void ASSCharacter::Interact()
 	}
 
 	// 현재 겹쳐 있는 SSPickupActor 중 가장 가까운 액터 탐색
-	TArray<AActor*> Overlapping;
-	GetOverlappingActors(Overlapping);
+	TArray<AActor*> Pickups, Survivors;
+	GetOverlappingActors(Pickups, ASSPickupActor::StaticClass());
+	GetOverlappingActors(Survivors, ASSSurvivorPickup::StaticClass());
+	Pickups.Append(Survivors);
 
 	float Closest = MAX_FLT;
 	AActor* Target = nullptr;
-	for (AActor* Actor : Overlapping)
+	for (AActor* Actor : Pickups)
 	{
-        if (!IsValid(Actor) || Actor->IsHidden()
-            || (!Actor->IsA<ASSPickupActor>() && !Actor->IsA<ASSSurvivorPickup>())) continue;
+		if (!IsValid(Actor) || Actor->IsHidden()) continue;
 		const float Dist = FVector::Dist(GetActorLocation(), Actor->GetActorLocation());
 		if (Dist < Closest)
 		{

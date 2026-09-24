@@ -26,26 +26,26 @@ void USSItemDefinition::PostLoad()
 	bUseSettingsInitialized = true;
 	// Preserve any explicit settings on newly authored assets.
 	if (UseEffect != ESSItemUseEffect::None || EffectAmount != 0.f) return;
-	if (ItemId == TEXT("Water"))
+	if (ItemId == SSItemIds::Water)
 	{
 		UseEffect = ESSItemUseEffect::RestoreHydration;
 		EffectAmount = 50.f;
 	}
-	else if (ItemId == TEXT("Food"))
+	else if (ItemId == SSItemIds::Food)
 	{
 		UseEffect = ESSItemUseEffect::RestoreSatiety;
 		EffectAmount = 40.f;
 	}
-	else if (ItemId == TEXT("Medkit"))
+	else if (ItemId == SSItemIds::Medkit)
 	{
 		UseEffect = ESSItemUseEffect::RestoreHealth;
 		EffectAmount = 30.f;
 	}
-	else if (ItemId == TEXT("Battery"))
+	else if (ItemId == SSItemIds::Battery)
 	{
 		ItemType = ESSItemType::ExplorationResource;
 	}
-	else if (ItemId == TEXT("RepairKit"))
+	else if (ItemId == SSItemIds::RepairKit)
 	{
 		ItemType = ESSItemType::Tool;
 		bConsumeOnUse = false;

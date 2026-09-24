@@ -8,6 +8,7 @@
 #include "Components/VerticalBoxSlot.h"
 #include "Engine/GameInstance.h"
 #include "Item/SSRunSubsystem.h"
+#include "Item/SSItemDefinition.h"
 
 namespace SSRobotInfoStyle
 {
@@ -102,7 +103,7 @@ void USSRobotInfoContentWidget::RefreshDisplay()
     if (!StatusText || !DescriptionText || !RepairInfoText || !RepairButton) return;
     RepairButton->SetIsEnabled(false);
     if (!IsValid(RunSubsystem)) return;
-    const int32 KitCount = RunSubsystem->GetStoredQuantityById(TEXT("RepairKit"));
+    const int32 KitCount = RunSubsystem->GetStoredQuantityById(SSItemIds::RepairKit);
     FText Status;
     FText Description;
     FText RepairInfo;

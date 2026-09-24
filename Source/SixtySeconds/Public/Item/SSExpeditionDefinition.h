@@ -5,6 +5,8 @@
 #include "Item/SSInventoryTypes.h"
 #include "SSExpeditionDefinition.generated.h"
 
+class USSExplorationMapDefinition;
+
 UCLASS(BlueprintType)
 class SIXTYSECONDS_API USSExpeditionDefinition : public UDataAsset
 {
@@ -35,4 +37,8 @@ public:
 	// 귀환 시 지급되는 보상 (Min~Max 범위에서 랜덤 지급)
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="SS|Expedition")
 	TArray<FSSItemStackRange> Rewards;
+
+	// 직접 탐사 지도. 비어 있으면 이 지역은 로봇 파견만 가능하다.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="SS|Expedition")
+	TObjectPtr<USSExplorationMapDefinition> DirectExplorationMap;
 };

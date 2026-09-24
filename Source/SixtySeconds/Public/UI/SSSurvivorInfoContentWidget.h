@@ -8,8 +8,10 @@
 
 class UTextBlock;
 class UProgressBar;
+class UCheckBox;
 class USSRunSubsystem;
 class UBorder;
+class UButton;
 /**
  * 
  */
@@ -53,10 +55,28 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> ObservationText;
 
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UCheckBox> FoodRationCheckBox;
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UCheckBox> WaterRationCheckBox;
+
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UButton> HealButton;
+
 private:
 	UFUNCTION()
 	void RefreshDisplay();
 
+	UFUNCTION()
+	void OnFoodRationChanged(bool bIsChecked);
+
+	UFUNCTION()
+	void OnWaterRationChanged(bool bIsChecked);
+
+	UFUNCTION()
+	void OnHealClicked();
+	
 	UPROPERTY(Transient)
 	TObjectPtr<USSRunSubsystem> RunSubsystem;
 

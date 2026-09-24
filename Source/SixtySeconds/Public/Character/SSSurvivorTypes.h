@@ -29,6 +29,6 @@ struct SIXTYSECONDS_API FSSSurvivorState
     UPROPERTY(BlueprintReadOnly) TObjectPtr<USSSurvivorDefinition> Definition = nullptr;
     UPROPERTY(BlueprintReadOnly) FSSSurvivorStats Stats;
     UPROPERTY(BlueprintReadOnly) bool bAlive = true;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite) bool bGiveFood = true;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite) bool bGiveWater = true;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite) bool bGiveFood = false;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite) bool bGiveWater = false;
 };

@@ -133,11 +133,7 @@ void USSShelterHUD::OnSurvivorSelected(FName SurvivorId)
         return;
     }
     if (IsValid(InfoPanelWidget) && InfoPanelWidget->IsInViewport()) return;
-    const FSSSurvivorState* State = RunSubsystem->GetRescuedSurvivors().FindByPredicate(
-        [SurvivorId](const FSSSurvivorState& Entry)
-        {
-            return IsValid(Entry.Definition) && Entry.Definition->SurvivorId == SurvivorId;
-        });
+    const FSSSurvivorState* State = RunSubsystem->FindRescuedSurvivor(SurvivorId);
     if (!State) return;
     if (!IsValid(InfoPanelWidget))
         InfoPanelWidget = CreateWidget<USSInfoPanelWidget>(GetGameInstance(), InfoPanelWidgetClass);
@@ -230,32 +226,11 @@ void USSShelterHUD::RefreshDisplay()
     int32 FoodCount = 0;
     int32 BatteryCount = 0;
 
-    static const FName WaterItemId(TEXT("Water"));
-    static const FName FoodItemId(TEXT("Food"));
-    static const FName BatteryItemId(TEXT("Battery"));
-
     if (IsValid(RunSubsystem))
     {
-        for (const FSSItemStack& Stack : RunSubsystem->GetStoredItems())
-        {
-            if (!IsValid(Stack.Item) || Stack.Quantity <= 0)
-            {
-                continue;
-            }
-
-            if (Stack.Item->ItemId == WaterItemId)
-            {
-                WaterCount += Stack.Quantity;
-            }
-            else if (Stack.Item->ItemId == FoodItemId)
-            {
-                FoodCount += Stack.Quantity;
-            }
-            else if (Stack.Item->ItemId == BatteryItemId)
-            {
-                BatteryCount += Stack.Quantity;
-            }
-        }
+        WaterCount   = RunSubsystem->GetStoredQuantityById(SSItemIds::Water);
+        FoodCount    = RunSubsystem->GetStoredQuantityById(SSItemIds::Food);
+        BatteryCount = RunSubsystem->GetStoredQuantityById(SSItemIds::Battery);
     }
 
     if (WaterCountText)
@@ -300,7 +275,7 @@ void USSShelterHUD::OnComputerClicked()
 
 void USSShelterHUD::OnNextDayClicked()
 {
-    if (!IsValid(RunSubsystem) || !FoodRationCheckBox || !WaterRationCheckBox || !FoodRationCheckBox)
+    if (!IsValid(RunSubsystem) || !FoodRationCheckBox || !WaterRationCheckBox)
     {
         return;
     }
@@ -316,12 +291,31 @@ void USSShelterHUD::OnNextDayClicked()
     const bool bGiveFood = FoodRationCheckBox->IsChecked();
     const bool bGiveWater = WaterRationCheckBox->IsChecked();
 
-    if (!RunSubsystem->AdvanceDay(bGiveFood, bGiveWater))
+    int32 RequiredFood = 0;
+    int32 RequiredWater = 0;
+    RunSubsystem->GetRequiredRations(bGiveFood, bGiveWater, RequiredFood, RequiredWater);
+    const int32 StoredFood  = RunSubsystem->GetStoredQuantityById(SSItemIds::Food);
+    const int32 StoredWater = RunSubsystem->GetStoredQuantityById(SSItemIds::Water);
+
+    if (StoredFood < RequiredFood || StoredWater < RequiredWater)
     {
-        UE_LOG(LogTemp, Warning,
-            TEXT("[Shelter] Cannot advance day: dead or insufficient supplies."));
+        if (NextDayMessageText)
+        {
+            NextDayMessageText->SetText(FText::Format(
+                NSLOCTEXT("SS", "RationShortage", "배급 수량 부족 — 식량 {0}/{1} · 물 {2}/{3}"),
+                StoredFood, RequiredFood, StoredWater, RequiredWater));
+        }
         return;
     }
+
+    if (!RunSubsystem->AdvanceDay(bGiveFood, bGiveWater))
+    {
+        if (NextDayMessageText)
+            NextDayMessageText->SetText(NSLOCTEXT("SS", "CannotAdvanceDay", "다음 날로 넘어갈 수 없습니다."));
+        return;
+    }
+
+    if (NextDayMessageText) NextDayMessageText->SetText(FText::GetEmpty());
 
     CurrentDay = RunSubsystem->GetCurrentDay();
 

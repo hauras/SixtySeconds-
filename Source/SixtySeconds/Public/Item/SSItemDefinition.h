@@ -7,6 +7,16 @@
 class UStaticMesh;
 class UTexture2D;
 
+// 코드에서 직접 참조하는 아이템 ID. 데이터에셋의 ItemId와 일치해야 한다.
+namespace SSItemIds
+{
+	inline const FName Food(TEXT("Food"));
+	inline const FName Water(TEXT("Water"));
+	inline const FName Medkit(TEXT("Medkit"));
+	inline const FName Battery(TEXT("Battery"));
+	inline const FName RepairKit(TEXT("RepairKit"));
+}
+
 USTRUCT(BlueprintType)
 struct FSSStockVisual
 {

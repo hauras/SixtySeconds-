@@ -33,9 +33,11 @@ void USSSurvivorImageWidget::NativePreConstruct()
     Super::NativePreConstruct();
     if (SurvivorButton)
     {
-        UCanvasPanelSlot* ButtonSlot = CastChecked<UCanvasPanelSlot>(SurvivorButton->Slot);
-        ButtonSlot->SetAnchors(FAnchors(ClickAreaMin.X, ClickAreaMin.Y, ClickAreaMax.X, ClickAreaMax.Y));
-        ButtonSlot->SetOffsets(FMargin(0));
+        if (UCanvasPanelSlot* ButtonSlot = Cast<UCanvasPanelSlot>(SurvivorButton->Slot))
+        {
+            ButtonSlot->SetAnchors(FAnchors(ClickAreaMin.X, ClickAreaMin.Y, ClickAreaMax.X, ClickAreaMax.Y));
+            ButtonSlot->SetOffsets(FMargin(0));
+        }
     }
     RefreshSurvivor();
 }
@@ -65,13 +67,16 @@ void USSSurvivorImageWidget::NativeDestruct()
 void USSSurvivorImageWidget::RefreshSurvivor()
 {
     if (!SurvivorImage) return;
-    const bool bRescued = IsDesignTime() ? bPreviewRescued
-        : IsValid(RunSubsystem) && IsValid(SurvivorDefinition)
-            && RunSubsystem->IsSurvivorRescued(SurvivorDefinition->SurvivorId);
+    const FSSSurvivorState* State = !IsDesignTime() && IsValid(RunSubsystem) && IsValid(SurvivorDefinition)
+        ? RunSubsystem->FindRescuedSurvivor(SurvivorDefinition->SurvivorId) : nullptr;
+    const bool bRescued = IsDesignTime() ? bPreviewRescued : State != nullptr;
+    const bool bDead = State && !State->bAlive;
     UTexture2D* Texture = bRescued && IsValid(SurvivorDefinition)
         ? SurvivorDefinition->ShelterImage.Get() : nullptr;
     SurvivorImage->SetBrushFromTexture(Texture, false);
     SurvivorImage->SetVisibility(Texture ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Hidden);
+    // 사망한 동료는 어둡게 남겨두고, 클릭하면 정보창에서 사망 상태를 확인할 수 있다.
+    SurvivorImage->SetColorAndOpacity(bDead ? FLinearColor(0.25f, 0.25f, 0.25f, 0.6f) : FLinearColor::White);
     if (SurvivorButton)
     {
         SurvivorButton->SetVisibility(Texture ? ESlateVisibility::Visible : ESlateVisibility::Hidden);

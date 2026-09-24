@@ -3,13 +3,96 @@
 #include "Item/SSExpeditionDefinition.h"
 #include "Character/SSSurvivorDefinition.h"
 
-bool USSRunSubsystem::IsSurvivorRescued(FName SurvivorId) const
+namespace
 {
-    if (SurvivorId.IsNone()) return false;
-    return RescuedSurvivors.ContainsByPredicate([SurvivorId](const FSSSurvivorState& State)
-    {
-        return IsValid(State.Definition) && State.Definition->SurvivorId == SurvivorId;
-    });
+	constexpr float DailySatietyLoss   = 20.f;
+	constexpr float DailyHydrationLoss = 25.f;
+	constexpr float StarvationDamage   = 10.f;
+	constexpr float DehydrationDamage  = 20.f;
+
+	// 하루치 포만감·수분 감소와 굶주림·탈수 피해. 플레이어와 동료 공용.
+	void ApplyDailyDecay(FSSSurvivorStats& Stats)
+	{
+		Stats.Satiety   = FMath::Clamp(Stats.Satiety   - DailySatietyLoss,   0.f, 100.f);
+		Stats.Hydration = FMath::Clamp(Stats.Hydration - DailyHydrationLoss, 0.f, 100.f);
+
+		float Damage = 0.f;
+		if (Stats.Satiety   <= 0.f) Damage += StarvationDamage;
+		if (Stats.Hydration <= 0.f) Damage += DehydrationDamage;
+		Stats.Health = FMath::Clamp(Stats.Health - Damage, 0.f, 100.f);
+	}
+
+	FText RationText(bool bGiven)
+	{
+		return bGiven ? NSLOCTEXT("SSJournal", "Given", "배급함") : NSLOCTEXT("SSJournal", "NotGiven", "배급 안 함");
+	}
+}
+
+const FSSSurvivorState* USSRunSubsystem::FindRescuedSurvivor(FName SurvivorId) const
+{
+	if (SurvivorId.IsNone()) return nullptr;
+	return RescuedSurvivors.FindByPredicate([SurvivorId](const FSSSurvivorState& State)
+	{
+		return IsValid(State.Definition) && State.Definition->SurvivorId == SurvivorId;
+	});
+}
+
+FSSSurvivorState* USSRunSubsystem::FindRescuedSurvivorMutable(FName SurvivorId)
+{
+	return const_cast<FSSSurvivorState*>(FindRescuedSurvivor(SurvivorId));
+}
+
+void USSRunSubsystem::SetSurvivorFoodRation(FName SurvivorId, bool bGive)
+{
+	FSSSurvivorState* Survivor = FindRescuedSurvivorMutable(SurvivorId);
+	if (Survivor && Survivor->bAlive) Survivor->bGiveFood = bGive;
+}
+
+void USSRunSubsystem::SetSurvivorWaterRation(FName SurvivorId, bool bGive)
+{
+	FSSSurvivorState* Survivor = FindRescuedSurvivorMutable(SurvivorId);
+	if (Survivor && Survivor->bAlive) Survivor->bGiveWater = bGive;
+}
+
+bool USSRunSubsystem::HealSurvivor(FName SurvivorId)
+{
+	if (PlayerStats.Health <= 0.f || ActionPoints < HealActionCost)
+	{
+		return false;
+	}
+
+	FSSSurvivorState* Survivor = FindRescuedSurvivorMutable(SurvivorId);
+	if (!Survivor || !Survivor->bAlive || Survivor->Stats.Health <= 0.f || Survivor->Stats.Health >= 100.f) return false;
+
+	const FName MedkitItemId = SSItemIds::Medkit;
+	USSItemDefinition* Medkit = FindStoredItem(MedkitItemId);
+
+	if (!IsValid(Medkit)
+		|| Medkit->UseEffect != ESSItemUseEffect::RestoreHealth
+		|| !FMath::IsFinite(Medkit->EffectAmount)
+		|| Medkit->EffectAmount <= 0.f)
+	{
+		return false;
+	}
+
+	const float HealAmount = Medkit->EffectAmount;
+
+	// 차감에 성공했을 때만 회복
+	if (!ConsumeStoredItems(MedkitItemId, 1))
+	{
+		return false;
+	}
+
+	Survivor->Stats.Health = FMath::Clamp(
+		Survivor->Stats.Health + HealAmount,
+		0.f,
+		100.f);
+
+	ConsumeActionPoints(HealActionCost);
+	// 동료 정보창 갱신
+	OnSurvivorsChanged.Broadcast();
+
+	return true;
 }
 
 bool USSRunSubsystem::RecruitSurvivor(USSSurvivorDefinition* Definition)
@@ -17,8 +100,7 @@ bool USSRunSubsystem::RecruitSurvivor(USSSurvivorDefinition* Definition)
     if (!IsValid(Definition) || Definition->SurvivorId.IsNone() || GetHealth() <= 0.f) return false;
     for (const auto& Following : FollowingSurvivors)
         if (IsValid(Following) && Following->SurvivorId == Definition->SurvivorId) return false;
-    for (const FSSSurvivorState& Rescued : RescuedSurvivors)
-        if (IsValid(Rescued.Definition) && Rescued.Definition->SurvivorId == Definition->SurvivorId) return false;
+    if (FindRescuedSurvivor(Definition->SurvivorId)) return false;
     FollowingSurvivors.Add(Definition);
     OnSurvivorsChanged.Broadcast();
     UE_LOG(LogTemp, Log, TEXT("[Survivor] Following: %s"), *Definition->SurvivorId.ToString());
@@ -352,12 +434,24 @@ void USSRunSubsystem::FulfillExpedition()
 	OnStoredItemsChanged.Broadcast();
 }
 
+void USSRunSubsystem::GetRequiredRations(bool bGiveFood, bool bGiveWater, int32& OutFood, int32& OutWater) const
+{
+	OutFood  = bGiveFood  ? 1 : 0;
+	OutWater = bGiveWater ? 1 : 0;
+	for (const FSSSurvivorState& Survivor : RescuedSurvivors)
+	{
+		if (!Survivor.bAlive || !IsValid(Survivor.Definition)) continue;
+		OutFood  += Survivor.bGiveFood  ? 1 : 0;
+		OutWater += Survivor.bGiveWater ? 1 : 0;
+	}
+}
+
 bool USSRunSubsystem::AdvanceDay(bool bGiveFood, bool bGiveWater)
 {
 	if (PlayerStats.Health <= 0.f) return false;
 
-	static const FName FoodItemId(TEXT("Food"));
-	static const FName WaterItemId(TEXT("Water"));
+	const FName FoodItemId  = SSItemIds::Food;
+	const FName WaterItemId = SSItemIds::Water;
 
 	USSItemDefinition* Food  = FindStoredItem(FoodItemId);
 	USSItemDefinition* Water = FindStoredItem(WaterItemId);
@@ -368,31 +462,50 @@ bool USSRunSubsystem::AdvanceDay(bool bGiveFood, bool bGiveWater)
 			&& FMath::IsFinite(Item->EffectAmount) && Item->EffectAmount > 0.f;
 	};
 
-	if (bGiveFood && !IsRationValid(Food, ESSItemUseEffect::RestoreSatiety))
-		return false;
+	// 플레이어와 동료의 전체 배급 필요량
+	int32 RequiredFood = 0;
+	int32 RequiredWater = 0;
+	GetRequiredRations(bGiveFood, bGiveWater, RequiredFood, RequiredWater);
 
-	if (bGiveWater && !IsRationValid(Water, ESSItemUseEffect::RestoreHydration))
+	// 배급 아이템 데이터 검사
+	if (RequiredFood > 0
+		&& !IsRationValid(Food, ESSItemUseEffect::RestoreSatiety))
+	{
 		return false;
+	}
+
+	if (RequiredWater > 0
+		&& !IsRationValid(Water, ESSItemUseEffect::RestoreHydration))
+	{
+		return false;
+	}
+
+	// 전체 배급량이 부족하면 아무것도 변경하지 않고 중단
+	if (GetStoredQuantityById(FoodItemId) < RequiredFood
+		|| GetStoredQuantityById(WaterItemId) < RequiredWater)
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[Ration] Insufficient supplies. Required: Food %d, Water %d"),
+			RequiredFood, RequiredWater);
+
+		return false;
+	}
 
 	const float HealthBeforeDay = PlayerStats.Health;
 	if (bGiveFood)  ApplyItemEffect(Food,  true);
 	if (bGiveWater) ApplyItemEffect(Water, true);
 
-	PlayerStats.Satiety   = FMath::Clamp(PlayerStats.Satiety   - 20.f, 0.f, 100.f);
-	PlayerStats.Hydration = FMath::Clamp(PlayerStats.Hydration - 25.f, 0.f, 100.f);
+	ApplyDailyDecay(PlayerStats);
 
-	float Damage = 0.f;
-	if (PlayerStats.Satiety   <= 0.f) Damage += 10.f;
-	if (PlayerStats.Hydration <= 0.f) Damage += 20.f;
-
-	PlayerStats.Health = FMath::Clamp(PlayerStats.Health - Damage, 0.f, 100.f);
 	RecordEvent(ESSJournalEvent::Rations, FText::Format(NSLOCTEXT("SSJournal", "Rations", "오늘 배급 — 식량: {0} / 물: {1}"),
-		bGiveFood ? NSLOCTEXT("SSJournal", "Given", "배급함") : NSLOCTEXT("SSJournal", "NotGiven", "배급 안 함"),
-		bGiveWater ? NSLOCTEXT("SSJournal", "Given", "배급함") : NSLOCTEXT("SSJournal", "NotGiven", "배급 안 함")));
+		RationText(bGiveFood), RationText(bGiveWater)));
+
 	RecordEvent(ESSJournalEvent::DayEnd, FText::Format(NSLOCTEXT("SSJournal", "DayEnd", "하루 종료 — 체력 {0} / 포만감 {1} / 수분 {2}"),
 		FMath::RoundToInt(PlayerStats.Health), FMath::RoundToInt(PlayerStats.Satiety), FMath::RoundToInt(PlayerStats.Hydration)));
+	
 	if (PlayerStats.Health < HealthBeforeDay)
 		RecordEvent(ESSJournalEvent::DayEnd, FText::Format(NSLOCTEXT("SSJournal", "Damage", "굶주림·탈수로 체력이 {0} 감소했다."), FMath::RoundToInt(HealthBeforeDay - PlayerStats.Health)));
+
 	if (PlayerStats.Health <= 0.f)
 		RecordEvent(ESSJournalEvent::Death, NSLOCTEXT("SSJournal", "Death", "생존자가 사망했다."));
 
@@ -401,24 +514,22 @@ bool USSRunSubsystem::AdvanceDay(bool bGiveFood, bool bGiveWater)
 	{
 		if (!Survivor.bAlive || !IsValid(Survivor.Definition)) continue;
 
-		if (Survivor.bGiveFood && IsRationValid(Food, ESSItemUseEffect::RestoreSatiety))
+		if (Survivor.bGiveFood && IsRationValid(Food, ESSItemUseEffect::RestoreSatiety)
+			&& ConsumeStoredItems(FoodItemId, 1))
 		{
-			ConsumeStoredItems(FoodItemId, 1);
 			Survivor.Stats.Satiety = FMath::Clamp(Survivor.Stats.Satiety + Food->EffectAmount, 0.f, 100.f);
 		}
-		if (Survivor.bGiveWater && IsRationValid(Water, ESSItemUseEffect::RestoreHydration))
+		if (Survivor.bGiveWater && IsRationValid(Water, ESSItemUseEffect::RestoreHydration)
+			&& ConsumeStoredItems(WaterItemId, 1))
 		{
-			ConsumeStoredItems(WaterItemId, 1);
 			Survivor.Stats.Hydration = FMath::Clamp(Survivor.Stats.Hydration + Water->EffectAmount, 0.f, 100.f);
 		}
 
-		Survivor.Stats.Satiety   = FMath::Clamp(Survivor.Stats.Satiety   - 20.f, 0.f, 100.f);
-		Survivor.Stats.Hydration = FMath::Clamp(Survivor.Stats.Hydration - 25.f, 0.f, 100.f);
+		RecordEvent(ESSJournalEvent::Rations, FText::Format(
+			NSLOCTEXT("SSJournal", "SurvivorRations", "{0} 배급 — 식량: {1} / 물: {2}"),
+			Survivor.Definition->DisplayName, RationText(Survivor.bGiveFood), RationText(Survivor.bGiveWater)));
 
-		float SurvivorDamage = 0.f;
-		if (Survivor.Stats.Satiety   <= 0.f) SurvivorDamage += 10.f;
-		if (Survivor.Stats.Hydration <= 0.f) SurvivorDamage += 20.f;
-		Survivor.Stats.Health = FMath::Clamp(Survivor.Stats.Health - SurvivorDamage, 0.f, 100.f);
+		ApplyDailyDecay(Survivor.Stats);
 
 		if (Survivor.Stats.Health <= 0.f)
 		{
@@ -428,6 +539,14 @@ bool USSRunSubsystem::AdvanceDay(bool bGiveFood, bool bGiveWater)
 				Survivor.Definition->DisplayName));
 		}
 	}
+
+	// 하루 배급 처리가 끝났으므로 다음 날 예약은 해제
+	for (FSSSurvivorState& Survivor : RescuedSurvivors)
+	{
+		Survivor.bGiveFood = false;
+		Survivor.bGiveWater = false;
+	}
+
 	OnSurvivorsChanged.Broadcast();
 
 	++CurrentDay;
@@ -454,8 +573,7 @@ bool USSRunSubsystem::RepairRobot()
 		return false;
 	}
 
-	static const FName RepairKitId(TEXT("RepairKit"));
-	if (!ConsumeItem(RepairKitId))
+	if (!ConsumeItem(SSItemIds::RepairKit))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[Robot] 수리키트 부족 — 수리 불가"));
 		return false;

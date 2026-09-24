@@ -9,8 +9,6 @@
 
 void USSInfoPanelWidget::SetPanelContent(UWidget* InContent)
 {
-	if (ActionSlot) ActionSlot->ClearChildren();
-    if (ObservationSlot) ObservationSlot->ClearChildren();
 	if (ContentSlot) ContentSlot->SetContent(InContent);
 }
 

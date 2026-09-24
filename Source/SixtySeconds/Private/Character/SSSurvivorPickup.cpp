@@ -42,7 +42,8 @@ bool ASSSurvivorPickup::TryRecruit(APawn* PlayerPawn)
         || !InteractionSphere->IsOverlappingActor(PlayerPawn) || !IsValid(Mode)
         || Mode->GetCurrentPhase() != ESSGamePhase::Scramble
         || Mode->GetScrambleTimeRemaining() <= 0.f) return false;
-    USSRunSubsystem* Run = GetGameInstance()->GetSubsystem<USSRunSubsystem>();
+    UGameInstance* GI = GetGameInstance();
+    USSRunSubsystem* Run = IsValid(GI) ? GI->GetSubsystem<USSRunSubsystem>() : nullptr;
     if (!IsValid(Run) || !Run->RecruitSurvivor(Definition)) return false;
     bRecruited = true;
     SetActorHiddenInGame(true);

@@ -78,7 +78,11 @@ protected:
 
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UCheckBox> WaterRationCheckBox;
-	
+
+	// 다음 날로 넘어가지 못한 이유 표시 (배급 수량 부족 등)
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UTextBlock> NextDayMessageText;
+
 private:
     UFUNCTION()
     void OnSurvivorSelected(FName SurvivorId);
