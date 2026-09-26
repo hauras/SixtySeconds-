@@ -1,5 +1,6 @@
 #include "Exploration/SSExplorationMapDefinition.h"
 #include "Misc/AutomationTest.h"
+#include <limits>
 
 #if WITH_DEV_AUTOMATION_TESTS
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSSExplorationMapTest, "SS.Exploration.MapValidation",
@@ -54,6 +55,24 @@ bool FSSExplorationMapTest::RunTest(const FString& Parameters)
     TestFalse(TEXT("Guard starting at entrance rejected"), Map->Validate(Errors));
 
     Map->PatrolRoute = { TEXT("Storage"), TEXT("Hall") };
+
+    // 규칙 수치: 에디터 ClampMin을 거치지 않은 값도 걸러야 함
+    const auto ExpectInvalid = [this, Map, &Errors](const TCHAR* What)
+    {
+        Errors.Reset();
+        TestFalse(What, Map->Validate(Errors));
+    };
+    Map->MaxTurns = 0;            ExpectInvalid(TEXT("Zero turns rejected"));            Map->MaxTurns = 12;
+    Map->CarryCapacity = 0;       ExpectInvalid(TEXT("Zero carry capacity rejected"));   Map->CarryCapacity = 4;
+    Map->NoiseRange = -1;         ExpectInvalid(TEXT("Negative noise range rejected"));  Map->NoiseRange = 2;
+    Map->EmergencyInjury = -5.f;  ExpectInvalid(TEXT("Negative injury rejected"));       Map->EmergencyInjury = 30.f;
+    Map->EmergencyInjury = std::numeric_limits<float>::quiet_NaN();   ExpectInvalid(TEXT("NaN injury rejected"));            Map->EmergencyInjury = 30.f;
+    Map->ExitRoomId = TEXT("Entrance");
+    ExpectInvalid(TEXT("Same entrance and exit rejected"));
+    Map->ExitRoomId = TEXT("Exit");
+    Errors.Reset();
+    TestTrue(TEXT("Restored map valid again"), Map->Validate(Errors));
+
     Map->Rooms[2].RoomId = TEXT("Hall");
     Errors.Reset();
     TestFalse(TEXT("Duplicate room id rejected"), Map->Validate(Errors));

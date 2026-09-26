@@ -42,7 +42,7 @@ TArray<int32> USSExplorationMapDefinition::FindShortestPath(const TArray<TArray<
 		if (Current == To) break;
 		for (const int32 Next : Adjacency[Current])
 		{
-			if (Visited[Next]) continue;
+			if (!Adjacency.IsValidIndex(Next) || Visited[Next]) continue;   // 잘못된 인접 배열이 넘어와도 범위 밖 접근 방지
 			Visited[Next] = true;
 			Previous[Next] = Current;
 			Queue.Add(Next);
@@ -58,6 +58,16 @@ TArray<int32> USSExplorationMapDefinition::FindShortestPath(const TArray<TArray<
 bool USSExplorationMapDefinition::Validate(TArray<FText>& OutErrors) const
 {
 	const int32 ErrorsBefore = OutErrors.Num();
+
+	// ClampMin은 에디터 입력만 막으므로 코드·스크립트로 들어온 값도 여기서 검사
+	if (MaxTurns <= 0)
+		OutErrors.Add(LOCTEXT("BadMaxTurns", "MaxTurns는 1 이상이어야 합니다."));
+	if (CarryCapacity <= 0)
+		OutErrors.Add(LOCTEXT("BadCarryCapacity", "CarryCapacity는 1 이상이어야 합니다."));
+	if (NoiseRange < 0)
+		OutErrors.Add(LOCTEXT("BadNoiseRange", "NoiseRange는 0 이상이어야 합니다."));
+	if (!FMath::IsFinite(EmergencyInjury) || EmergencyInjury < 0.f)
+		OutErrors.Add(LOCTEXT("BadInjury", "EmergencyInjury는 0 이상의 유한한 값이어야 합니다."));
 
 	TSet<FName> SeenIds;
 	for (const FSSExplorationRoom& Room : Rooms)
@@ -82,6 +92,10 @@ bool USSExplorationMapDefinition::Validate(TArray<FText>& OutErrors) const
 	if (Entrance == INDEX_NONE || Exit == INDEX_NONE)
 	{
 		OutErrors.Add(LOCTEXT("MissingEndpoints", "입구 또는 출구 구역이 지정되지 않았습니다."));
+	}
+	else if (Entrance == Exit)
+	{
+		OutErrors.Add(LOCTEXT("SameEndpoints", "입구와 출구가 같은 구역이면 시작하자마자 귀환할 수 있습니다."));
 	}
 	else
 	{

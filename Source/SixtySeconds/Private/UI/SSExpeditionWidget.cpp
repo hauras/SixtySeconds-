@@ -3,6 +3,8 @@
 #include "Components/Button.h"
 #include "Item/SSExpeditionDefinition.h"
 #include "Item/SSRunSubsystem.h"
+#include "UI/SSExplorationWidget.h"
+#include "Exploration/SSExplorationMapDefinition.h"   // IsValid(DirectExplorationMap)에 완전한 타입 필요
 #include "Engine/GameInstance.h"
 
 void USSExpeditionWidget::NativeConstruct()
@@ -17,6 +19,9 @@ void USSExpeditionWidget::NativeConstruct()
 
 	if (CloseButton)
 		CloseButton->OnClicked.AddUniqueDynamic(this, &USSExpeditionWidget::OnCloseClicked);
+
+	if (DirectExploreButton)
+		DirectExploreButton->OnClicked.AddUniqueDynamic(this, &USSExpeditionWidget::OnDirectExploreClicked);
 
 	if (IsValid(RunSubsystem))
 	{
@@ -41,6 +46,7 @@ void USSExpeditionWidget::NativeDestruct()
 	}
 	if (DispatchButton) DispatchButton->OnClicked.RemoveDynamic(this, &USSExpeditionWidget::OnDispatchClicked);
 	if (CloseButton) CloseButton->OnClicked.RemoveDynamic(this, &USSExpeditionWidget::OnCloseClicked);
+	if (DirectExploreButton) DirectExploreButton->OnClicked.RemoveDynamic(this, &USSExpeditionWidget::OnDirectExploreClicked);
 
 	Super::NativeDestruct();
 }
@@ -51,6 +57,15 @@ void USSExpeditionWidget::RefreshDisplay()
 		&& IsValid(ExpeditionDefinition) && RunSubsystem->GetHealth() > 0.f
 		&& RunSubsystem->GetRobotState() == ESSRobotState::Idle
 		&& RunSubsystem->GetActionPoints() >= USSRunSubsystem::ExpeditionActionCost);
+
+	if (DirectExploreButton)
+	{
+		// 지도가 없는 지역은 로봇 파견만 가능하므로 버튼 자체를 숨김
+		const bool bHasMap = IsValid(ExpeditionDefinition) && IsValid(ExpeditionDefinition->DirectExplorationMap);
+		DirectExploreButton->SetVisibility(bHasMap ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+		DirectExploreButton->SetIsEnabled(bHasMap && IsValid(RunSubsystem) && RunSubsystem->GetHealth() > 0.f);
+	}
+
 	if (!IsValid(RunSubsystem)) return;
 
 	// 지역 정보
@@ -183,6 +198,27 @@ void USSExpeditionWidget::OnDispatchClicked()
 void USSExpeditionWidget::OnCloseClicked()
 {
 	RemoveFromParent();
+}
+
+void USSExpeditionWidget::OnDirectExploreClicked()
+{
+	if (!IsValid(ExpeditionDefinition) || !IsValid(ExpeditionDefinition->DirectExplorationMap)) return;
+	if (!ExplorationWidgetClass)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Exploration] ExplorationWidgetClass not assigned in WBP_Expedition Class Defaults"));
+		return;
+	}
+	if (IsValid(ExplorationWidget) && ExplorationWidget->IsInViewport()) return;   // 이미 열려 있음
+
+	ExplorationWidget = CreateWidget<USSExplorationWidget>(GetOwningPlayer(), ExplorationWidgetClass);
+	if (!IsValid(ExplorationWidget)) return;
+
+	ExplorationWidget->AddToViewport(30);   // 탐사 창·정보창(20)보다 위
+	if (!ExplorationWidget->StartExploration(ExpeditionDefinition->DirectExplorationMap))
+	{
+		ExplorationWidget->RemoveFromParent();   // 지도 검사 실패 — 이유는 [Exploration] 로그 참고
+		if (MessageText) MessageText->SetText(NSLOCTEXT("SSExpeditionUI", "ExploreMapInvalid", "탐사 지도 데이터 오류."));
+	}
 }
 
 void USSExpeditionWidget::OnRobotReturnedHandler(const FSSExpeditionResult& Result)

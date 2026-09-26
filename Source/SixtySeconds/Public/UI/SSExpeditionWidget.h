@@ -9,6 +9,7 @@ class UTextBlock;
 class UButton;
 class USSExpeditionDefinition;
 class USSRunSubsystem;
+class USSExplorationWidget;
 
 UCLASS(Abstract)
 class SIXTYSECONDS_API USSExpeditionWidget : public UUserWidget
@@ -37,10 +38,19 @@ protected:
 	UPROPERTY(meta=(BindWidget)) TObjectPtr<UButton>    DispatchButton;
 	UPROPERTY(meta=(BindWidget)) TObjectPtr<UButton>    CloseButton;
 
+	// 직접 탐사: 지역 DA에 StealthMap(DirectExplorationMap)이 있을 때만 보임
+	UPROPERTY(meta=(BindWidgetOptional)) TObjectPtr<UButton> DirectExploreButton;
+
+	// 직접 탐사 화면 WBP (예: WBP_Exploration_SupplyDepot) — Class Defaults에서 지정
+	UPROPERTY(EditDefaultsOnly, Category="SS|Exploration")
+	TSubclassOf<USSExplorationWidget> ExplorationWidgetClass;
+
 private:
 	UFUNCTION() void OnDispatchClicked();
 	UFUNCTION() void OnCloseClicked();
+	UFUNCTION() void OnDirectExploreClicked();
 	UFUNCTION() void OnRobotReturnedHandler(const FSSExpeditionResult& Result);
 
 	UPROPERTY(Transient) TObjectPtr<USSRunSubsystem> RunSubsystem;
+	UPROPERTY(Transient) TObjectPtr<USSExplorationWidget> ExplorationWidget;   // 중복으로 여는 것 방지
 };

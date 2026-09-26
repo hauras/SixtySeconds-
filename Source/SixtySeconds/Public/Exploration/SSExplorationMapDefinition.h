@@ -5,8 +5,6 @@
 #include "Exploration/SSExplorationTypes.h"
 #include "SSExplorationMapDefinition.generated.h"
 
-class UTexture2D;
-
 // 직접 탐사 지도 하나의 고정 데이터: 구역, 통로, 순찰 경로, 규칙 수치
 UCLASS(BlueprintType)
 class SIXTYSECONDS_API USSExplorationMapDefinition : public UDataAsset
@@ -14,9 +12,6 @@ class SIXTYSECONDS_API USSExplorationMapDefinition : public UDataAsset
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="SS|Exploration")
-	TObjectPtr<UTexture2D> Background;
-
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="SS|Exploration")
 	TArray<FSSExplorationRoom> Rooms;
 

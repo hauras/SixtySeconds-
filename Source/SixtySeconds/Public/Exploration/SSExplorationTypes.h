@@ -30,7 +30,7 @@ enum class ESSExplorationOutcome : uint8
 	TimeOut,  // 턴 소진 — 비상 귀환
 };
 
-// 지도 위 구역 하나. 좌표는 지도 이미지 기준 0~1 비율.
+// 지도 위 구역 하나. 화면 위치는 탐사 WBP에 배치한 방 위젯이 정한다.
 USTRUCT(BlueprintType)
 struct SIXTYSECONDS_API FSSExplorationRoom
 {
@@ -41,12 +41,6 @@ struct SIXTYSECONDS_API FSSExplorationRoom
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="SS|Exploration")
 	FText DisplayName;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="SS|Exploration")
-	FVector2D MapMin = FVector2D::ZeroVector;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="SS|Exploration")
-	FVector2D MapMax = FVector2D(0.1, 0.1);
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="SS|Exploration")
 	bool bSearchable = false;
