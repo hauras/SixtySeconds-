@@ -2,6 +2,7 @@
 #include "Item/SSItemDefinition.h"
 #include "Item/SSExpeditionDefinition.h"
 #include "Character/SSSurvivorDefinition.h"
+#include "Exploration/SSExplorationTypes.h"
 
 namespace
 {
@@ -446,7 +447,64 @@ void USSRunSubsystem::GetRequiredRations(bool bGiveFood, bool bGiveWater, int32&
 	}
 }
 
+bool USSRunSubsystem::HasRationsFor(bool bGiveFood, bool bGiveWater) const
+{
+	int32 RequiredFood = 0;
+	int32 RequiredWater = 0;
+	GetRequiredRations(bGiveFood, bGiveWater, RequiredFood, RequiredWater);
+	return GetStoredQuantityById(SSItemIds::Food) >= RequiredFood
+		&& GetStoredQuantityById(SSItemIds::Water) >= RequiredWater;
+}
+
 bool USSRunSubsystem::AdvanceDay(bool bGiveFood, bool bGiveWater)
+{
+	if (!AdvanceDayCore(bGiveFood, bGiveWater)) return false;
+	OnDayAdvanced.Broadcast();   // 은신처 HUD가 날짜·스탯 갱신과 사망 확인
+	return true;
+}
+
+bool USSRunSubsystem::ApplyExplorationResult(const FSSExplorationResult& Result, bool bGiveFood, bool bGiveWater)
+{
+	if (PlayerStats.Health <= 0.f || Result.Outcome == ESSExplorationOutcome::InProgress) return false;
+	if (!HasRationsFor(bGiveFood, bGiveWater)) return false;   // 출발 때 확인했지만, 그사이 바뀌었으면 아무것도 바꾸지 않음
+
+	// 탐사는 출발한 날의 일이라 하루가 넘어가기 전에 기록
+	FText Summary;
+	switch (Result.Outcome)
+	{
+	case ESSExplorationOutcome::Returned:
+		Summary = FText::Format(NSLOCTEXT("SSJournal", "ExploreReturned", "직접 탐사에서 무사히 귀환했다. ({0}턴)"), Result.TurnsUsed);
+		break;
+	case ESSExplorationOutcome::Caught:
+		Summary = NSLOCTEXT("SSJournal", "ExploreCaught", "직접 탐사 중 경비 로봇에게 발각되어 물품을 버리고 도망쳤다.");
+		break;
+	default:
+		Summary = NSLOCTEXT("SSJournal", "ExploreTimeOut", "직접 탐사 중 시간이 다 되어 물품을 버리고 도망쳤다.");
+		break;
+	}
+	RecordEvent(ESSJournalEvent::Expedition, Summary);
+
+	// 정산 순서: 하루 경과(출발 전 재고로 배급) → 입고 → 부상
+	if (!AdvanceDayCore(bGiveFood, bGiveWater)) return false;
+
+	if (Result.Outcome == ESSExplorationOutcome::Returned)
+	{
+		DepositItems(Result.Items);
+	}
+	else if (Result.Injury > 0.f && PlayerStats.Health > 0.f)
+	{
+		PlayerStats.Health = FMath::Clamp(PlayerStats.Health - Result.Injury, 0.f, 100.f);
+		RecordEvent(ESSJournalEvent::DayEnd, FText::Format(
+			NSLOCTEXT("SSJournal", "ExploreInjury", "도망치다 다쳐 체력이 {0} 감소했다."), FMath::RoundToInt(Result.Injury)));
+		if (PlayerStats.Health <= 0.f)
+			RecordEvent(ESSJournalEvent::Death, NSLOCTEXT("SSJournal", "Death", "생존자가 사망했다."));
+	}
+
+	OnDayAdvanced.Broadcast();
+	return true;
+}
+
+bool USSRunSubsystem::AdvanceDayCore(bool bGiveFood, bool bGiveWater)
 {
 	if (PlayerStats.Health <= 0.f) return false;
 

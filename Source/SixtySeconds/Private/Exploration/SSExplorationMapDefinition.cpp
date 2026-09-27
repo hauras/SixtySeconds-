@@ -68,6 +68,8 @@ bool USSExplorationMapDefinition::Validate(TArray<FText>& OutErrors) const
 		OutErrors.Add(LOCTEXT("BadNoiseRange", "NoiseRange는 0 이상이어야 합니다."));
 	if (!FMath::IsFinite(EmergencyInjury) || EmergencyInjury < 0.f)
 		OutErrors.Add(LOCTEXT("BadInjury", "EmergencyInjury는 0 이상의 유한한 값이어야 합니다."));
+	if (BaseTurns < 0 || TurnsPerActionPoint <= 0 || MinActionPoints < 0)
+		OutErrors.Add(LOCTEXT("BadTurnFormula", "BaseTurns·MinActionPoints는 0 이상, TurnsPerActionPoint는 1 이상이어야 합니다."));
 
 	TSet<FName> SeenIds;
 	for (const FSSExplorationRoom& Room : Rooms)
@@ -104,6 +106,8 @@ bool USSExplorationMapDefinition::Validate(TArray<FText>& OutErrors) const
 			OutErrors.Add(LOCTEXT("Unreachable", "입구에서 출구까지 이어지는 경로가 없습니다."));
 		else if (ExitPath.Num() - 1 > MaxTurns)
 			OutErrors.Add(LOCTEXT("TooFar", "출구까지의 최소 이동 턴이 MaxTurns보다 많습니다."));
+		else if (ExitPath.Num() - 1 > GetTurnBudget(MinActionPoints))
+			OutErrors.Add(LOCTEXT("TooFarForMinAP", "최소 행동력으로 출발하면 출구까지 갈 턴이 부족합니다."));
 	}
 
 	if (PatrolRoute.IsEmpty())

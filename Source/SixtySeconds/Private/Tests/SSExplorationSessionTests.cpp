@@ -1,5 +1,6 @@
 #include "Exploration/SSExplorationSession.h"
 #include "Exploration/SSExplorationMapDefinition.h"
+#include "Item/SSItemDefinition.h"
 #include "Misc/AutomationTest.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
@@ -121,6 +122,10 @@ bool FSSExplorationGuardTest::RunTest(const FString& Parameters)
     TestEqual(TEXT("Guard stays after catching"), Session->GetGuardRoom(), 2);
     TestFalse(TEXT("No moves after caught"), Session->CanMoveTo(1));
     TestFalse(TEXT("MoveTo rejected after caught"), Session->MoveTo(1));
+    const FSSExplorationResult CaughtResult = Session->MakeResult();
+    TestTrue(TEXT("Caught result outcome"), CaughtResult.Outcome == ESSExplorationOutcome::Caught);
+    TestEqual(TEXT("Caught result injury"), CaughtResult.Injury, Map->EmergencyInjury);
+    TestEqual(TEXT("Caught result turns used"), CaughtResult.TurnsUsed, 2);
 
     // 3. 경비를 피해 다니며 턴을 다 쓰면 시간 초과
     USSExplorationSession* Walker = NewObject<USSExplorationSession>();
@@ -132,6 +137,10 @@ bool FSSExplorationGuardTest::RunTest(const FString& Parameters)
     TestEqual(TEXT("All turns used"), Walker->GetRemainingTurns(), 0);
     TestTrue(TEXT("Time out after last turn"), Walker->GetOutcome() == ESSExplorationOutcome::TimeOut);
     TestFalse(TEXT("No moves after time out"), Walker->CanMoveTo(1));
+    const FSSExplorationResult TimeOutResult = Walker->MakeResult();
+    TestTrue(TEXT("Time out result outcome"), TimeOutResult.Outcome == ESSExplorationOutcome::TimeOut);
+    TestEqual(TEXT("Time out result injury"), TimeOutResult.Injury, Map->EmergencyInjury);
+    TestEqual(TEXT("Time out result turns used"), TimeOutResult.TurnsUsed, 4);
 
     // 4. 경비가 플레이어 방으로 걸어 들어와도 발각
     Map->PatrolRoute = { TEXT("B"), TEXT("A") };   // 경비: B(2) ↔ A(1)
@@ -141,6 +150,123 @@ bool FSSExplorationGuardTest::RunTest(const FString& Parameters)
     TestTrue(TEXT("Player moves to A"), Ambush->MoveTo(1));   // 플레이어가 A로 가는 순간 경비는 B → 다음에 A
     TestTrue(TEXT("Caught when guard walks into player room"), Ambush->GetOutcome() == ESSExplorationOutcome::Caught);
     TestEqual(TEXT("Guard entered player room"), Ambush->GetGuardRoom(), 1);
+
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSSExplorationLootTest, "SS.Exploration.SessionLoot",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FSSExplorationLootTest::RunTest(const FString& Parameters)
+{
+    // 아이템: 식량(1칸), 약품(2칸)
+    USSItemDefinition* Food = NewObject<USSItemDefinition>();
+    Food->ItemId = TEXT("Food");
+    Food->CarryCost = 1;
+    USSItemDefinition* Medkit = NewObject<USSItemDefinition>();
+    Medkit->ItemId = TEXT("Medkit");
+    Medkit->CarryCost = 2;
+
+    // 지도: Entrance(0) - Storage(1) - Exit(2) - Far(3), 경비는 Far에 고정
+    USSExplorationMapDefinition* Map = NewObject<USSExplorationMapDefinition>();
+    for (const TCHAR* Id : { TEXT("Entrance"), TEXT("Storage"), TEXT("Exit"), TEXT("Far") })
+    {
+        Map->Rooms.AddDefaulted_GetRef().RoomId = Id;
+    }
+    FSSExplorationRoom& Storage = Map->Rooms[1];
+    Storage.bSearchable = true;
+    FSSItemStack FoodStack;   FoodStack.Item = Food;     FoodStack.Quantity = 3;
+    FSSItemStack MedStack;    MedStack.Item = Medkit;    MedStack.Quantity = 1;
+    Storage.Loot = { FoodStack, MedStack };
+
+    const auto Connect = [Map](const TCHAR* A, const TCHAR* B)
+    {
+        FSSExplorationPassage& Passage = Map->Passages.AddDefaulted_GetRef();
+        Passage.RoomA = A;
+        Passage.RoomB = B;
+    };
+    Connect(TEXT("Entrance"), TEXT("Storage"));
+    Connect(TEXT("Storage"), TEXT("Exit"));
+    Connect(TEXT("Exit"), TEXT("Far"));
+    Map->EntranceRoomId = TEXT("Entrance");
+    Map->ExitRoomId = TEXT("Exit");
+    Map->PatrolRoute = { TEXT("Far") };   // 경비가 움직이지 않아 수색 규칙만 확인
+    Map->MaxTurns = 12;
+    Map->CarryCapacity = 4;
+
+    USSExplorationSession* Session = NewObject<USSExplorationSession>();
+    TestTrue(TEXT("Initialize loot map"), Session->Initialize(Map));
+
+    // 1. 수색 불가 방: 입구
+    TestFalse(TEXT("Entrance is not searchable"), Session->CanSearch());
+    TestFalse(TEXT("Search rejected at entrance"), Session->Search());
+    TestEqual(TEXT("Rejected search uses no turn"), Session->GetRemainingTurns(), 12);
+    TestFalse(TEXT("Cannot return from entrance"), Session->CanReturn());
+
+    // 2. 대기: 턴만 1 줄어듦
+    TestTrue(TEXT("Wait"), Session->Wait());
+    TestEqual(TEXT("Wait uses one turn"), Session->GetRemainingTurns(), 11);
+    TestEqual(TEXT("Wait keeps position"), Session->GetCurrentRoom(), 0);
+
+    // 3. 수색 전에는 아무것도 담기지 않음
+    TestTrue(TEXT("Move to storage"), Session->MoveTo(1));
+    TestEqual(TEXT("Storage still has its loot before search"), Session->GetCurrentRoomLoot().Num(), 2);
+    TestEqual(TEXT("Nothing carried before search"), Session->GetCarriedLoad(), 0);
+    TestFalse(TEXT("Storage not searched yet"), Session->IsCurrentRoomSearched());
+
+    // 4. 수색: 1턴, 들어가는 만큼 자동으로 담김
+    //    식량 3개(1칸씩) → 3칸, 약품(2칸)은 3+2=5 > 4라 방에 남음
+    TestTrue(TEXT("Can search storage"), Session->CanSearch());
+    TestTrue(TEXT("Search storage"), Session->Search());
+    TestEqual(TEXT("Search uses one turn"), Session->GetRemainingTurns(), 9);
+    TestTrue(TEXT("Storage marked searched"), Session->IsCurrentRoomSearched());
+    TestEqual(TEXT("Auto-collected up to capacity"), Session->GetCarriedLoad(), 3);
+    TestEqual(TEXT("Same item stacks in one slot"), Session->GetCarried().Num(), 1);
+    TestTrue(TEXT("Carried item is food"), Session->GetCarried()[0].Item == Food);
+    TestEqual(TEXT("Carried food quantity"), Session->GetCarried()[0].Quantity, 3);
+    TestEqual(TEXT("Only medkit left in room"), Session->GetCurrentRoomLoot().Num(), 1);
+    TestTrue(TEXT("Leftover is medkit"), Session->GetCurrentRoomLoot()[0].Item == Medkit);
+
+    // 5. 방마다 한 번만: 남은 물자가 있어도 다시 수색 불가
+    TestFalse(TEXT("Cannot search twice"), Session->CanSearch());
+    TestFalse(TEXT("Second search rejected"), Session->Search());
+    TestEqual(TEXT("Rejected search uses no turn"), Session->GetRemainingTurns(), 9);
+    TestEqual(TEXT("Load unchanged after rejected search"), Session->GetCarriedLoad(), 3);
+
+    // 6. 귀환: 출구에서만, 턴을 안 쓰고, 이후 모든 행동 불가
+    TestFalse(TEXT("Cannot return from storage"), Session->ReturnToShelter());
+    TestTrue(TEXT("Move to exit"), Session->MoveTo(2));
+    TestEqual(TEXT("Turns before return"), Session->GetRemainingTurns(), 8);
+    TestTrue(TEXT("Can return at exit"), Session->CanReturn());
+    TestTrue(TEXT("Return"), Session->ReturnToShelter());
+    TestTrue(TEXT("Outcome is Returned"), Session->GetOutcome() == ESSExplorationOutcome::Returned);
+    TestEqual(TEXT("Return uses no turn"), Session->GetRemainingTurns(), 8);
+    TestEqual(TEXT("Carried items kept on return"), Session->GetCarriedLoad(), 3);
+    TestFalse(TEXT("No acting after return"), Session->CanAct());
+    TestFalse(TEXT("No moving after return"), Session->MoveTo(1));
+    TestFalse(TEXT("No waiting after return"), Session->Wait());
+    TestFalse(TEXT("No second return"), Session->ReturnToShelter());
+
+    // 결과 요약: 귀환 성공이면 부상 없음, 운반함 그대로, 사용 턴 = 12 - 8
+    const FSSExplorationResult Result = Session->MakeResult();
+    TestTrue(TEXT("Result outcome Returned"), Result.Outcome == ESSExplorationOutcome::Returned);
+    TestEqual(TEXT("Result carries food stack"), Result.Items.Num(), 1);
+    TestEqual(TEXT("Result food quantity"), Result.Items.Num() > 0 ? Result.Items[0].Quantity : 0, 3);
+    TestEqual(TEXT("No injury on return"), Result.Injury, 0.f);
+    TestEqual(TEXT("Turns used"), Result.TurnsUsed, 4);
+
+    // 7. 지도 에셋 원본은 그대로 (복사본만 줄어들었는지)
+    TestEqual(TEXT("Map asset food untouched"), Map->Rooms[1].Loot[0].Quantity, 3);
+    TestEqual(TEXT("Map asset loot count untouched"), Map->Rooms[1].Loot.Num(), 2);
+
+    // 8. 턴 예산: 기본값은 지도 MaxTurns, 행동력으로 계산한 값을 넘기면 그걸 사용
+    TestEqual(TEXT("Default budget is MaxTurns"), Session->GetTurnBudget(), 12);
+    USSExplorationSession* Budgeted = NewObject<USSExplorationSession>();
+    TestTrue(TEXT("Initialize with AP budget"), Budgeted->Initialize(Map, Map->GetTurnBudget(2)));
+    TestEqual(TEXT("Budget from 2 AP"), Budgeted->GetTurnBudget(), 8);
+    TestEqual(TEXT("Remaining starts at budget"), Budgeted->GetRemainingTurns(), 8);
+    TestTrue(TEXT("Budgeted wait"), Budgeted->Wait());
+    TestEqual(TEXT("Turns used counts from budget"), Budgeted->MakeResult().TurnsUsed, 1);
 
     return true;
 }

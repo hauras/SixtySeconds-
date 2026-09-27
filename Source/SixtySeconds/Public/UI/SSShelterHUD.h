@@ -88,6 +88,8 @@ private:
     void OnSurvivorSelected(FName SurvivorId);
     UFUNCTION()
     void OnSurvivorsUpdated();
+    UFUNCTION()
+    void HandleDayAdvanced();   // 다음 날 버튼·직접 탐사 정산 어느 쪽이든 하루가 지나면 날짜·스탯 갱신과 사망 확인
     FName InspectedSurvivorId = NAME_None;
     bool bShowingRobotInfo = false;
 	UFUNCTION()

@@ -29,8 +29,23 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="SS|Exploration|Guard")
 	TArray<FName> PatrolRoute;
 
+	// 행동력 없이 시작할 때(테스트·디버그)의 탐사 턴. 실제 게임은 아래 행동력 공식으로 턴을 정한다.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="SS|Exploration|Rules", meta=(ClampMin="1"))
 	int32 MaxTurns = 12;
+
+	// 직접 탐사 턴 = BaseTurns + TurnsPerActionPoint × 출발 시 남은 행동력
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="SS|Exploration|Rules", meta=(ClampMin="0"))
+	int32 BaseTurns = 4;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="SS|Exploration|Rules", meta=(ClampMin="1"))
+	int32 TurnsPerActionPoint = 2;
+
+	// 이보다 행동력이 적으면 출발 불가
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="SS|Exploration|Rules", meta=(ClampMin="0"))
+	int32 MinActionPoints = 2;
+
+	int32 GetTurnBudget(int32 ActionPoints) const { return BaseTurns + TurnsPerActionPoint * FMath::Max(0, ActionPoints); }
+	bool CanStartWithActionPoints(int32 ActionPoints) const { return ActionPoints >= MinActionPoints; }
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="SS|Exploration|Rules", meta=(ClampMin="1"))
 	int32 CarryCapacity = 4;

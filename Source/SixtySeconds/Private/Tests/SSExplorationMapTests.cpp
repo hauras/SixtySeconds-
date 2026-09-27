@@ -73,6 +73,21 @@ bool FSSExplorationMapTest::RunTest(const FString& Parameters)
     Errors.Reset();
     TestTrue(TEXT("Restored map valid again"), Map->Validate(Errors));
 
+    // 행동력 → 탐사 턴 공식: BaseTurns 4 + 행동력 × 2, 최소 행동력 2
+    TestEqual(TEXT("Budget with full AP"), Map->GetTurnBudget(5), 14);
+    TestEqual(TEXT("Budget with min AP"), Map->GetTurnBudget(2), 8);
+    TestEqual(TEXT("Negative AP treated as zero"), Map->GetTurnBudget(-3), 4);
+    TestFalse(TEXT("Below min AP cannot start"), Map->CanStartWithActionPoints(1));
+    TestTrue(TEXT("Min AP can start"), Map->CanStartWithActionPoints(2));
+
+    Map->TurnsPerActionPoint = 0;   ExpectInvalid(TEXT("Zero turns per AP rejected"));   Map->TurnsPerActionPoint = 2;
+    Map->BaseTurns = -1;            ExpectInvalid(TEXT("Negative base turns rejected")); Map->BaseTurns = 4;
+    Map->MinActionPoints = -1;      ExpectInvalid(TEXT("Negative min AP rejected"));     Map->MinActionPoints = 2;
+    // 최소 행동력으로 출발하면 1턴뿐인데 출구까지 2턴 → 거부
+    Map->BaseTurns = 0; Map->TurnsPerActionPoint = 1; Map->MinActionPoints = 1;
+    ExpectInvalid(TEXT("Exit unreachable with min AP rejected"));
+    Map->BaseTurns = 4; Map->TurnsPerActionPoint = 2; Map->MinActionPoints = 2;
+
     Map->Rooms[2].RoomId = TEXT("Hall");
     Errors.Reset();
     TestFalse(TEXT("Duplicate room id rejected"), Map->Validate(Errors));

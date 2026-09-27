@@ -2,7 +2,7 @@
 #include "Exploration/SSExplorationMapDefinition.h"
 
 
-bool USSExplorationSession::Initialize(USSExplorationMapDefinition* InMap)
+bool USSExplorationSession::Initialize(USSExplorationMapDefinition* InMap, int32 TurnBudget)
 {
 	// 실패해도 이전 지도의 상태가 남지 않도록 먼저 비운다
 	Map = nullptr;
@@ -23,7 +23,8 @@ bool USSExplorationSession::Initialize(USSExplorationMapDefinition* InMap)
 	Map = InMap;
 	Adjacency = Map->BuildAdjacency();
 	State.CurrentRoom = Map->FindRoomIndex(Map->EntranceRoomId);
-	State.RemainingTurns = Map->MaxTurns;
+	State.TurnBudget = TurnBudget > 0 ? TurnBudget : Map->MaxTurns;   // 0 이하면 지도 기본값 (테스트·디버그용)
+	State.RemainingTurns = State.TurnBudget;
 	State.PatrolStep = 0;
 	State.GuardRoom = Map->FindRoomIndex(Map->PatrolRoute[State.PatrolStep]);
 
@@ -126,8 +127,24 @@ bool USSExplorationSession::Search()
 	const int32 PlayerBefore = State.CurrentRoom;
 	const int32 GuardBefore = State.GuardRoom;
 	State.SearchedRooms.Add(State.CurrentRoom);
-	
-	EndTurn(PlayerBefore, GuardBefore);
+
+	// 담을 수 있는 첫 물자를 하나씩 담는다. 담을 때마다 목록이 줄거나 당겨지므로 매번 처음부터 다시 찾음
+	bool bTookAny = true;
+	while (bTookAny)
+	{
+		bTookAny = false;
+		const int32 Count = State.RoomLoot[State.CurrentRoom].Num();
+		for (int32 i = 0; i < Count; ++i)
+		{
+			if (TakeItem(i))
+			{
+				bTookAny = true;
+				break;
+			}
+		}
+	}
+
+	EndTurn(PlayerBefore, GuardBefore);   // 방송은 여기서 한 번
 	return true;
 }
 
@@ -176,8 +193,7 @@ bool USSExplorationSession::TakeItem(int32 LootIndex)
 		State.RoomLoot[State.CurrentRoom].RemoveAt(LootIndex);
 	}
 
-	OnExplorationChanged.Broadcast();   // 턴을 안 쓰니까 EndTurn 대신 직접 방송
-	return true;
+	return true;   // 방송은 부른 쪽(Search)의 EndTurn이 한 번에 함
 }
 
 bool USSExplorationSession::CanReturn() const
@@ -191,8 +207,19 @@ bool USSExplorationSession::ReturnToShelter()
 {
 	if (!CanReturn()) return false;
 	State.Outcome = ESSExplorationOutcome::Returned;
-	OnExplorationChanged.Broadcast();  
+	OnExplorationChanged.Broadcast();
 	return true;
+}
+
+FSSExplorationResult USSExplorationSession::MakeResult() const
+{
+	FSSExplorationResult Result;
+	Result.Outcome = State.Outcome;
+	Result.Items = State.Carried;   // 실패해도 채움: 결과창이 잃은 물품을 흐리게 보여줌. 입고 여부는 Outcome으로 판단
+	const bool bFailed = State.Outcome == ESSExplorationOutcome::Caught || State.Outcome == ESSExplorationOutcome::TimeOut;
+	Result.Injury = bFailed && IsValid(Map) ? Map->EmergencyInjury : 0.f;
+	Result.TurnsUsed = State.TurnBudget - State.RemainingTurns;
+	return Result;
 }
 
 void USSExplorationSession::EndTurn(int32 PlayerBefore, int32 GuardBefore)

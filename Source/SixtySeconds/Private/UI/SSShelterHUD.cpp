@@ -52,6 +52,7 @@ void USSShelterHUD::NativeConstruct()
         RunSubsystem->OnRobotStateChanged.AddUniqueDynamic(this, &USSShelterHUD::RefreshRobotDisplay);
         RunSubsystem->OnActionPointsChanged.AddUniqueDynamic(this, &USSShelterHUD::RefreshDisplay);
         RunSubsystem->OnSurvivorsChanged.AddUniqueDynamic(this, &ThisClass::OnSurvivorsUpdated);
+        RunSubsystem->OnDayAdvanced.AddUniqueDynamic(this, &ThisClass::HandleDayAdvanced);
     }
     RefreshRobotDisplay();
     RefreshDisplay();
@@ -65,6 +66,7 @@ void USSShelterHUD::NativeDestruct()
         RunSubsystem->OnRobotStateChanged.RemoveDynamic(this, &USSShelterHUD::RefreshRobotDisplay);
         RunSubsystem->OnActionPointsChanged.RemoveDynamic(this, &USSShelterHUD::RefreshDisplay);
         RunSubsystem->OnSurvivorsChanged.RemoveDynamic(this, &ThisClass::OnSurvivorsUpdated);
+        RunSubsystem->OnDayAdvanced.RemoveDynamic(this, &ThisClass::HandleDayAdvanced);
     }
     if (RobotButton)
         RobotButton->OnClicked.RemoveDynamic(this, &USSShelterHUD::OnRobotClicked);
@@ -315,7 +317,13 @@ void USSShelterHUD::OnNextDayClicked()
         return;
     }
 
+    // 날짜·스탯 갱신과 사망 확인은 OnDayAdvanced → HandleDayAdvanced가 처리
     if (NextDayMessageText) NextDayMessageText->SetText(FText::GetEmpty());
+}
+
+void USSShelterHUD::HandleDayAdvanced()
+{
+    if (!IsValid(RunSubsystem)) return;
 
     CurrentDay = RunSubsystem->GetCurrentDay();
 
@@ -326,8 +334,8 @@ void USSShelterHUD::OnNextDayClicked()
         RunSubsystem->GetHydration());
 
     // 다음 날 배급은 다시 선택
-    FoodRationCheckBox->SetIsChecked(false);
-    WaterRationCheckBox->SetIsChecked(false);
+    if (FoodRationCheckBox) FoodRationCheckBox->SetIsChecked(false);
+    if (WaterRationCheckBox) WaterRationCheckBox->SetIsChecked(false);
 
     if (RunSubsystem->GetHealth() <= 0.f)
     {
@@ -336,6 +344,9 @@ void USSShelterHUD::OnNextDayClicked()
             NextDayButton->SetIsEnabled(false);
         }
 
-        ShelterGameMode->StartDeath();
+        if (ASSGameMode* ShelterGameMode = Cast<ASSGameMode>(UGameplayStatics::GetGameMode(this)))
+        {
+            ShelterGameMode->StartDeath();
+        }
     }
 }

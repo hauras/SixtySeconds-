@@ -1,7 +1,9 @@
 #include "UI/SSExpeditionWidget.h"
 #include "Components/TextBlock.h"
 #include "Components/Button.h"
+#include "Components/CheckBox.h"
 #include "Item/SSExpeditionDefinition.h"
+#include "Item/SSItemDefinition.h"
 #include "Item/SSRunSubsystem.h"
 #include "UI/SSExplorationWidget.h"
 #include "Exploration/SSExplorationMapDefinition.h"   // IsValid(DirectExplorationMap)에 완전한 타입 필요
@@ -47,6 +49,7 @@ void USSExpeditionWidget::NativeDestruct()
 	if (DispatchButton) DispatchButton->OnClicked.RemoveDynamic(this, &USSExpeditionWidget::OnDispatchClicked);
 	if (CloseButton) CloseButton->OnClicked.RemoveDynamic(this, &USSExpeditionWidget::OnCloseClicked);
 	if (DirectExploreButton) DirectExploreButton->OnClicked.RemoveDynamic(this, &USSExpeditionWidget::OnDirectExploreClicked);
+	if (IsValid(ExplorationWidget)) ExplorationWidget->OnExplorationFinished.RemoveDynamic(this, &USSExpeditionWidget::OnExplorationFinished);
 
 	Super::NativeDestruct();
 }
@@ -63,7 +66,9 @@ void USSExpeditionWidget::RefreshDisplay()
 		// 지도가 없는 지역은 로봇 파견만 가능하므로 버튼 자체를 숨김
 		const bool bHasMap = IsValid(ExpeditionDefinition) && IsValid(ExpeditionDefinition->DirectExplorationMap);
 		DirectExploreButton->SetVisibility(bHasMap ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
-		DirectExploreButton->SetIsEnabled(bHasMap && IsValid(RunSubsystem) && RunSubsystem->GetHealth() > 0.f);
+		// 남은 행동력이 지도의 최소 행동력 이상이어야 출발 가능 (행동력 → 탐사 턴)
+		DirectExploreButton->SetIsEnabled(bHasMap && IsValid(RunSubsystem) && RunSubsystem->GetHealth() > 0.f
+			&& ExpeditionDefinition->DirectExplorationMap->CanStartWithActionPoints(RunSubsystem->GetActionPoints()));
 	}
 
 	if (!IsValid(RunSubsystem)) return;
@@ -202,7 +207,29 @@ void USSExpeditionWidget::OnCloseClicked()
 
 void USSExpeditionWidget::OnDirectExploreClicked()
 {
-	if (!IsValid(ExpeditionDefinition) || !IsValid(ExpeditionDefinition->DirectExplorationMap)) return;
+	if (!IsValid(ExpeditionDefinition) || !IsValid(ExpeditionDefinition->DirectExplorationMap) || !IsValid(RunSubsystem)) return;
+	USSExplorationMapDefinition* Map = ExpeditionDefinition->DirectExplorationMap;
+	const int32 ActionPoints = RunSubsystem->GetActionPoints();
+	if (!Map->CanStartWithActionPoints(ActionPoints))
+	{
+		if (MessageText) MessageText->SetText(FText::Format(
+			NSLOCTEXT("SSExpeditionUI", "ExploreNeedAP", "직접 탐사에는 행동력 {0} 이상이 필요합니다."), Map->MinActionPoints));
+		return;
+	}
+	// 직접 탐사를 가면 그날이 끝나므로 오늘 배급을 지금 확정. 부족하면 출발 불가
+	const bool bGiveFood  = ExploreFoodCheckBox  && ExploreFoodCheckBox->IsChecked();
+	const bool bGiveWater = ExploreWaterCheckBox && ExploreWaterCheckBox->IsChecked();
+	if (!RunSubsystem->HasRationsFor(bGiveFood, bGiveWater))
+	{
+		int32 RequiredFood = 0;
+		int32 RequiredWater = 0;
+		RunSubsystem->GetRequiredRations(bGiveFood, bGiveWater, RequiredFood, RequiredWater);
+		if (MessageText) MessageText->SetText(FText::Format(
+			NSLOCTEXT("SSExpeditionUI", "ExploreRationShortage", "배급 수량 부족 — 식량 {0}/{1} · 물 {2}/{3}"),
+			RunSubsystem->GetStoredQuantityById(SSItemIds::Food), RequiredFood,
+			RunSubsystem->GetStoredQuantityById(SSItemIds::Water), RequiredWater));
+		return;
+	}
 	if (!ExplorationWidgetClass)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[Exploration] ExplorationWidgetClass not assigned in WBP_Expedition Class Defaults"));
@@ -214,11 +241,35 @@ void USSExpeditionWidget::OnDirectExploreClicked()
 	if (!IsValid(ExplorationWidget)) return;
 
 	ExplorationWidget->AddToViewport(30);   // 탐사 창·정보창(20)보다 위
-	if (!ExplorationWidget->StartExploration(ExpeditionDefinition->DirectExplorationMap))
+	// 남은 행동력이 곧 탐사 시간. 행동력은 정산의 하루 경과에서 새 날 값으로 바뀜
+	if (!ExplorationWidget->StartExploration(Map, Map->GetTurnBudget(ActionPoints)))
 	{
 		ExplorationWidget->RemoveFromParent();   // 지도 검사 실패 — 이유는 [Exploration] 로그 참고
 		if (MessageText) MessageText->SetText(NSLOCTEXT("SSExpeditionUI", "ExploreMapInvalid", "탐사 지도 데이터 오류."));
+		return;
 	}
+
+	bExploreGiveFood = bGiveFood;
+	bExploreGiveWater = bGiveWater;
+	ExplorationWidget->OnExplorationFinished.AddUniqueDynamic(this, &USSExpeditionWidget::OnExplorationFinished);
+	if (MessageText) MessageText->SetText(FText::GetEmpty());
+}
+
+void USSExpeditionWidget::OnExplorationFinished(const FSSExplorationResult& Result)
+{
+	if (!IsValid(RunSubsystem)) return;
+
+	// 하루 경과 → 입고/부상 → OnDayAdvanced (은신처 HUD가 날짜·스탯 갱신과 사망 확인)
+	if (!RunSubsystem->ApplyExplorationResult(Result, bExploreGiveFood, bExploreGiveWater))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Exploration] Settlement failed: rations changed or player already dead"));
+		if (MessageText) MessageText->SetText(NSLOCTEXT("SSExpeditionUI", "ExploreSettleFailed", "탐사 결과를 반영하지 못했습니다."));
+		return;
+	}
+
+	if (ExploreFoodCheckBox)  ExploreFoodCheckBox->SetIsChecked(false);   // 다음 날 배급은 다시 선택
+	if (ExploreWaterCheckBox) ExploreWaterCheckBox->SetIsChecked(false);
+	RefreshDisplay();
 }
 
 void USSExpeditionWidget::OnRobotReturnedHandler(const FSSExpeditionResult& Result)

@@ -8,7 +8,9 @@
 #include "SSRunSubsystem.generated.h"
 
 class USSExpeditionDefinition;
+struct FSSExplorationResult;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FSSOnDayAdvanced);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FSSOnStoredItemsChanged);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FSSOnRobotStateChanged);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FSSOnJournalChanged);
@@ -60,10 +62,15 @@ public:
 	void ResetRun();
 
 	void InitializeShelterStats(float InHealth, float InSatiety, float InHydration);
+	// 다음 날 버튼: 배급 → 하루 경과 → OnDayAdvanced
 	bool AdvanceDay(bool bGiveFood, bool bGiveWater);
+
+	// 직접 탐사 정산: 하루 경과(출발 전 재고로 배급) → 귀환 성공이면 입고, 실패면 부상 → OnDayAdvanced
+	bool ApplyExplorationResult(const FSSExplorationResult& Result, bool bGiveFood, bool bGiveWater);
 
 	// 플레이어 배급 선택 + 살아 있는 동료의 배급 예약을 합친 필요 수량
 	void GetRequiredRations(bool bGiveFood, bool bGiveWater, int32& OutFood, int32& OutWater) const;
+	bool HasRationsFor(bool bGiveFood, bool bGiveWater) const;
 
 	int32 GetCurrentDay() const { return CurrentDay; }
 	float GetHealth() const { return PlayerStats.Health; }
@@ -139,6 +146,10 @@ public:
 	const TArray<FSSJournalEntry>& GetJournalEntries() const { return JournalEntries; }
 
 	// UI 등에 데이터 변경을 알리는 이벤트
+	// 하루가 지남 (다음 날 버튼, 직접 탐사 정산 모두). 날짜·플레이어 스탯이 바뀌었으니 다시 그리고 사망 확인
+	UPROPERTY(BlueprintAssignable, Category="SS|Run")
+	FSSOnDayAdvanced OnDayAdvanced;
+
 	UPROPERTY(BlueprintAssignable, Category="SS|Survivor")
 	FSSOnSurvivorsChanged OnSurvivorsChanged;
 
@@ -160,6 +171,7 @@ public:
 
 private:
 	// 내부 처리 함수
+	bool AdvanceDayCore(bool bGiveFood, bool bGiveWater);   // 배급·감소·날짜·행동력·로봇 진행 (알림 없음)
 	bool ConsumeActionPoints(int32 Cost);
 	FSSSurvivorState* FindRescuedSurvivorMutable(FName SurvivorId);
 
