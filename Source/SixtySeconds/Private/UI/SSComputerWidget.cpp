@@ -18,13 +18,13 @@
 namespace SSComputerStyle
 {
     FLinearColor Color(const TCHAR* Hex) { return FLinearColor::FromSRGBColor(FColor::FromHex(Hex)); }
-    UTextBlock* Label(UWidgetTree* Tree, const FText& Text, int32 Size)
+    UTextBlock* Label(UWidgetTree* Tree, const FText& Text, int32 Size, const TCHAR* Hex = TEXT("F3E8D6"))
     {
         UTextBlock* Widget = Tree->ConstructWidget<UTextBlock>();
         Widget->SetText(Text);
         FSlateFontInfo Font = Widget->GetFont(); Font.Size = Size;
         Widget->SetFont(Font);
-        Widget->SetColorAndOpacity(FSlateColor(Color(TEXT("F3E8D6"))));
+        Widget->SetColorAndOpacity(FSlateColor(Color(Hex)));
         Widget->SetAutoWrapText(true);
         return Widget;
     }
@@ -32,12 +32,12 @@ namespace SSComputerStyle
     {
         UButton* Widget = Tree->ConstructWidget<UButton>();
         FButtonStyle Style = Widget->GetStyle();
-        Style.Normal.TintColor = FSlateColor(Color(TEXT("624726")));
-        Style.Hovered.TintColor = FSlateColor(Color(TEXT("896335")));
+        Style.Normal.TintColor = FSlateColor(Color(TEXT("6D5032")));
+        Style.Hovered.TintColor = FSlateColor(Color(TEXT("92704A")));
         Style.Pressed.TintColor = FSlateColor(Color(TEXT("47321F")));
         Widget->SetStyle(Style);
         Widget->SetContent(Label(Tree, Text, 20));
-        CastChecked<UButtonSlot>(Widget->GetContent()->Slot)->SetPadding(FMargin(24, 10));
+        CastChecked<UButtonSlot>(Widget->GetContent()->Slot)->SetPadding(FMargin(25, 12));
         return Widget;
     }
     FText Category(ESSJournalEvent Event)
@@ -50,6 +50,7 @@ namespace SSComputerStyle
         case ESSJournalEvent::Robot: return NSLOCTEXT("SSJournal", "CatRobot", "로봇");
         case ESSJournalEvent::ItemUse: return NSLOCTEXT("SSJournal", "CatItemUse", "사용");
         case ESSJournalEvent::Death: return NSLOCTEXT("SSJournal", "CatDeath", "생존");
+        case ESSJournalEvent::Event: return NSLOCTEXT("SSJournal", "CatEvent", "사건");
         default: return NSLOCTEXT("SSJournal", "CatDay", "하루 종료");
         }
     }
@@ -63,46 +64,53 @@ TSharedRef<SWidget> USSComputerWidget::RebuildWidget()
         UCanvasPanel* Canvas = WidgetTree->ConstructWidget<UCanvasPanel>();
         WidgetTree->RootWidget = Canvas;
         UBorder* Blocker = WidgetTree->ConstructWidget<UBorder>();
-        Blocker->SetBrushColor(FLinearColor(0, 0, 0, .35f));
+        Blocker->SetBrushColor(FLinearColor(0, 0, 0, .58f));
         UCanvasPanelSlot* BlockerSlot = Canvas->AddChildToCanvas(Blocker);
         BlockerSlot->SetAnchors(FAnchors(0, 0, 1, 1));
         BlockerSlot->SetOffsets(FMargin(0));
 
         UBorder* Frame = WidgetTree->ConstructWidget<UBorder>();
-        Frame->SetBrushColor(Color(TEXT("B58A4A")));
+        Frame->SetBrushColor(Color(TEXT("A77A48")));
         Frame->SetPadding(FMargin(2));
         UCanvasPanelSlot* FrameSlot = Canvas->AddChildToCanvas(Frame);
         FrameSlot->SetAnchors(FAnchors(.5f, .5f));
         FrameSlot->SetAlignment(FVector2D(.5f, .5f));
         FrameSlot->SetPosition(FVector2D::ZeroVector);
-        FrameSlot->SetSize(FVector2D(960, 740));
+        FrameSlot->SetSize(FVector2D(1060, 690));
         UBorder* Body = WidgetTree->ConstructWidget<UBorder>();
-        Body->SetBrushColor(Color(TEXT("2B211A"))); Body->SetPadding(FMargin(28));
+        Body->SetBrushColor(Color(TEXT("241C19"))); Body->SetPadding(FMargin(26));
         Frame->SetContent(Body);
         UVerticalBox* Column = WidgetTree->ConstructWidget<UVerticalBox>(); Body->SetContent(Column);
 
         UHorizontalBox* Header = WidgetTree->ConstructWidget<UHorizontalBox>();
-        Header->AddChildToHorizontalBox(Label(WidgetTree, NSLOCTEXT("SSJournal", "ComputerTitle", "컴퓨터 · 하루 기록"), 30))->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+        UVerticalBox* HeaderTitles = WidgetTree->ConstructWidget<UVerticalBox>();
+        HeaderTitles->AddChildToVerticalBox(Label(WidgetTree, NSLOCTEXT("SSJournal", "ArchiveTerminal", "제7연구소  /  B1 관리 단말"), 17, TEXT("C7A176")));
+        HeaderTitles->AddChildToVerticalBox(Label(WidgetTree, NSLOCTEXT("SSJournal", "ComputerTitle", "하루 기록"), 36))->SetPadding(FMargin(0, 4, 0, 0));
+        Header->AddChildToHorizontalBox(HeaderTitles)->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
         ExpeditionButton = Button(WidgetTree, NSLOCTEXT("SSJournal", "ExpeditionButton", "탐사 열기"));
-        Header->AddChildToHorizontalBox(ExpeditionButton);
-        Column->AddChildToVerticalBox(Header)->SetPadding(FMargin(0, 0, 0, 24));
+        Header->AddChildToHorizontalBox(ExpeditionButton)->SetVerticalAlignment(VAlign_Center);
+        Column->AddChildToVerticalBox(Header)->SetPadding(FMargin(0, 0, 0, 19));
 
         UHorizontalBox* DayNavigationRow = WidgetTree->ConstructWidget<UHorizontalBox>();
-        PreviousButton = Button(WidgetTree, NSLOCTEXT("SSJournal", "PreviousDay", "이전 날"));
-        NextButton = Button(WidgetTree, NSLOCTEXT("SSJournal", "NextDay", "다음 날"));
+        PreviousButton = Button(WidgetTree, NSLOCTEXT("SSJournal", "PreviousDay", "◀  이전 날"));
+        NextButton = Button(WidgetTree, NSLOCTEXT("SSJournal", "NextDay", "다음 날  ▶"));
         DayNavigationRow->AddChildToHorizontalBox(PreviousButton);
-        DayText = Label(WidgetTree, FText::GetEmpty(), 25); DayText->SetJustification(ETextJustify::Center);
+        DayText = Label(WidgetTree, FText::GetEmpty(), 25, TEXT("F0D2A4")); DayText->SetJustification(ETextJustify::Center);
         UHorizontalBoxSlot* DaySlot = DayNavigationRow->AddChildToHorizontalBox(DayText);
         DaySlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill)); DaySlot->SetVerticalAlignment(VAlign_Center);
         DayNavigationRow->AddChildToHorizontalBox(NextButton);
-        Column->AddChildToVerticalBox(DayNavigationRow)->SetPadding(FMargin(0, 0, 0, 20));
+        Column->AddChildToVerticalBox(DayNavigationRow)->SetPadding(FMargin(0, 0, 0, 17));
 
+        UBorder* RecordPaper = WidgetTree->ConstructWidget<UBorder>();
+        RecordPaper->SetBrushColor(Color(TEXT("D8C9B3")));
+        RecordPaper->SetPadding(FMargin(19, 17));
         EntryScroll = WidgetTree->ConstructWidget<UScrollBox>();
         Entries = WidgetTree->ConstructWidget<UVerticalBox>(); EntryScroll->AddChild(Entries);
-        UVerticalBoxSlot* ScrollSlot = Column->AddChildToVerticalBox(EntryScroll);
-        ScrollSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill)); ScrollSlot->SetPadding(FMargin(0, 0, 0, 20));
+        RecordPaper->SetContent(EntryScroll);
+        UVerticalBoxSlot* ScrollSlot = Column->AddChildToVerticalBox(RecordPaper);
+        ScrollSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill)); ScrollSlot->SetPadding(FMargin(0, 0, 0, 17));
         CloseButton = Button(WidgetTree, NSLOCTEXT("SSJournal", "Close", "닫기"));
-        Column->AddChildToVerticalBox(CloseButton)->SetHorizontalAlignment(HAlign_Center);
+        Column->AddChildToVerticalBox(CloseButton)->SetHorizontalAlignment(HAlign_Right);
     }
     return Super::RebuildWidget();
 }
@@ -139,18 +147,28 @@ void USSComputerWidget::RefreshJournal()
 {
     if (!Entries || !IsValid(RunSubsystem)) return;
     ViewedDay = FMath::Clamp(ViewedDay, 1, RunSubsystem->GetCurrentDay());
-    DayText->SetText(FText::Format(NSLOCTEXT("SSJournal", "DayTitleWithCurrent", "{0}일차 기록  ·  현재 {1}일차"), ViewedDay, RunSubsystem->GetCurrentDay()));
+    DayText->SetText(FText::Format(NSLOCTEXT("SSJournal", "DayTitleWithCurrent", "DAY {0}  /  현재 {1}일차"), ViewedDay, RunSubsystem->GetCurrentDay()));
     PreviousButton->SetIsEnabled(ViewedDay > 1);
     NextButton->SetIsEnabled(ViewedDay < RunSubsystem->GetCurrentDay());
     Entries->ClearChildren();
     for (const FSSJournalEntry& Entry : RunSubsystem->GetJournalEntries())
     {
         if (Entry.Day != ViewedDay) continue;
-        UTextBlock* Row = SSComputerStyle::Label(WidgetTree, FText::Format(NSLOCTEXT("SSJournal", "Entry", "[{0}]  {1}"), SSComputerStyle::Category(Entry.Event), Entry.Message), 21);
-        Entries->AddChildToVerticalBox(Row)->SetPadding(FMargin(0, 0, 14, 16));
+        UBorder* RowPaper = WidgetTree->ConstructWidget<UBorder>();
+        RowPaper->SetBrushColor(SSComputerStyle::Color(TEXT("E9DFD0")));
+        RowPaper->SetPadding(FMargin(16, 14));
+        UHorizontalBox* Row = WidgetTree->ConstructWidget<UHorizontalBox>();
+        RowPaper->SetContent(Row);
+        UTextBlock* Category = SSComputerStyle::Label(WidgetTree, SSComputerStyle::Category(Entry.Event), 19, TEXT("346369"));
+        UHorizontalBoxSlot* CategorySlot = Row->AddChildToHorizontalBox(Category);
+        CategorySlot->SetPadding(FMargin(0, 0, 18, 0));
+        CategorySlot->SetVerticalAlignment(VAlign_Center);
+        UTextBlock* Message = SSComputerStyle::Label(WidgetTree, Entry.Message, 21, TEXT("302821"));
+        Row->AddChildToHorizontalBox(Message)->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+        Entries->AddChildToVerticalBox(RowPaper)->SetPadding(FMargin(0, 0, 0, 8));
     }
     if (Entries->GetChildrenCount() == 0)
-        Entries->AddChild(SSComputerStyle::Label(WidgetTree, NSLOCTEXT("SSJournal", "Empty", "아직 기록된 일이 없습니다."), 21));
+        Entries->AddChild(SSComputerStyle::Label(WidgetTree, NSLOCTEXT("SSJournal", "Empty", "이 날짜에 기록된 일이 없습니다."), 21, TEXT("53483E")));
 }
 
 void USSComputerWidget::PreviousDay() { --ViewedDay; RefreshJournal(); EntryScroll->ScrollToStart(); }

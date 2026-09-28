@@ -8,9 +8,11 @@
 #include "SSRunSubsystem.generated.h"
 
 class USSExpeditionDefinition;
+class USSEventDirector;
 struct FSSExplorationResult;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FSSOnDayAdvanced);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FSSOnPlayerStatsChanged);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FSSOnStoredItemsChanged);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FSSOnRobotStateChanged);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FSSOnJournalChanged);
@@ -145,10 +147,30 @@ public:
 	// 일일 기록
 	const TArray<FSSJournalEntry>& GetJournalEntries() const { return JournalEntries; }
 
+	// 하루 사건: 규칙과 런 상태(1회성·쿨다운·예약)를 가진 디렉터. 처음 부를 때 생성
+	USSEventDirector* GetEventDirector();
+
+	// 사건 효과용 변경 함수
+	bool RemoveStoredItemsById(FName ItemId, int32 Quantity) { return ConsumeStoredItems(ItemId, Quantity); }
+	void ModifyPlayerStats(float DeltaHealth, float DeltaSatiety, float DeltaHydration);
+	void ModifySurvivorsHealth(float Delta);   // 살아 있는 모든 동료. 0이 되면 사망 처리
+	void AdjustActionPoints(int32 Delta);      // 0 ~ MaxActionPoints
+	void AddEventJournal(const FText& Message) { RecordEvent(ESSJournalEvent::Event, Message); }
+
+	const FText& GetAraBriefing() const { return AraBriefing; }   // 오늘 아침 ARA 보고 (하루 시작 때 고정)
+	bool HasUnreadAraBriefing() const { return LastAraReadDay < CurrentDay; }
+	void MarkAraBriefingRead() { LastAraReadDay = CurrentDay; }
+	bool AskAraQuestion(int32 QuestionIndex, FText& OutAnswer);
+	bool HasAskedAraQuestionToday(int32 QuestionIndex) const;
+
 	// UI 등에 데이터 변경을 알리는 이벤트
 	// 하루가 지남 (다음 날 버튼, 직접 탐사 정산 모두). 날짜·플레이어 스탯이 바뀌었으니 다시 그리고 사망 확인
 	UPROPERTY(BlueprintAssignable, Category="SS|Run")
 	FSSOnDayAdvanced OnDayAdvanced;
+
+	// 하루 경과 외의 이유(사건 등)로 플레이어 스탯이 바뀜. HUD가 스탯을 다시 그리고 사망 확인
+	UPROPERTY(BlueprintAssignable, Category="SS|Run")
+	FSSOnPlayerStatsChanged OnPlayerStatsChanged;
 
 	UPROPERTY(BlueprintAssignable, Category="SS|Survivor")
 	FSSOnSurvivorsChanged OnSurvivorsChanged;
@@ -185,6 +207,7 @@ private:
 	void TickRepair();
 
 	void RecordEvent(ESSJournalEvent Event, const FText& Message);
+	void BuildAraBriefing();   // 오늘 날짜·물자로 아침 보고 문장을 만들어 저장
 	void RecordExpeditionReturn(const FSSExpeditionResult& Result, bool bSuccess);
 
 	// 동료 데이터
@@ -205,6 +228,18 @@ private:
 	// 게임 진행 및 플레이어 상태
 	UPROPERTY(Transient)
 	int32 CurrentDay = 1;
+
+	UPROPERTY(Transient)
+	int32 LastAraReadDay = 0;
+
+	UPROPERTY(Transient)
+	FText AraBriefing;   // 아침에 만든 문장을 저장. 열 때마다 다시 만들지 않음
+
+	UPROPERTY(Transient)
+	uint8 AskedAraQuestionsMask = 0;
+
+	UPROPERTY(Transient)
+	int32 AraLearningScore = 0;
 
 	UPROPERTY(Transient)
 	FSSSurvivorStats PlayerStats;
@@ -228,4 +263,7 @@ private:
 	// 남은 행동력
 	UPROPERTY(Transient)
 	int32 ActionPoints = MaxActionPoints;
+
+	UPROPERTY(Transient)
+	TObjectPtr<USSEventDirector> EventDirector;
 };

@@ -17,6 +17,10 @@
 #include "UI/SSSurvivorInfoContentWidget.h"
 #include "Character/SSSurvivorDefinition.h"
 #include "Blueprint/WidgetTree.h"
+#include "UI/SSEventWidget.h"
+#include "Event/SSEventDirector.h"
+#include "Event/SSEventCatalog.h"
+#include "UI/SSAraWidget.h"
 
 void USSShelterHUD::NativeConstruct()
 {
@@ -41,6 +45,8 @@ void USSShelterHUD::NativeConstruct()
 
     if (RobotButton)
         RobotButton->OnClicked.AddUniqueDynamic(this, &USSShelterHUD::OnRobotClicked);
+    if (AraButton)
+        AraButton->OnClicked.AddUniqueDynamic(this, &ThisClass::OnAraClicked);
     TArray<UWidget*> Widgets;
     WidgetTree->GetAllWidgets(Widgets);
     for (UWidget* Widget : Widgets)
@@ -53,13 +59,31 @@ void USSShelterHUD::NativeConstruct()
         RunSubsystem->OnActionPointsChanged.AddUniqueDynamic(this, &USSShelterHUD::RefreshDisplay);
         RunSubsystem->OnSurvivorsChanged.AddUniqueDynamic(this, &ThisClass::OnSurvivorsUpdated);
         RunSubsystem->OnDayAdvanced.AddUniqueDynamic(this, &ThisClass::HandleDayAdvanced);
+        RunSubsystem->OnPlayerStatsChanged.AddUniqueDynamic(this, &ThisClass::HandlePlayerStatsChanged);
+
+        // 사건 카탈로그 연결 (런 동안 한 번. 같은 카탈로그면 다시 색인하지 않음)
+        USSEventDirector* Director = RunSubsystem->GetEventDirector();
+        if (EventCatalog && Director && Director->GetCatalog() != EventCatalog)
+        {
+            Director->SetCatalog(EventCatalog);
+        }
     }
     RefreshRobotDisplay();
     RefreshDisplay();
+    RefreshAraIndicator();
+    if (AraIconImage)
+    {
+        ScheduleAraBlink();
+    }
 }
 
 void USSShelterHUD::NativeDestruct()
 {
+    if (GetWorld())
+    {
+        GetWorld()->GetTimerManager().ClearTimer(AraBlinkTimer);
+        GetWorld()->GetTimerManager().ClearTimer(AraBlinkRestoreTimer);
+    }
     if (IsValid(RunSubsystem))
     {
         RunSubsystem->OnStoredItemsChanged.RemoveDynamic(this, &USSShelterHUD::RefreshDisplay);
@@ -67,9 +91,12 @@ void USSShelterHUD::NativeDestruct()
         RunSubsystem->OnActionPointsChanged.RemoveDynamic(this, &USSShelterHUD::RefreshDisplay);
         RunSubsystem->OnSurvivorsChanged.RemoveDynamic(this, &ThisClass::OnSurvivorsUpdated);
         RunSubsystem->OnDayAdvanced.RemoveDynamic(this, &ThisClass::HandleDayAdvanced);
+        RunSubsystem->OnPlayerStatsChanged.RemoveDynamic(this, &ThisClass::HandlePlayerStatsChanged);
     }
     if (RobotButton)
         RobotButton->OnClicked.RemoveDynamic(this, &USSShelterHUD::OnRobotClicked);
+    if (AraButton)
+        AraButton->OnClicked.RemoveDynamic(this, &ThisClass::OnAraClicked);
     TArray<UWidget*> Widgets;
     WidgetTree->GetAllWidgets(Widgets);
     for (UWidget* Widget : Widgets)
@@ -78,6 +105,10 @@ void USSShelterHUD::NativeDestruct()
     if (IsValid(InfoPanelWidget))
         InfoPanelWidget->RemoveFromParent();
     InfoPanelWidget = nullptr;
+    if (IsValid(EventWidget)) EventWidget->RemoveFromParent();
+    EventWidget = nullptr;
+    if (IsValid(AraPanelWidget)) AraPanelWidget->RemoveFromParent();
+    AraPanelWidget = nullptr;
     if (IsValid(ComputerWidget)) ComputerWidget->CloseWindows();
     ComputerWidget = nullptr;
     Super::NativeDestruct();
@@ -326,6 +357,7 @@ void USSShelterHUD::HandleDayAdvanced()
     if (!IsValid(RunSubsystem)) return;
 
     CurrentDay = RunSubsystem->GetCurrentDay();
+    RefreshAraIndicator();
 
     // 스탯과 날짜·보관 수량을 함께 갱신
     RefreshStats(
@@ -337,16 +369,112 @@ void USSShelterHUD::HandleDayAdvanced()
     if (FoodRationCheckBox) FoodRationCheckBox->SetIsChecked(false);
     if (WaterRationCheckBox) WaterRationCheckBox->SetIsChecked(false);
 
-    if (RunSubsystem->GetHealth() <= 0.f)
-    {
-        if (NextDayButton)
-        {
-            NextDayButton->SetIsEnabled(false);
-        }
+    CheckPlayerDeath();
+    if (RunSubsystem->GetHealth() > 0.f) TryShowDailyEvent();   // 새 날의 아침 사건
+}
 
-        if (ASSGameMode* ShelterGameMode = Cast<ASSGameMode>(UGameplayStatics::GetGameMode(this)))
-        {
-            ShelterGameMode->StartDeath();
-        }
+void USSShelterHUD::RefreshAraIndicator()
+{
+    const bool bUnread = IsValid(RunSubsystem) && RunSubsystem->HasUnreadAraBriefing();
+    const bool bWarning = IsAraWarning();
+    if (GetWorld() && GetWorld()->GetTimerManager().IsTimerActive(AraBlinkRestoreTimer))
+        RestoreAraBlink();
+    UTexture2D* Face = bWarning ? AraWarningIconTexture.Get()
+        : bUnread ? AraUnreadIconTexture.Get() : AraIdleIconTexture.Get();
+    if (AraIconImage && IsValid(Face))
+        AraIconImage->SetBrushFromTexture(Face, false);
+    if (AraUnreadText)
+        AraUnreadText->SetVisibility(bUnread && (bWarning || !IsValid(AraUnreadIconTexture))
+            ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
+}
+
+bool USSShelterHUD::IsAraWarning() const
+{
+    return IsValid(RunSubsystem) && RunSubsystem->GetHealth() > 0.f
+        && (RunSubsystem->GetHealth() <= 25.f || RunSubsystem->GetSatiety() <= 20.f
+            || RunSubsystem->GetHydration() <= 20.f);
+}
+
+void USSShelterHUD::ScheduleAraBlink()
+{
+    if (GetWorld() && AraIconImage)
+        GetWorld()->GetTimerManager().SetTimer(AraBlinkTimer, this,
+            &ThisClass::BlinkAra, FMath::FRandRange(5.f, 7.f), false);
+}
+
+void USSShelterHUD::BlinkAra()
+{
+    if (AraIconImage && IsValid(AraBlinkIconTexture) && IsInViewport() && IsValid(RunSubsystem)
+        && !RunSubsystem->HasUnreadAraBriefing() && !IsAraWarning())
+    {
+        AraIconImage->SetBrushFromTexture(AraBlinkIconTexture, false);
+        GetWorld()->GetTimerManager().SetTimer(AraBlinkRestoreTimer, this,
+            &ThisClass::RestoreAraBlink, 0.14f, false);
     }
+    ScheduleAraBlink();
+}
+
+void USSShelterHUD::RestoreAraBlink()
+{
+    if (GetWorld()) GetWorld()->GetTimerManager().ClearTimer(AraBlinkRestoreTimer);
+    RefreshAraIndicator();
+}
+
+void USSShelterHUD::OnAraClicked()
+{
+    if (!IsValid(RunSubsystem)) return;
+    if (IsValid(AraPanelWidget) && AraPanelWidget->IsInViewport())
+    {
+        AraPanelWidget->RemoveFromParent();
+        return;
+    }
+
+    if (!IsValid(AraPanelWidget))
+        AraPanelWidget = CreateWidget<USSAraWidget>(GetOwningPlayer());
+    if (!IsValid(AraPanelWidget)) return;
+
+    AraPanelWidget->SetBriefing(RunSubsystem->GetAraBriefing());   // 문장 만들기는 세션 몫, HUD는 전달만
+    AraPanelWidget->AddToViewport(30);
+    RunSubsystem->MarkAraBriefingRead();
+    RefreshAraIndicator();
+}
+
+void USSShelterHUD::HandlePlayerStatsChanged()
+{
+    if (!IsValid(RunSubsystem)) return;
+    RefreshStats(RunSubsystem->GetHealth(), RunSubsystem->GetSatiety(), RunSubsystem->GetHydration());
+    RefreshAraIndicator();
+    CheckPlayerDeath();
+}
+
+void USSShelterHUD::CheckPlayerDeath()
+{
+    if (!IsValid(RunSubsystem) || RunSubsystem->GetHealth() > 0.f) return;
+
+    if (NextDayButton)
+    {
+        NextDayButton->SetIsEnabled(false);
+    }
+
+    if (ASSGameMode* ShelterGameMode = Cast<ASSGameMode>(UGameplayStatics::GetGameMode(this)))
+    {
+        ShelterGameMode->StartDeath();
+    }
+}
+
+void USSShelterHUD::TryShowDailyEvent()
+{
+    if (!IsValid(RunSubsystem) || !EventWidgetClass) return;
+    if (IsValid(EventWidget) && EventWidget->IsInViewport()) return;   // 이미 떠 있음
+
+    USSEventDirector* Director = RunSubsystem->GetEventDirector();
+    if (!IsValid(Director) || !Director->GetCatalog()) return;
+
+    const FName EventId = Director->PickEventForToday(*RunSubsystem);
+    if (EventId.IsNone()) return;   // 오늘은 조용한 날
+
+    EventWidget = CreateWidget<USSEventWidget>(GetOwningPlayer(), EventWidgetClass);
+    if (!IsValid(EventWidget)) return;
+    EventWidget->AddToViewport(50);   // 탐사 결과창(40)보다 위
+    EventWidget->ShowEvent(Director, RunSubsystem, EventId);
 }

@@ -1,0 +1,47 @@
+#pragma once
+
+#include "CoreMinimal.h"
+#include "Blueprint/UserWidget.h"
+#include "SSEventWidget.generated.h"
+
+class UButton;
+class UTextBlock;
+class USSEventDirector;
+class USSRunSubsystem;
+
+// 하루 사건 창. 제목·본문과 선택지 버튼(최대 3개)을 보여주고, 고른 선택지를 디렉터에 넘긴다.
+UCLASS(Abstract)
+class SIXTYSECONDS_API USSEventWidget : public UUserWidget
+{
+	GENERATED_BODY()
+
+public:
+	void ShowEvent(USSEventDirector* InDirector, USSRunSubsystem* InRun, FName InEventId);
+
+protected:
+	virtual void NativeConstruct() override;
+	virtual void NativeDestruct() override;
+
+	UPROPERTY(meta=(BindWidget))         TObjectPtr<UTextBlock> TitleText;
+	UPROPERTY(meta=(BindWidget))         TObjectPtr<UTextBlock> BodyText;
+
+	// 선택지 칸. 사건의 선택지 수보다 많은 칸은 숨김
+	UPROPERTY(meta=(BindWidgetOptional)) TObjectPtr<UButton> ChoiceButton0;
+	UPROPERTY(meta=(BindWidgetOptional)) TObjectPtr<UButton> ChoiceButton1;
+	UPROPERTY(meta=(BindWidgetOptional)) TObjectPtr<UButton> ChoiceButton2;
+	UPROPERTY(meta=(BindWidgetOptional)) TObjectPtr<UTextBlock> ChoiceText0;
+	UPROPERTY(meta=(BindWidgetOptional)) TObjectPtr<UTextBlock> ChoiceText1;
+	UPROPERTY(meta=(BindWidgetOptional)) TObjectPtr<UTextBlock> ChoiceText2;
+
+private:
+	UFUNCTION() void HandleChoice0();
+	UFUNCTION() void HandleChoice1();
+	UFUNCTION() void HandleChoice2();
+	void Choose(int32 Index);
+
+	UPROPERTY(Transient) TObjectPtr<USSEventDirector> Director;
+	UPROPERTY(Transient) TObjectPtr<USSRunSubsystem> Run;
+
+	FName EventId = NAME_None;
+	TArray<FName> ChoiceIds;   // 버튼 칸 번호 → 선택지 ID
+};

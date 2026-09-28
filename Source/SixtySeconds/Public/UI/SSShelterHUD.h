@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "TimerManager.h"
 #include "SSShelterHUD.generated.h"
 
 class UCheckBox;
@@ -14,6 +15,9 @@ class USSComputerWidget;
 class USSInfoPanelWidget;
 class UTexture2D;
 class USSSurvivorInfoContentWidget;
+class USSEventCatalog;
+class USSEventWidget;
+class USSAraWidget;
 
 UCLASS(Abstract)
 class SIXTYSECONDS_API USSShelterHUD : public UUserWidget
@@ -31,6 +35,27 @@ protected:
 
 	UPROPERTY(meta=(BindWidgetOptional))
 	TObjectPtr<UButton> RobotButton;
+
+	UPROPERTY(meta=(BindWidgetOptional))
+	TObjectPtr<UButton> AraButton;
+
+	UPROPERTY(meta=(BindWidgetOptional))
+	TObjectPtr<UTextBlock> AraUnreadText;
+
+	UPROPERTY(meta=(BindWidgetOptional))
+	TObjectPtr<UImage> AraIconImage;
+
+	UPROPERTY(EditDefaultsOnly, Category="SS|ARA")
+	TObjectPtr<UTexture2D> AraIdleIconTexture;
+
+	UPROPERTY(EditDefaultsOnly, Category="SS|ARA")
+	TObjectPtr<UTexture2D> AraUnreadIconTexture;
+
+	UPROPERTY(EditDefaultsOnly, Category="SS|ARA")
+	TObjectPtr<UTexture2D> AraWarningIconTexture;
+
+	UPROPERTY(EditDefaultsOnly, Category="SS|ARA")
+	TObjectPtr<UTexture2D> AraBlinkIconTexture;
 
 	UPROPERTY(EditDefaultsOnly, Category="SS|UI")
 	TSubclassOf<USSInfoPanelWidget> InfoPanelWidgetClass;
@@ -83,6 +108,13 @@ protected:
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UTextBlock> NextDayMessageText;
 
+	// 하루 사건 데이터와 사건 창 WBP — Class Defaults에서 지정
+	UPROPERTY(EditDefaultsOnly, Category="SS|Event")
+	TObjectPtr<USSEventCatalog> EventCatalog;
+
+	UPROPERTY(EditDefaultsOnly, Category="SS|Event")
+	TSubclassOf<USSEventWidget> EventWidgetClass;
+
 private:
     UFUNCTION()
     void OnSurvivorSelected(FName SurvivorId);
@@ -90,6 +122,26 @@ private:
     void OnSurvivorsUpdated();
     UFUNCTION()
     void HandleDayAdvanced();   // 다음 날 버튼·직접 탐사 정산 어느 쪽이든 하루가 지나면 날짜·스탯 갱신과 사망 확인
+    UFUNCTION()
+    void HandlePlayerStatsChanged();   // 사건 효과 등으로 스탯이 바뀜 → 다시 그리고 사망 확인
+    void CheckPlayerDeath();
+    void TryShowDailyEvent();          // 하루가 시작될 때 사건 하나 (없을 수도 있음)
+    void RefreshAraIndicator();
+    void ScheduleAraBlink();
+    void BlinkAra();
+    void RestoreAraBlink();
+    bool IsAraWarning() const;
+    FTimerHandle AraBlinkTimer;
+    FTimerHandle AraBlinkRestoreTimer;
+
+    UFUNCTION()
+    void OnAraClicked();
+
+    UPROPERTY(Transient)
+    TObjectPtr<USSAraWidget> AraPanelWidget;
+
+    UPROPERTY(Transient)
+    TObjectPtr<USSEventWidget> EventWidget;
     FName InspectedSurvivorId = NAME_None;
     bool bShowingRobotInfo = false;
 	UFUNCTION()

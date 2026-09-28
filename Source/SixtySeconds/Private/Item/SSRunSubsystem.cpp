@@ -3,6 +3,7 @@
 #include "Item/SSExpeditionDefinition.h"
 #include "Character/SSSurvivorDefinition.h"
 #include "Exploration/SSExplorationTypes.h"
+#include "Event/SSEventDirector.h"
 
 namespace
 {
@@ -193,6 +194,10 @@ void USSRunSubsystem::ResetRun()
 	JournalEntries.Reset();
 
 	CurrentDay = 1;
+	LastAraReadDay = 0;
+	AskedAraQuestionsMask = 0;
+	AraLearningScore = 0;
+	BuildAraBriefing();
 	PlayerStats = FSSSurvivorStats{};
 
 	RobotState = ESSRobotState::Idle;
@@ -201,6 +206,7 @@ void USSRunSubsystem::ResetRun()
 	RepairDaysRemaining = 0;
 	LastExpeditionResult = FSSExpeditionResult{};
 	ActionPoints = MaxActionPoints;
+	if (IsValid(EventDirector)) EventDirector->ResetRunState();   // 카탈로그는 유지, 1회성·예약만 초기화
 	OnJournalChanged.Broadcast();
 	OnRobotStateChanged.Broadcast();
 	OnStoredItemsChanged.Broadcast();
@@ -208,11 +214,87 @@ void USSRunSubsystem::ResetRun()
     OnSurvivorsChanged.Broadcast();
 }
 
+void USSRunSubsystem::BuildAraBriefing()
+{
+	AraBriefing = CurrentDay == 1
+		? NSLOCTEXT("SSAra", "DayOne", "Day 1. B1 비상 대피실의 인원을 확인했습니다. 현재 설비는 정상 범위에서 작동 중입니다. 안전한 하루를 권장합니다.")
+		: FText::Format(NSLOCTEXT("SSAra", "DailyBriefing", "Day {0}. 현재 보유 물자는 식량 {1}개, 물 {2}개입니다. 대피실 상태를 계속 관찰하겠습니다."),
+			CurrentDay, GetStoredQuantityById(SSItemIds::Food), GetStoredQuantityById(SSItemIds::Water));
+}
+
+bool USSRunSubsystem::HasAskedAraQuestionToday(int32 QuestionIndex) const
+{
+	return QuestionIndex >= 0 && QuestionIndex < 3
+		&& (AskedAraQuestionsMask & (1u << QuestionIndex)) != 0;
+}
+
+bool USSRunSubsystem::AskAraQuestion(int32 QuestionIndex, FText& OutAnswer)
+{
+	if (QuestionIndex < 0 || QuestionIndex >= 3 || PlayerStats.Health <= 0.f)
+		return false;
+
+	static const FText Answers[] = {
+		NSLOCTEXT("SSAra", "OutsideAnswer", "현재 외부 통로에는 경비 로봇이 순찰 중입니다. 대피실에 머무르는 것이 가장 안전합니다."),
+		NSLOCTEXT("SSAra", "PatrolAnswer", "경비 로봇은 인원 보호 명령을 수행 중입니다. 허가되지 않은 이동을 제한하고 있습니다."),
+		NSLOCTEXT("SSAra", "SurvivorAnswer", "다른 구역의 인원 정보는 확인 중입니다. 검증되지 않은 위치는 안내할 수 없습니다.")
+	};
+	OutAnswer = Answers[QuestionIndex];
+	if (HasAskedAraQuestionToday(QuestionIndex)) return true;
+	if (!ConsumeActionPoints(1)) return false;
+	AskedAraQuestionsMask |= static_cast<uint8>(1u << QuestionIndex);
+	++AraLearningScore;
+	return true;
+}
+
+USSEventDirector* USSRunSubsystem::GetEventDirector()
+{
+	if (!IsValid(EventDirector)) EventDirector = NewObject<USSEventDirector>(this);
+	return EventDirector;
+}
+
+void USSRunSubsystem::ModifyPlayerStats(float DeltaHealth, float DeltaSatiety, float DeltaHydration)
+{
+	if (PlayerStats.Health <= 0.f) return;   // 이미 사망
+
+	PlayerStats.Health    = FMath::Clamp(PlayerStats.Health    + DeltaHealth,    0.f, 100.f);
+	PlayerStats.Satiety   = FMath::Clamp(PlayerStats.Satiety   + DeltaSatiety,   0.f, 100.f);
+	PlayerStats.Hydration = FMath::Clamp(PlayerStats.Hydration + DeltaHydration, 0.f, 100.f);
+	if (PlayerStats.Health <= 0.f)
+		RecordEvent(ESSJournalEvent::Death, NSLOCTEXT("SSJournal", "Death", "생존자가 사망했다."));
+	OnPlayerStatsChanged.Broadcast();
+}
+
+void USSRunSubsystem::ModifySurvivorsHealth(float Delta)
+{
+	bool bChanged = false;
+	for (FSSSurvivorState& Survivor : RescuedSurvivors)
+	{
+		if (!Survivor.bAlive || !IsValid(Survivor.Definition)) continue;
+		Survivor.Stats.Health = FMath::Clamp(Survivor.Stats.Health + Delta, 0.f, 100.f);
+		bChanged = true;
+		if (Survivor.Stats.Health <= 0.f)
+		{
+			Survivor.bAlive = false;
+			RecordEvent(ESSJournalEvent::Death, FText::Format(
+				NSLOCTEXT("SSJournal", "SurvivorDeath", "{0}이(가) 사망했다."), Survivor.Definition->DisplayName));
+		}
+	}
+	if (bChanged) OnSurvivorsChanged.Broadcast();
+}
+
+void USSRunSubsystem::AdjustActionPoints(int32 Delta)
+{
+	const int32 Before = ActionPoints;
+	ActionPoints = FMath::Clamp(ActionPoints + Delta, 0, MaxActionPoints);
+	if (ActionPoints != Before) OnActionPointsChanged.Broadcast();
+}
+
 void USSRunSubsystem::InitializeShelterStats(float InHealth, float InSatiety, float InHydration)
 {
 	PlayerStats.Health = FMath::Clamp(InHealth, 0.f, 100.f);
 	PlayerStats.Satiety = FMath::Clamp(InSatiety, 0.f, 100.f);
 	PlayerStats.Hydration = FMath::Clamp(InHydration, 0.f, 100.f);
+	BuildAraBriefing();   // 은신처 첫날 보고 (ResetRun을 거치지 않고 들어와도 비어 있지 않게)
 }
 
 bool USSRunSubsystem::ConsumeItem(FName ItemId)
@@ -608,6 +690,7 @@ bool USSRunSubsystem::AdvanceDayCore(bool bGiveFood, bool bGiveWater)
 	OnSurvivorsChanged.Broadcast();
 
 	++CurrentDay;
+	AskedAraQuestionsMask = 0;
 
 	// 사망했으면 탐사 진행 없이 종료
 	if (PlayerStats.Health <= 0.f) return true;
@@ -617,6 +700,8 @@ bool USSRunSubsystem::AdvanceDayCore(bool bGiveFood, bool bGiveWater)
 
 	TickExpedition();
 	TickRepair();
+
+	BuildAraBriefing();   // 로봇 귀환까지 반영된 아침 상태로 보고를 고정
 
 	return true;
 }
