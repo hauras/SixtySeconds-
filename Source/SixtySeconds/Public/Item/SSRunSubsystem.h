@@ -157,6 +157,8 @@ public:
 	void AdjustActionPoints(int32 Delta);      // 0 ~ MaxActionPoints
 	void AddEventJournal(const FText& Message) { RecordEvent(ESSJournalEvent::Event, Message); }
 
+	void BuildAraBriefing();   // 현재 날짜·물자로 아침 보고 문장을 만들어 저장
+
 	const FText& GetAraBriefing() const { return AraBriefing; }   // 오늘 아침 ARA 보고 (하루 시작 때 고정)
 	bool HasUnreadAraBriefing() const { return LastAraReadDay < CurrentDay; }
 	void MarkAraBriefingRead() { LastAraReadDay = CurrentDay; }
@@ -207,7 +209,6 @@ private:
 	void TickRepair();
 
 	void RecordEvent(ESSJournalEvent Event, const FText& Message);
-	void BuildAraBriefing();   // 오늘 날짜·물자로 아침 보고 문장을 만들어 저장
 	void RecordExpeditionReturn(const FSSExpeditionResult& Result, bool bSuccess);
 
 	// 동료 데이터

@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "Event/SSEventTypes.h"
 #include "SSEventWidget.generated.h"
 
 class UButton;
@@ -9,8 +10,10 @@ class UTextBlock;
 class USSEventDirector;
 class USSRunSubsystem;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FSSOnEventFinished);
+
 // 하루 사건 창. 제목·본문과 선택지 버튼(최대 3개)을 보여주고, 고른 선택지를 디렉터에 넘긴다.
-UCLASS(Abstract)
+UCLASS()
 class SIXTYSECONDS_API USSEventWidget : public UUserWidget
 {
 	GENERATED_BODY()
@@ -18,12 +21,16 @@ class SIXTYSECONDS_API USSEventWidget : public UUserWidget
 public:
 	void ShowEvent(USSEventDirector* InDirector, USSRunSubsystem* InRun, FName InEventId);
 
+	const FSSEventResult& GetResult() const { return Result; }
+	UPROPERTY(BlueprintAssignable, Category="SS|Event")
+	FSSOnEventFinished OnEventFinished;
 protected:
+	virtual TSharedRef<SWidget> RebuildWidget() override;
 	virtual void NativeConstruct() override;
 	virtual void NativeDestruct() override;
 
-	UPROPERTY(meta=(BindWidget))         TObjectPtr<UTextBlock> TitleText;
-	UPROPERTY(meta=(BindWidget))         TObjectPtr<UTextBlock> BodyText;
+	UPROPERTY(meta=(BindWidgetOptional)) TObjectPtr<UTextBlock> TitleText;
+	UPROPERTY(meta=(BindWidgetOptional)) TObjectPtr<UTextBlock> BodyText;
 
 	// 선택지 칸. 사건의 선택지 수보다 많은 칸은 숨김
 	UPROPERTY(meta=(BindWidgetOptional)) TObjectPtr<UButton> ChoiceButton0;
@@ -44,4 +51,6 @@ private:
 
 	FName EventId = NAME_None;
 	TArray<FName> ChoiceIds;   // 버튼 칸 번호 → 선택지 ID
+
+	FSSEventResult Result;
 };

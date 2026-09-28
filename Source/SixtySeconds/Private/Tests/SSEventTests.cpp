@@ -16,6 +16,7 @@ namespace SSEventTest
         Item->ItemId = Id;
         Item->UseEffect = Effect;
         Item->EffectAmount = 40.f;
+        Item->DisplayName = FText::FromName(Id);   // 결과 문장에 "Food -1"처럼 이름이 나오게
         return Item;
     }
 
@@ -90,6 +91,10 @@ bool FSSEventDirectorTest::RunTest(const FString& Parameters)
     Effects->AddRow(TEXT("E4"), Effect(TEXT("Knock_Ignore"), ESSEventEffect::PlayerHealth, NAME_None, -10));
     Effects->AddRow(TEXT("E5"), Effect(TEXT("Reward_Take"), ESSEventEffect::Item, TEXT("Water"), 2));
     Effects->AddRow(TEXT("E6"), Effect(TEXT("Leak_Fix"), ESSEventEffect::ActionPoints, NAME_None, -1));
+    Effects->AddRow(TEXT("E7"), Effect(TEXT("Knock_Ignore"), ESSEventEffect::Item, TEXT("Water"), -5));   // 가진 것보다 많이 잃기
+    FSSEventEffectRow Never = Effect(TEXT("Knock_Ignore"), ESSEventEffect::ActionPoints, NAME_None, -1);
+    Never.Chance = 0.f;                                                                                  // 절대 안 일어나는 효과
+    Effects->AddRow(TEXT("E8"), Never);
 
     Catalog->EventTable = Events;
     Catalog->ChoiceTable = Choices;
@@ -118,11 +123,21 @@ bool FSSEventDirectorTest::RunTest(const FString& Parameters)
     FSSItemStack WaterStack; WaterStack.Item = Water; WaterStack.Quantity = 1;
     Run->DepositItems({ FoodStack, WaterStack });
 
+    FSSEventResult Result;   // 선택 결과 (선택할 때마다 새로 채워짐)
+    const auto HasChange = [&Result](ESSEventEffect Type, FName Target, int32 Amount)
+    {
+        return Result.Changes.ContainsByPredicate([&](const FSSEventChange& Change)
+        {
+            return Change.Type == Type && Change.Target == Target && Change.Amount == Amount;
+        });
+    };
+
     // 3. Day 1: Knock은 Day 2부터, Reward는 예약 전용 → Leak만 가능
     TestEqual(TEXT("Day 1 picks Leak"), Director->PickEventForToday(*Run), FName(TEXT("Leak")));
-    TestFalse(TEXT("Choice from another event rejected"), Director->ApplyChoice(TEXT("Leak"), TEXT("Knock_Open"), *Run));
-    TestTrue(TEXT("Apply Leak_Fix"), Director->ApplyChoice(TEXT("Leak"), TEXT("Leak_Fix"), *Run));
+    TestFalse(TEXT("Choice from another event rejected"), Director->ApplyChoice(TEXT("Leak"), TEXT("Knock_Open"), *Run, Result));
+    TestTrue(TEXT("Apply Leak_Fix"), Director->ApplyChoice(TEXT("Leak"), TEXT("Leak_Fix"), *Run, Result));
     TestEqual(TEXT("Action point effect"), Run->GetActionPoints(), USSRunSubsystem::MaxActionPoints - 1);
+    TestTrue(TEXT("Result records action point change"), HasChange(ESSEventEffect::ActionPoints, NAME_None, -1));
 
     // 4. Day 2: Leak은 쿨다운 → Knock
     TestTrue(TEXT("Advance to day 2"), Run->AdvanceDay(false, false));
@@ -131,10 +146,20 @@ bool FSSEventDirectorTest::RunTest(const FString& Parameters)
     TestEqual(TEXT("Knock has two choices"), KnockChoices.Num(), 2);
     TestTrue(TEXT("Choices sorted by Order"), KnockChoices.Num() == 2 && KnockChoices[0].ChoiceId == TEXT("Knock_Open"));
     TestTrue(TEXT("Open available with food"), KnockChoices.Num() == 2 && KnockChoices[0].bAvailable);
-    TestTrue(TEXT("Apply Knock_Open"), Director->ApplyChoice(TEXT("Knock"), TEXT("Knock_Open"), *Run));
+    TestTrue(TEXT("Apply Knock_Open"), Director->ApplyChoice(TEXT("Knock"), TEXT("Knock_Open"), *Run, Result));
     TestEqual(TEXT("Food spent"), Run->GetStoredQuantityById(TEXT("Food")), 0);
-    TestTrue(TEXT("Journal entry recorded"), Run->GetJournalEntries().ContainsByPredicate(
-        [](const FSSJournalEntry& Entry) { return Entry.Event == ESSJournalEvent::Event; }));
+    TestEqual(TEXT("Result keeps chosen text"), Result.ChoiceText.ToString(), FString(TEXT("Knock")));
+    TestTrue(TEXT("Result keeps journal line"), Result.Lines.Num() == 1 && Result.Lines[0].ToString() == TEXT("Shared food"));
+    TestTrue(TEXT("Result records food loss"), HasChange(ESSEventEffect::Item, TEXT("Food"), -1));
+    TestEqual(TEXT("Scheduled follow-up is hidden from result"), Result.Changes.Num(), 1);
+    TestEqual(TEXT("Changes described"), Director->DescribeChanges(Result).ToString(), FString(TEXT("Food -1")));
+    const TArray<FSSJournalEntry>& Journal = Run->GetJournalEntries();
+    const int32 EventIndex = Journal.FindLastByPredicate(   // 방금 고른 Knock의 기록 (앞에 Leak 기록이 있음)
+        [](const FSSJournalEntry& Entry) { return Entry.Event == ESSJournalEvent::Event; });
+    const FSSJournalEntry* EventEntry = Journal.IsValidIndex(EventIndex) ? &Journal[EventIndex] : nullptr;
+    TestTrue(TEXT("One journal line with result and change"), EventEntry
+        && EventEntry->Message.ToString().Contains(TEXT("Shared food"))
+        && EventEntry->Message.ToString().Contains(TEXT("(Food -1)")));
 
     // 5. Day 3: Knock 1회성, Leak 쿨다운, Reward는 Day 4 예약 → 없음
     TestTrue(TEXT("Advance to day 3"), Run->AdvanceDay(false, false));
@@ -143,15 +168,19 @@ bool FSSEventDirectorTest::RunTest(const FString& Parameters)
     // 6. Day 4: 예약된 Reward
     TestTrue(TEXT("Advance to day 4"), Run->AdvanceDay(false, false));
     TestEqual(TEXT("Day 4 picks scheduled Reward"), Director->PickEventForToday(*Run), FName(TEXT("Reward")));
-    TestTrue(TEXT("Apply Reward_Take"), Director->ApplyChoice(TEXT("Reward"), TEXT("Reward_Take"), *Run));
+    TestTrue(TEXT("Apply Reward_Take"), Director->ApplyChoice(TEXT("Reward"), TEXT("Reward_Take"), *Run, Result));
     TestEqual(TEXT("Water gained from catalog item"), Run->GetStoredQuantityById(TEXT("Water")), 3);
 
     // 7. 조건이 안 맞는 선택지: 식량이 없으면 열어주기 불가
     const TArray<FSSEventChoiceView> NoFood = Director->GetChoices(TEXT("Knock"), *Run);
     TestFalse(TEXT("Open unavailable without food"), NoFood.Num() == 2 && NoFood[0].bAvailable);
-    TestFalse(TEXT("Unavailable choice rejected"), Director->ApplyChoice(TEXT("Knock"), TEXT("Knock_Open"), *Run));
-    TestTrue(TEXT("Ignore still possible"), Director->ApplyChoice(TEXT("Knock"), TEXT("Knock_Ignore"), *Run));
+    TestFalse(TEXT("Unavailable choice rejected"), Director->ApplyChoice(TEXT("Knock"), TEXT("Knock_Open"), *Run, Result));
+    TestTrue(TEXT("Ignore still possible"), Director->ApplyChoice(TEXT("Knock"), TEXT("Knock_Ignore"), *Run, Result));
     TestEqual(TEXT("Health effect"), Run->GetHealth(), 90.f);
+    TestTrue(TEXT("Result records health change"), HasChange(ESSEventEffect::PlayerHealth, NAME_None, -10));
+    TestTrue(TEXT("Loss capped to what was held"), HasChange(ESSEventEffect::Item, TEXT("Water"), -3));
+    TestEqual(TEXT("Water gone"), Run->GetStoredQuantityById(TEXT("Water")), 0);
+    TestFalse(TEXT("Failed chance not in result"), HasChange(ESSEventEffect::ActionPoints, NAME_None, -1));
 
     // 8. 확률 0이면 예약 없이는 사건 없음
     Catalog->DailyEventChance = 0.f;

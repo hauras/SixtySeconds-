@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "TimerManager.h"
+#include "Event/SSEventTypes.h"
 #include "SSShelterHUD.generated.h"
 
 class UCheckBox;
@@ -18,6 +19,8 @@ class USSSurvivorInfoContentWidget;
 class USSEventCatalog;
 class USSEventWidget;
 class USSAraWidget;
+class UWidget;
+
 
 UCLASS(Abstract)
 class SIXTYSECONDS_API USSShelterHUD : public UUserWidget
@@ -114,6 +117,46 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category="SS|Event")
 	TSubclassOf<USSEventWidget> EventWidgetClass;
+	
+	// 밤 레이어 (어두운 막 + 진행 표시). 평소엔 숨김
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UWidget> NightLayer;
+	
+	// "DAY 1 → NIGHT → DAY 2" 표시
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UTextBlock> NightProgressText;
+
+	
+	// 밤 화면이 어두워지는 시간(초). 완료된 뒤 사건 단서 또는 계속 버튼 표시
+	UPROPERTY(EditDefaultsOnly, Category="SS|Night", meta=(ClampMin="0.1"))
+	float NightIntroSeconds = 1.3f;
+
+	UPROPERTY(EditDefaultsOnly, Category="SS|Night", meta=(ClampMin="0.1"))
+	float MorningFadeSeconds = 1.0f;
+
+	// 밤 사건 발견 표시(!). 루트 Canvas의 직접 자식이어야 위치를 옮길 수 있음. 평소엔 Collapsed
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UButton> NightEventCueButton;
+
+	// 발견 표시 옆 글자 ("! 문 확인")
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UTextBlock> NightEventCueText;
+
+	// 조용한 밤에 누르는 "아침 맞이하기". 평소엔 Collapsed
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UButton> NightContinueButton;
+
+	// 사건 위치 → 화면 앵커(0~1). 배경 그림이 바뀌면 여기만 고치면 됨
+	UPROPERTY(EditDefaultsOnly, Category="SS|Night")
+	TMap<ESSEventSpot, FVector2D> NightSpotAnchors = {
+		{ ESSEventSpot::Monitor,   FVector2D(0.69f, 0.51f) },
+		{ ESSEventSpot::Door,      FVector2D(0.87f, 0.49f) },
+		{ ESSEventSpot::Vent,      FVector2D(0.51f, 0.19f) },
+		{ ESSEventSpot::Shelf,     FVector2D(0.49f, 0.32f) },
+		{ ESSEventSpot::Equipment, FVector2D(0.65f, 0.69f) },
+		{ ESSEventSpot::Terminal,  FVector2D(0.11f, 0.57f) },
+		{ ESSEventSpot::Bed,       FVector2D(0.50f, 0.70f) },
+	};
 
 private:
     UFUNCTION()
@@ -125,7 +168,26 @@ private:
     UFUNCTION()
     void HandlePlayerStatsChanged();   // 사건 효과 등으로 스탯이 바뀜 → 다시 그리고 사망 확인
     void CheckPlayerDeath();
-    void TryShowDailyEvent();          // 하루가 시작될 때 사건 하나 (없을 수도 있음)
+    bool TryShowDailyEvent();          // 선택된 밤 사건을 띄움
+    void PlaceNightEventCue(FName EventId);   // 사건 데이터의 Spot으로 발견 표시 위치와 글자를 정함
+    UFUNCTION()
+    void OnNightEventCueClicked();
+    UFUNCTION()
+    void OnNightContinueClicked();
+
+    // 밤: 하루가 넘어간 뒤 사건을 처리하는 동안. 낮 행동을 잠그고, 끝나면 아침 브리핑
+    void BeginNight();
+    void ContinueNightAfterIntro();
+    void StartNightFade(bool bFadeToNight);
+    void UpdateNightFade();
+    UFUNCTION()
+    void EndNight();                   // 사건 선택을 마치거나 조용한 밤을 넘기면 아침으로
+    void SetDayControlsEnabled(bool bEnabled);
+    bool bNight = false;
+    FTimerHandle NightFadeTimer;
+    float NightFadeStartedAt = 0.f;
+    bool bFadingToNight = false;
+    FName PendingNightEventId = NAME_None;
     void RefreshAraIndicator();
     void ScheduleAraBlink();
     void BlinkAra();

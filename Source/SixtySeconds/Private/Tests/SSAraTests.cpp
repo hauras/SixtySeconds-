@@ -62,6 +62,11 @@ bool FSSAraBriefingTest::RunTest(const FString& Parameters)
     TestTrue(TEXT("Food consumed after morning"), Run->RemoveStoredItemsById(SSItemIds::Food, 1));
     TestEqual(TEXT("Briefing stays fixed after morning"), Run->GetAraBriefing().ToString(), Morning);
 
+    // 밤 사건으로 물자가 줄고 밤이 끝나면(HUD가 다시 만듦) 아침 보고에 반영
+    TestTrue(TEXT("Night event takes water"), Run->RemoveStoredItemsById(SSItemIds::Water, 1));
+    Run->BuildAraBriefing();
+    TestTrue(TEXT("Rebuilt briefing reflects the night"), Run->GetAraBriefing().ToString().Contains(TEXT("물 1개")));
+
     // 새 판: Day 1 보고로 돌아가고 안 읽음
     Run->MarkAraBriefingRead();
     Run->ResetRun();

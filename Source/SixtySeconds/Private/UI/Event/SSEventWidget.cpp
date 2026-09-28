@@ -3,6 +3,85 @@
 #include "Item/SSRunSubsystem.h"
 #include "Components/Button.h"
 #include "Components/TextBlock.h"
+#include "Blueprint/WidgetTree.h"
+#include "Components/Border.h"
+#include "Components/CanvasPanel.h"
+#include "Components/CanvasPanelSlot.h"
+#include "Components/ButtonSlot.h"
+#include "Components/VerticalBox.h"
+#include "Components/VerticalBoxSlot.h"
+
+namespace
+{
+	FLinearColor EventColor(const TCHAR* Hex)
+	{
+		return FLinearColor::FromSRGBColor(FColor::FromHex(Hex));
+	}
+
+	UTextBlock* EventLabel(UWidgetTree* Tree, const FText& Text, int32 Size, const TCHAR* Hex)
+	{
+		UTextBlock* Label = Tree->ConstructWidget<UTextBlock>();
+		Label->SetText(Text);
+		FSlateFontInfo Font = Label->GetFont();
+		Font.Size = Size;
+		Label->SetFont(Font);
+		Label->SetColorAndOpacity(FSlateColor(EventColor(Hex)));
+		Label->SetAutoWrapText(true);
+		return Label;
+	}
+}
+
+TSharedRef<SWidget> USSEventWidget::RebuildWidget()
+{
+	if (!WidgetTree->RootWidget)
+	{
+		UCanvasPanel* Canvas = WidgetTree->ConstructWidget<UCanvasPanel>();
+		Canvas->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+		WidgetTree->RootWidget = Canvas;
+
+		UBorder* Frame = WidgetTree->ConstructWidget<UBorder>();
+		Frame->SetBrushColor(EventColor(TEXT("4BB9C8")));
+		Frame->SetPadding(FMargin(2));
+		UCanvasPanelSlot* FrameSlot = Canvas->AddChildToCanvas(Frame);
+		FrameSlot->SetAnchors(FAnchors(.5f, .5f));
+		FrameSlot->SetAlignment(FVector2D(.5f, .5f));
+		FrameSlot->SetSize(FVector2D(760, 540));
+
+		UBorder* Body = WidgetTree->ConstructWidget<UBorder>();
+		Body->SetBrushColor(EventColor(TEXT("101D2B")));
+		Body->SetPadding(FMargin(30, 24));
+		Frame->SetContent(Body);
+		UVerticalBox* Column = WidgetTree->ConstructWidget<UVerticalBox>();
+		Body->SetContent(Column);
+		Column->AddChildToVerticalBox(EventLabel(WidgetTree,
+			NSLOCTEXT("SSEvent", "NightEyebrow", "▲  밤 사건  /  제7연구소"), 17, TEXT("EBC085")))
+			->SetPadding(FMargin(0, 0, 0, 12));
+
+		TitleText = EventLabel(WidgetTree, FText::GetEmpty(), 32, TEXT("F3EBDE"));
+		Column->AddChildToVerticalBox(TitleText)->SetPadding(FMargin(0, 0, 0, 22));
+		BodyText = EventLabel(WidgetTree, FText::GetEmpty(), 23, TEXT("E3EAF0"));
+		Column->AddChildToVerticalBox(BodyText)->SetPadding(FMargin(0, 0, 0, 26));
+
+		TObjectPtr<UButton>* Buttons[] = { &ChoiceButton0, &ChoiceButton1, &ChoiceButton2 };
+		TObjectPtr<UTextBlock>* Texts[] = { &ChoiceText0, &ChoiceText1, &ChoiceText2 };
+		for (int32 Index = 0; Index < 3; ++Index)
+		{
+			UButton* Button = WidgetTree->ConstructWidget<UButton>();
+			FButtonStyle Style = Button->GetStyle();
+			Style.Normal.TintColor = FSlateColor(EventColor(TEXT("1C3A52")));
+			Style.Hovered.TintColor = FSlateColor(EventColor(TEXT("2D667B")));
+			Style.Pressed.TintColor = FSlateColor(EventColor(TEXT("143044")));
+			Button->SetStyle(Style);
+			Column->AddChildToVerticalBox(Button)->SetPadding(FMargin(0, 0, 0, 10));
+			UTextBlock* ChoiceText = EventLabel(WidgetTree, FText::GetEmpty(), 22, TEXT("F3EBDE"));
+			Button->SetContent(ChoiceText);
+			CastChecked<UButtonSlot>(ChoiceText->Slot)->SetPadding(FMargin(16, 10));
+			*Buttons[Index] = Button;
+			*Texts[Index] = ChoiceText;
+		}
+	}
+	return Super::RebuildWidget();
+}
 
 void USSEventWidget::ShowEvent(USSEventDirector* InDirector, USSRunSubsystem* InRun, FName InEventId)
 {
@@ -62,8 +141,9 @@ void USSEventWidget::Choose(int32 Index)
 	if (!ChoiceIds.IsValidIndex(Index) || ChoiceIds[Index].IsNone() || !IsValid(Director) || !IsValid(Run)) return;
 
 	// 적용 여부 판단은 디렉터가 함. 성공했을 때만 창을 닫음
-	if (Director->ApplyChoice(EventId, ChoiceIds[Index], *Run))
+	if (Director->ApplyChoice(EventId, ChoiceIds[Index], *Run, Result))
 	{
+		OnEventFinished.Broadcast();
 		RemoveFromParent();
 	}
 }

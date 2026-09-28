@@ -31,6 +31,19 @@ enum class ESSEventEffect : uint8
 	ScheduleEvent,     // Target = EventId, Amount = 며칠 뒤 (1 이상)
 };
 
+// 밤 사건이 은신처 어디에서 느껴지는지. HUD가 이 위치에 발견 표시(!)를 띄움
+UENUM(BlueprintType)
+enum class ESSEventSpot : uint8
+{
+	Monitor,     // 감시 화면 (위치를 정하지 않은 사건의 기본값)
+	Door,        // 방화문
+	Vent,        // 천장 환풍구
+	Shelf,       // 물자 선반
+	Equipment,   // 설비·사물함
+	Terminal,    // 관리 단말 (아라)
+	Bed,         // 침대
+};
+
 // Events 시트 한 줄. 행 이름(Name 열)이 EventId.
 USTRUCT(BlueprintType)
 struct SIXTYSECONDS_API FSSEventRow : public FTableRowBase
@@ -50,6 +63,8 @@ struct SIXTYSECONDS_API FSSEventRow : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="SS|Event") ESSEventCondition Condition = ESSEventCondition::None;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="SS|Event") FName ConditionTarget = NAME_None;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="SS|Event") int32 ConditionAmount = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="SS|Event") ESSEventSpot Spot = ESSEventSpot::Monitor;   // 밤에 발견 표시가 뜨는 곳
 };
 
 // Choices 시트 한 줄. 행 이름이 ChoiceId.
@@ -88,4 +103,23 @@ struct FSSEventChoiceView
 	FName ChoiceId = NAME_None;
 	FText Text;
 	bool bAvailable = false;
+};
+
+
+// 선택으로 실제로 바뀐 것 하나 (확률에 성공했고, 가진 만큼만 잃은 실제 양)
+struct FSSEventChange
+{
+	ESSEventEffect Type = ESSEventEffect::None;
+	FName Target = NAME_None;   // 아이템일 때 ItemId
+	int32 Amount = 0;           // 실제 적용된 양 (+얻음 / -잃음)
+};
+
+// 사건 하나의 결과. 선택 후 아침 알림과 저널 기록에 같이 씀
+struct FSSEventResult
+{
+	FName EventId = NAME_None;
+	FText Title;                     // 사건 이름
+	FText ChoiceText;                // 고른 선택지
+	TArray<FText> Lines;             // 결과 문장 (Journal 효과 문장들)
+	TArray<FSSEventChange> Changes;  // 실제로 바뀐 것들 (다음 날로 이어지는 결과는 넣지 않음)
 };

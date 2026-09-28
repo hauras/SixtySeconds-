@@ -21,6 +21,7 @@
 #include "Event/SSEventDirector.h"
 #include "Event/SSEventCatalog.h"
 #include "UI/Ara/SSAraWidget.h"
+#include "Components/CanvasPanelSlot.h"
 
 void USSShelterHUD::NativeConstruct()
 {
@@ -47,6 +48,17 @@ void USSShelterHUD::NativeConstruct()
         RobotButton->OnClicked.AddUniqueDynamic(this, &USSShelterHUD::OnRobotClicked);
     if (AraButton)
         AraButton->OnClicked.AddUniqueDynamic(this, &ThisClass::OnAraClicked);
+    // 밤 버튼은 WBP에 배치 (BindWidgetOptional). 평소엔 숨김
+    if (NightEventCueButton)
+    {
+        NightEventCueButton->OnClicked.AddUniqueDynamic(this, &ThisClass::OnNightEventCueClicked);
+        NightEventCueButton->SetVisibility(ESlateVisibility::Collapsed);
+    }
+    if (NightContinueButton)
+    {
+        NightContinueButton->OnClicked.AddUniqueDynamic(this, &ThisClass::OnNightContinueClicked);
+        NightContinueButton->SetVisibility(ESlateVisibility::Collapsed);
+    }
     TArray<UWidget*> Widgets;
     WidgetTree->GetAllWidgets(Widgets);
     for (UWidget* Widget : Widgets)
@@ -71,6 +83,11 @@ void USSShelterHUD::NativeConstruct()
     RefreshRobotDisplay();
     RefreshDisplay();
     RefreshAraIndicator();
+    if (NightLayer)
+    {
+        NightLayer->SetRenderOpacity(1.f);
+        NightLayer->SetVisibility(ESlateVisibility::Collapsed);   // 낮으로 시작
+    }
     if (AraIconImage)
     {
         ScheduleAraBlink();
@@ -83,7 +100,11 @@ void USSShelterHUD::NativeDestruct()
     {
         GetWorld()->GetTimerManager().ClearTimer(AraBlinkTimer);
         GetWorld()->GetTimerManager().ClearTimer(AraBlinkRestoreTimer);
+        GetWorld()->GetTimerManager().ClearTimer(NightFadeTimer);
     }
+    if (IsValid(EventWidget)) EventWidget->OnEventFinished.RemoveDynamic(this, &ThisClass::EndNight);
+    if (NightEventCueButton) NightEventCueButton->OnClicked.RemoveDynamic(this, &ThisClass::OnNightEventCueClicked);
+    if (NightContinueButton) NightContinueButton->OnClicked.RemoveDynamic(this, &ThisClass::OnNightContinueClicked);
     if (IsValid(RunSubsystem))
     {
         RunSubsystem->OnStoredItemsChanged.RemoveDynamic(this, &USSShelterHUD::RefreshDisplay);
@@ -308,7 +329,7 @@ void USSShelterHUD::OnComputerClicked()
 
 void USSShelterHUD::OnNextDayClicked()
 {
-    if (!IsValid(RunSubsystem) || !FoodRationCheckBox || !WaterRationCheckBox)
+    if (bNight || !IsValid(RunSubsystem) || !FoodRationCheckBox || !WaterRationCheckBox)   // 밤 동안은 무시
     {
         return;
     }
@@ -357,7 +378,6 @@ void USSShelterHUD::HandleDayAdvanced()
     if (!IsValid(RunSubsystem)) return;
 
     CurrentDay = RunSubsystem->GetCurrentDay();
-    RefreshAraIndicator();
 
     // 스탯과 날짜·보관 수량을 함께 갱신
     RefreshStats(
@@ -370,7 +390,7 @@ void USSShelterHUD::HandleDayAdvanced()
     if (WaterRationCheckBox) WaterRationCheckBox->SetIsChecked(false);
 
     CheckPlayerDeath();
-    if (RunSubsystem->GetHealth() > 0.f) TryShowDailyEvent();   // 새 날의 아침 사건
+    if (RunSubsystem->GetHealth() > 0.f) BeginNight();   // 넘어가는 사이가 밤. 사건은 밤에, 아라 브리핑은 아침에
 }
 
 void USSShelterHUD::RefreshAraIndicator()
@@ -462,19 +482,189 @@ void USSShelterHUD::CheckPlayerDeath()
     }
 }
 
-void USSShelterHUD::TryShowDailyEvent()
+bool USSShelterHUD::TryShowDailyEvent()
 {
-    if (!IsValid(RunSubsystem) || !EventWidgetClass) return;
-    if (IsValid(EventWidget) && EventWidget->IsInViewport()) return;   // 이미 떠 있음
+    if (!IsValid(RunSubsystem) || !EventWidgetClass || PendingNightEventId.IsNone()) return false;
+    if (IsValid(EventWidget) && EventWidget->IsInViewport())   // 이미 떠 있음 → 그 창이 끝나길 기다림
+    {
+        EventWidget->OnEventFinished.AddUniqueDynamic(this, &ThisClass::EndNight);
+        return true;
+    }
 
     USSEventDirector* Director = RunSubsystem->GetEventDirector();
-    if (!IsValid(Director) || !Director->GetCatalog()) return;
-
-    const FName EventId = Director->PickEventForToday(*RunSubsystem);
-    if (EventId.IsNone()) return;   // 오늘은 조용한 날
+    if (!IsValid(Director) || !Director->GetCatalog()) return false;
 
     EventWidget = CreateWidget<USSEventWidget>(GetOwningPlayer(), EventWidgetClass);
-    if (!IsValid(EventWidget)) return;
+    if (!IsValid(EventWidget)) return false;
     EventWidget->AddToViewport(50);   // 탐사 결과창(40)보다 위
-    EventWidget->ShowEvent(Director, RunSubsystem, EventId);
+    EventWidget->OnEventFinished.AddUniqueDynamic(this, &ThisClass::EndNight);
+    EventWidget->ShowEvent(Director, RunSubsystem, PendingNightEventId);
+    PendingNightEventId = NAME_None;
+    return true;
+}
+
+void USSShelterHUD::OnNightContinueClicked()
+{
+    if (!bNight || !PendingNightEventId.IsNone()) return;
+    if (IsValid(EventWidget) && EventWidget->IsInViewport()) return;
+    EndNight();
+}
+
+void USSShelterHUD::PlaceNightEventCue(FName EventId)
+{
+    // 위치는 사건 데이터(Spot)가 정함. HUD는 Spot → 화면 좌표와 글자만 앎
+    const USSEventDirector* Director = IsValid(RunSubsystem) ? RunSubsystem->GetEventDirector() : nullptr;
+    const FSSEventRow* Row = Director ? Director->FindEvent(EventId) : nullptr;
+    const ESSEventSpot Spot = Row ? Row->Spot : ESSEventSpot::Monitor;
+
+    if (NightEventCueButton)
+    {
+        if (UCanvasPanelSlot* CueSlot = Cast<UCanvasPanelSlot>(NightEventCueButton->Slot))
+        {
+            if (const FVector2D* Anchor = NightSpotAnchors.Find(Spot))
+                CueSlot->SetAnchors(FAnchors(Anchor->X, Anchor->Y));   // 좌표가 없으면 에디터에 둔 자리 그대로
+        }
+    }
+
+    if (NightEventCueText)
+    {
+        FText SpotName;
+        switch (Spot)
+        {
+        case ESSEventSpot::Door:      SpotName = NSLOCTEXT("SSNight", "DoorSpot", "문 확인"); break;
+        case ESSEventSpot::Vent:      SpotName = NSLOCTEXT("SSNight", "VentSpot", "환풍구 확인"); break;
+        case ESSEventSpot::Shelf:     SpotName = NSLOCTEXT("SSNight", "ShelfSpot", "선반 확인"); break;
+        case ESSEventSpot::Equipment: SpotName = NSLOCTEXT("SSNight", "EquipmentSpot", "설비 확인"); break;
+        case ESSEventSpot::Terminal:  SpotName = NSLOCTEXT("SSNight", "TerminalSpot", "단말 확인"); break;
+        case ESSEventSpot::Bed:       SpotName = NSLOCTEXT("SSNight", "BedSpot", "침대 확인"); break;
+        default:                      SpotName = NSLOCTEXT("SSNight", "CameraSpot", "감시 화면 확인"); break;
+        }
+        NightEventCueText->SetText(FText::FromString(TEXT("!")));
+        if (NightEventCueButton) NightEventCueButton->SetToolTipText(SpotName);
+    }
+}
+
+void USSShelterHUD::OnNightEventCueClicked()
+{
+    if (!bNight || PendingNightEventId.IsNone()) return;
+    if (NightEventCueButton) NightEventCueButton->SetVisibility(ESlateVisibility::Collapsed);
+    if (!TryShowDailyEvent()) EndNight();
+}
+
+void USSShelterHUD::BeginNight()
+{
+    if (bNight) return;
+    bNight = true;
+    SetDayControlsEnabled(false);   // 밤엔 낮 행동 금지 (사건 창이 떠 있는 동안 하루가 또 넘어가지 않게)
+
+    if (NightProgressText)
+        NightProgressText->SetText(FText::Format(NSLOCTEXT("SSNight", "Progress", "DAY {0}  →  NIGHT  →  DAY {1}"),
+            CurrentDay - 1, CurrentDay));   // 하루가 이미 넘어갔으므로 어제 → 오늘
+    StartNightFade(true);
+}
+
+void USSShelterHUD::StartNightFade(bool bFadeToNight)
+{
+    if (UWorld* World = GetWorld()) World->GetTimerManager().ClearTimer(NightFadeTimer);
+    if (!NightLayer || !GetWorld())
+    {
+        if (bFadeToNight) ContinueNightAfterIntro();
+        else SetDayControlsEnabled(true);
+        return;
+    }
+
+    bFadingToNight = bFadeToNight;
+    NightFadeStartedAt = GetWorld()->GetTimeSeconds();
+    NightLayer->SetVisibility(ESlateVisibility::HitTestInvisible);
+    NightLayer->SetRenderOpacity(bFadeToNight ? 0.f : 1.f);
+    GetWorld()->GetTimerManager().SetTimer(NightFadeTimer, this, &ThisClass::UpdateNightFade, 0.02f, true);
+}
+
+void USSShelterHUD::UpdateNightFade()
+{
+    UWorld* World = GetWorld();
+    if (!World || !NightLayer) return;
+
+    const float Duration = bFadingToNight ? NightIntroSeconds : MorningFadeSeconds;
+    const float Progress = FMath::Clamp((World->GetTimeSeconds() - NightFadeStartedAt) / FMath::Max(Duration, 0.1f), 0.f, 1.f);
+    const float Smoothed = Progress * Progress * (3.f - 2.f * Progress);
+    NightLayer->SetRenderOpacity(bFadingToNight ? Smoothed : 1.f - Smoothed);
+    if (Progress < 1.f) return;
+
+    World->GetTimerManager().ClearTimer(NightFadeTimer);
+    if (bFadingToNight)
+    {
+        ContinueNightAfterIntro();
+    }
+    else
+    {
+        NightLayer->SetVisibility(ESlateVisibility::Collapsed);
+        NightLayer->SetRenderOpacity(1.f);
+        SetDayControlsEnabled(true);
+    }
+}
+
+void USSShelterHUD::ContinueNightAfterIntro()
+{
+    if (!bNight) return;
+
+    USSEventDirector* Director = IsValid(RunSubsystem) ? RunSubsystem->GetEventDirector() : nullptr;
+    PendingNightEventId = IsValid(Director) && Director->GetCatalog() && EventWidgetClass
+        ? Director->PickEventForToday(*RunSubsystem) : NAME_None;
+
+    if (!PendingNightEventId.IsNone() && NightEventCueButton)
+    {
+        PlaceNightEventCue(PendingNightEventId);
+        NightEventCueButton->SetVisibility(ESlateVisibility::Visible); // 플레이어가 변화를 눌러야 사건을 발견
+    }
+    else if (!PendingNightEventId.IsNone())
+    {
+        // 예상과 달리 HUD 루트가 Canvas가 아니면 사건을 조용히 버리지 않는다.
+        if (!TryShowDailyEvent()) EndNight();
+    }
+    else if (NightContinueButton)
+    {
+        if (NightProgressText)
+            NightProgressText->SetText(NSLOCTEXT("SSNight", "QuietNight", "특이사항 없는 밤"));
+        NightContinueButton->SetVisibility(ESlateVisibility::Visible);
+    }
+    else EndNight(); // 버튼 생성 불가 시 진행이 막히지 않도록 복구
+}
+
+void USSShelterHUD::EndNight()
+{
+    if (!bNight) return;   // 델리게이트와 타이머가 겹쳐도 한 번만
+    bNight = false;
+    PendingNightEventId = NAME_None;
+    if (NightEventCueButton) NightEventCueButton->SetVisibility(ESlateVisibility::Collapsed);
+    if (NightContinueButton) NightContinueButton->SetVisibility(ESlateVisibility::Collapsed);
+
+    if (UWorld* World = GetWorld())
+    {
+        World->GetTimerManager().ClearTimer(NightFadeTimer);
+    }
+    if (IsValid(EventWidget)) EventWidget->OnEventFinished.RemoveDynamic(this, &ThisClass::EndNight);
+
+    // 사건 효과로 죽었으면 사망 처리가 화면을 가져감. 낮 버튼을 다시 풀지 않음
+    if (!IsValid(RunSubsystem) || RunSubsystem->GetHealth() <= 0.f) return;
+
+    RunSubsystem->BuildAraBriefing();   // 밤사이 결과(압수 등)까지 반영한 아침 보고
+    RefreshAraIndicator();               // 아침이 되어서야 안 읽음 표시
+
+    StartNightFade(false);
+}
+
+void USSShelterHUD::SetDayControlsEnabled(bool bEnabled)
+{
+    // 아라 버튼은 그대로 둠 (밤에도 깨어 있는 AI)
+    if (NextDayButton) NextDayButton->SetIsEnabled(bEnabled);
+    if (FoodRationCheckBox) FoodRationCheckBox->SetIsEnabled(bEnabled);
+    if (WaterRationCheckBox) WaterRationCheckBox->SetIsEnabled(bEnabled);
+    if (ComputerButton) ComputerButton->SetIsEnabled(bEnabled);
+    if (RobotButton) RobotButton->SetIsEnabled(bEnabled);
+    TArray<UWidget*> Widgets;
+    WidgetTree->GetAllWidgets(Widgets);
+    for (UWidget* Widget : Widgets)
+        if (USSSurvivorImageWidget* Person = Cast<USSSurvivorImageWidget>(Widget))
+            Person->SetIsEnabled(bEnabled);
 }
