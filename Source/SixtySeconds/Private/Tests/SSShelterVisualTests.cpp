@@ -1,11 +1,11 @@
 #include "Misc/AutomationTest.h"
 
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
-#include "UI/SSShelterHUD.h"
-#include "UI/SSStockItemWidget.h"
-#include "UI/SSSurvivorImageWidget.h"
-#include "UI/SSInfoPanelWidget.h"
-#include "UI/SSSurvivorInfoContentWidget.h"
+#include "UI/Shelter/SSShelterHUD.h"
+#include "UI/Shelter/SSStockItemWidget.h"
+#include "UI/Shelter/SSSurvivorImageWidget.h"
+#include "UI/Shelter/Info/SSInfoPanelWidget.h"
+#include "UI/Shelter/Info/SSSurvivorInfoContentWidget.h"
 #include "Components/NamedSlot.h"
 #include "Components/TextBlock.h"
 #include "Components/ProgressBar.h"

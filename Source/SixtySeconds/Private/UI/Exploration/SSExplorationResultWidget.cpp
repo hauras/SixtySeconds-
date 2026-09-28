@@ -1,5 +1,5 @@
-#include "UI/SSExplorationResultWidget.h"
-#include "UI/SSExplorationLootCard.h"
+#include "UI/Exploration/SSExplorationResultWidget.h"
+#include "UI/Exploration/SSExplorationLootCard.h"
 #include "Exploration/SSExplorationTypes.h"
 #include "Components/Button.h"
 #include "Components/PanelWidget.h"

@@ -1,4 +1,4 @@
-#include "UI/SSStockItemWidget.h"
+#include "UI/Shelter/SSStockItemWidget.h"
 #include "Components/Image.h"
 #include "Engine/GameInstance.h"
 #include "Item/SSItemDefinition.h"

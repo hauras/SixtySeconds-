@@ -1,4 +1,4 @@
-#include "UI/SSSurvivorImageWidget.h"
+#include "UI/Shelter/SSSurvivorImageWidget.h"
 #include "Blueprint/WidgetTree.h"
 #include "Character/SSSurvivorDefinition.h"
 #include "Components/Image.h"

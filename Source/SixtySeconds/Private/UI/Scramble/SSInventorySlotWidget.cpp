@@ -1,4 +1,4 @@
-#include "UI/SSInventorySlotWidget.h"
+#include "UI/Scramble/SSInventorySlotWidget.h"
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
 #include "Engine/Texture2D.h"

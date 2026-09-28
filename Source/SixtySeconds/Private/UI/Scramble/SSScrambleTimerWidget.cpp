@@ -1,4 +1,4 @@
-#include "UI/SSScrambleTimerWidget.h"
+#include "UI/Scramble/SSScrambleTimerWidget.h"
 #include "GameMode/SSGameMode.h"
 #include "Components/TextBlock.h"
 

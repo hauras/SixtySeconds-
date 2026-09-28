@@ -1,4 +1,4 @@
-#include "UI/SSExplorationLootCard.h"
+#include "UI/Exploration/SSExplorationLootCard.h"
 #include "Item/SSInventoryTypes.h"
 #include "Item/SSItemDefinition.h"
 #include "Components/Button.h"

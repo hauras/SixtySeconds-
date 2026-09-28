@@ -1,4 +1,4 @@
-#include "Exploration/SSExplorationRoomWidget.h"
+#include "UI/Exploration/SSExplorationRoomWidget.h"
 #include "Components/Border.h"
 #include "Components/Button.h"
 #include "Components/Image.h"

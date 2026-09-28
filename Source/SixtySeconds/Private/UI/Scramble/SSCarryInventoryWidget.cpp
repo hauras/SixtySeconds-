@@ -1,5 +1,5 @@
-#include "UI/SSCarryInventoryWidget.h"
-#include "UI/SSInventorySlotWidget.h"
+#include "UI/Scramble/SSCarryInventoryWidget.h"
+#include "UI/Scramble/SSInventorySlotWidget.h"
 #include "Item/SSCarryComponent.h"
 #include "Components/HorizontalBox.h"
 #include "Components/TextBlock.h"

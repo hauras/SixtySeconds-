@@ -1,5 +1,5 @@
-#include "UI/SSComputerWidget.h"
-#include "UI/SSExpeditionWidget.h"
+#include "UI/Shelter/SSComputerWidget.h"
+#include "UI/Exploration/SSExpeditionWidget.h"
 #include "Item/SSRunSubsystem.h"
 #include "Blueprint/WidgetTree.h"
 #include "Components/Border.h"

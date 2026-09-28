@@ -1,11 +1,11 @@
-#include "UI/SSExpeditionWidget.h"
+#include "UI/Exploration/SSExpeditionWidget.h"
 #include "Components/TextBlock.h"
 #include "Components/Button.h"
 #include "Components/CheckBox.h"
 #include "Item/SSExpeditionDefinition.h"
 #include "Item/SSItemDefinition.h"
 #include "Item/SSRunSubsystem.h"
-#include "UI/SSExplorationWidget.h"
+#include "UI/Exploration/SSExplorationWidget.h"
 #include "Exploration/SSExplorationMapDefinition.h"   // IsValid(DirectExplorationMap)에 완전한 타입 필요
 #include "Engine/GameInstance.h"
 

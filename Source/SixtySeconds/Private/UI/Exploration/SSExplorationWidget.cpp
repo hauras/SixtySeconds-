@@ -1,9 +1,9 @@
 
 
-#include "UI/SSExplorationWidget.h"
-#include "UI/SSExplorationResultWidget.h"
+#include "UI/Exploration/SSExplorationWidget.h"
+#include "UI/Exploration/SSExplorationResultWidget.h"
 #include "Exploration/SSExplorationSession.h"
-#include "Exploration/SSExplorationRoomWidget.h"
+#include "UI/Exploration/SSExplorationRoomWidget.h"
 #include "Exploration/SSExplorationMapDefinition.h"
 #include "Item/SSItemDefinition.h"
 #include "Blueprint/WidgetTree.h"      // WidgetTree->GetAllWidgets

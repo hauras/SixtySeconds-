@@ -1,8 +1,8 @@
 
 
 #include "Controller/SSRPlayerController.h"
-#include "UI/SSScrambleHUD.h"
-#include "UI/SSShelterHUD.h"
+#include "UI/Scramble/SSScrambleHUD.h"
+#include "UI/Shelter/SSShelterHUD.h"
 #include "Item/SSCarryComponent.h"
 #include "Character/SSCharacterStats.h"
 #include "GameFramework/Character.h"

@@ -1,6 +1,6 @@
 
 
-#include "UI/SSInfoPanelWidget.h"
+#include "UI/Shelter/Info/SSInfoPanelWidget.h"
 #include "Components/TextBlock.h"
 #include "Components/Image.h"
 #include "Components/Button.h"

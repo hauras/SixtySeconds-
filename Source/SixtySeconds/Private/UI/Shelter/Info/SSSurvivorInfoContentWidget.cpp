@@ -1,6 +1,6 @@
 
 
-#include "UI/SSSurvivorInfoContentWidget.h"
+#include "UI/Shelter/Info/SSSurvivorInfoContentWidget.h"
 #include "Engine/GameInstance.h"
 #include "Item/SSRunSubsystem.h"
 #include "Item/SSItemDefinition.h"
