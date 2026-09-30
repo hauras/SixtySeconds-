@@ -7,6 +7,8 @@
 #include "Character/SSSurvivorTypes.h"
 #include "SSRunSubsystem.generated.h"
 
+class USSCommsState;
+
 class USSExpeditionDefinition;
 class USSEventDirector;
 struct FSSExplorationResult;
@@ -165,6 +167,14 @@ public:
 	bool AskAraQuestion(int32 QuestionIndex, FText& OutAnswer);
 	bool HasAskedAraQuestionToday(int32 QuestionIndex) const;
 
+	// ── 외부 통신 (역추적 + 받은 메시지) ──
+	// 날을 넘어 이어지는 통신 상태. 처음 부를 때 생성
+	USSCommsState* GetComms();
+
+	// 다른 시스템(외부 통신 등)이 저널을 남기거나 행동력을 쓸 때
+	void AddJournal(ESSJournalEvent Event, const FText& Message) { RecordEvent(Event, Message); }
+	bool SpendActionPoints(int32 Cost) { return ConsumeActionPoints(Cost); }
+
 	// UI 등에 데이터 변경을 알리는 이벤트
 	// 하루가 지남 (다음 날 버튼, 직접 탐사 정산 모두). 날짜·플레이어 스탯이 바뀌었으니 다시 그리고 사망 확인
 	UPROPERTY(BlueprintAssignable, Category="SS|Run")
@@ -267,4 +277,7 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<USSEventDirector> EventDirector;
+
+	UPROPERTY(Transient)
+	TObjectPtr<USSCommsState> Comms;
 };

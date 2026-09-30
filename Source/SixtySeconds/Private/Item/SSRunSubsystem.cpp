@@ -4,6 +4,7 @@
 #include "Character/SSSurvivorDefinition.h"
 #include "Exploration/SSExplorationTypes.h"
 #include "Event/SSEventDirector.h"
+#include "Comms/SSCommsState.h"
 
 namespace
 {
@@ -198,6 +199,7 @@ void USSRunSubsystem::ResetRun()
 	AskedAraQuestionsMask = 0;
 	AraLearningScore = 0;
 	BuildAraBriefing();
+	GetComms()->ResetRun();
 	PlayerStats = FSSSurvivorStats{};
 
 	RobotState = ESSRobotState::Idle;
@@ -244,6 +246,12 @@ bool USSRunSubsystem::AskAraQuestion(int32 QuestionIndex, FText& OutAnswer)
 	AskedAraQuestionsMask |= static_cast<uint8>(1u << QuestionIndex);
 	++AraLearningScore;
 	return true;
+}
+
+USSCommsState* USSRunSubsystem::GetComms()
+{
+	if (!IsValid(Comms)) Comms = NewObject<USSCommsState>(this);
+	return Comms;
 }
 
 USSEventDirector* USSRunSubsystem::GetEventDirector()
@@ -700,6 +708,9 @@ bool USSRunSubsystem::AdvanceDayCore(bool bGiveFood, bool bGiveWater)
 
 	TickExpedition();
 	TickRepair();
+
+	// 하룻밤 지나면 적의 기억이 흐려짐 (외부 통신)
+	GetComms()->OnNewDay();
 
 	BuildAraBriefing();   // 로봇 귀환까지 반영된 아침 상태로 보고를 고정
 

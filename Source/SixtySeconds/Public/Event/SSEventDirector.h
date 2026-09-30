@@ -30,6 +30,9 @@ public:
 	// 선택지 적용. 선택지가 그 사건 것이 아니거나 조건이 안 맞으면 false
 	bool ApplyChoice(FName EventId, FName ChoiceId, USSRunSubsystem& Run, FSSEventResult& OutResult);
 
+	// 사건 밖(외부 통신 메시지 등)에서 효과 하나만 적용. 카탈로그가 없으면 아이템 효과는 건너뜀
+	void ApplyStandaloneEffect(const FSSEventEffectRow& Effect, USSRunSubsystem& Run, FSSEventResult& OutResult);
+
 	FText DescribeChanges(const FSSEventResult& Result) const;
 	void ResetRunState();            // 새 게임 시작 시
 	void SetSeed(int32 Seed) { Random.Initialize(Seed); }   // 테스트용

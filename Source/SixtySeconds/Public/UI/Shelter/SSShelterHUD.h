@@ -13,6 +13,8 @@ class UButton;
 class USSRunSubsystem;
 class USSExpeditionWidget;
 class USSComputerWidget;
+class USSTraceWidget;
+class USSTraceConfig;
 class USSInfoPanelWidget;
 class UTexture2D;
 class USSSurvivorInfoContentWidget;
@@ -230,6 +232,13 @@ private:
 	// 탐사 위젯 클래스 — BP에서 지정
 	UPROPERTY(EditDefaultsOnly, Category="SS|UI")
 	TSubclassOf<USSExpeditionWidget> ExpeditionWidgetClass;
+
+	// 지정하지 않으면 C++에서 구성하는 기본 통신 화면을 사용한다.
+	UPROPERTY(EditDefaultsOnly, Category="SS|UI")
+	TSubclassOf<USSTraceWidget> TraceWidgetClass;
+
+	UPROPERTY(EditDefaultsOnly, Category="SS|UI")
+	TObjectPtr<USSTraceConfig> TraceConfig;
 
 	// 컴퓨터가 기록 창과 탐사 창의 수명을 관리한다.
 	UPROPERTY(Transient) TObjectPtr<USSComputerWidget> ComputerWidget;

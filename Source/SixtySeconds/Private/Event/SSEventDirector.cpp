@@ -300,6 +300,13 @@ void USSEventDirector::ApplyEffect(const FSSEventEffectRow& Effect, USSRunSubsys
 	}
 }
 
+void USSEventDirector::ApplyStandaloneEffect(const FSSEventEffectRow& Effect, USSRunSubsystem& Run, FSSEventResult& OutResult)
+{
+	// 아이템은 카탈로그에서 에셋을 찾아야 해서, 카탈로그가 없으면 적용하지 않음
+	if (Effect.Type == ESSEventEffect::Item && !IsValid(Catalog)) return;
+	ApplyEffect(Effect, Run, OutResult);
+}
+
 void USSEventDirector::ResetRunState()
 {
 	Scheduled.Reset();

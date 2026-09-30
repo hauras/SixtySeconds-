@@ -1,6 +1,7 @@
 #include "UI/Shelter/SSShelterHUD.h"
 #include "UI/Exploration/SSExpeditionWidget.h"
 #include "UI/Shelter/SSComputerWidget.h"
+#include "UI/Trace/SSTraceWidget.h"
 #include "UI/Shelter/Info/SSInfoPanelWidget.h"
 #include "UI/Shelter/Info/SSRobotInfoContentWidget.h"
 #include "Engine/Texture2D.h"
@@ -320,10 +321,13 @@ void USSShelterHUD::RefreshDisplay()
 
 void USSShelterHUD::OnComputerClicked()
 {
-	if (IsValid(ComputerWidget) && (ComputerWidget->IsInViewport() || ComputerWidget->HasOpenExpedition())) return;
+	if (IsValid(ComputerWidget) && (ComputerWidget->IsInViewport() || ComputerWidget->HasOpenExpedition() || ComputerWidget->HasOpenTrace() || ComputerWidget->HasOpenDecode())) return;
 	ComputerWidget = CreateWidget<USSComputerWidget>(GetOwningPlayer());
 	if (!IsValid(ComputerWidget)) return;
 	ComputerWidget->SetExpeditionClass(ExpeditionWidgetClass);
+	const TSubclassOf<USSTraceWidget> ActiveTraceClass = TraceWidgetClass
+		? TraceWidgetClass : TSubclassOf<USSTraceWidget>(USSTraceWidget::StaticClass());
+	ComputerWidget->SetTraceSetup(ActiveTraceClass, TraceConfig);
 	ComputerWidget->AddToViewport(20);
 }
 
