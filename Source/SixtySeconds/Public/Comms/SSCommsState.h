@@ -60,6 +60,12 @@ public:
 
 	// 대기함 메시지의 다이얼 위치 저장 (해독 창을 닫아도 이어서 풀 수 있게)
 	void SaveDials(int32 PendingIndex, const TArray<int32>& Dials);
+
+	// 해독 실패: 대기함에서 메시지를 버림 (효과 없음, 저널에 기록). 번호가 잘못됐으면 아무 일 없음
+	void DiscardMessage(int32 PendingIndex);
+
+	// 진실 통신 추측표와 자동 해독 여부 저장 (창을 닫아도 이어서 풀 수 있게)
+	void SaveGuess(int32 PendingIndex, const TArray<int32>& Guess, bool bSolverDone);
 	
 	// 마지막으로 해독한 메시지 (Title = 제목, Lines[0] = 원문, Changes = 실제로 바뀐 것)
 	const FSSEventResult& GetLastMessage() const { return LastMessage; }

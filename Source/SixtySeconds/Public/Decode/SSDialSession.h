@@ -33,6 +33,22 @@ public:
 	float GetDialStrength(int32 DialIndex) const; // 이 다이얼의 신호 세기 0~1
 	bool IsUnlocked() const { return bUnlocked; }
 
+	
+	// ── 시간제한 (일반 통신만) ──
+
+	// 일반 통신 해독 제한 시간 (초)
+	static constexpr float InfoTimeLimit = 40.f;
+
+	// 시간을 흘려보냄 (창이 매 프레임 부름). 0이 되면 실패
+	void Tick(float DeltaSeconds);
+
+	// 포기 (창을 닫을 때). 시간제한 있는 해독만 실패 처리, 진실 통신은 진행 저장
+	void GiveUp();
+
+	bool HasTimeLimit() const { return bTimed; }
+	float GetTimeLeft() const { return TimeLeft; }
+	bool IsFailed() const { return bFailed; }
+	
 	UPROPERTY(BlueprintAssignable, Category="SS|Decode")
 	FSSOnDialChanged OnDialChanged;
 private:
@@ -40,6 +56,9 @@ private:
 	// 다이얼이 전부 정답이면 잠금 해제하고 해독 성공 처리
 	void CheckUnlock();
 
+	// 시간 초과·포기: 메시지를 버리고 실패 표시
+	void Fail();
+	
 	UPROPERTY()
 	TObjectPtr<USSRunSubsystem> Run;
 
@@ -57,5 +76,10 @@ private:
 	TArray<TArray<float>> ChiTable;
 
 	bool bUnlocked = false;
+
+	// 시간제한이 있는지 (실용 정보), 남은 시간, 실패했는지
+	bool bTimed = false;
+	float TimeLeft = 0.f;
+	bool bFailed = false;
 	
 };

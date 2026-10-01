@@ -13,7 +13,7 @@ namespace SSDialSessionTest
 	const TCHAR* const Plain = TEXT("PATROL UNIT SHIFT CHANGE AT SIX HUNDRED HOURS. CORRIDOR B ONE IS UNWATCHED FOR TWELVE MINUTES.");
 
 	// 실용 정보 하나(체력 -5)를 대기함에 넣은 RunSubsystem
-	USSRunSubsystem* MakeRunWithMessage()
+	USSRunSubsystem* MakeRunWithMessage(ESSTraceMessageKind Kind = ESSTraceMessageKind::Info)
 	{
 		UGameInstance* GameInstance = NewObject<UGameInstance>();
 		USSRunSubsystem* Run = NewObject<USSRunSubsystem>(GameInstance);
@@ -23,7 +23,7 @@ namespace SSDialSessionTest
 		UDataTable* Table = NewObject<UDataTable>();
 		Table->RowStruct = FSSTraceMessageRow::StaticStruct();
 		FSSTraceMessageRow Row;
-		Row.Kind = ESSTraceMessageKind::Info;
+		Row.Kind = Kind;
 		Row.Title = FText::FromString(TEXT("Patrol"));
 		Row.Text = FText::FromString(TEXT("Patrol"));
 		Row.CipherSource = Plain;
@@ -35,7 +35,7 @@ namespace SSDialSessionTest
 		Config->SensorPositions = { FVector2D(60.0, 50.0), FVector2D(550.0, 55.0), FVector2D(300.0, 360.0) };
 		Config->ShelterPosition = FVector2D(360.0, 190.0);
 		Config->MessageTable = Table;
-		Config->TruthEvery = 0;
+		Config->TruthEvery = Kind == ESSTraceMessageKind::Truth ? 1 : 0;
 		Config->DialCount = 3;
 
 		// 한 번만 더 받으면 되는 판 → 직접 송신 한 번으로 완료 → 대기함에 들어감
@@ -115,6 +115,68 @@ bool FSSDialSessionTest::RunTest(const FString& Parameters)
 	Session->TurnDial(0, +1);
 	TestEqual(TEXT("Locked dials after unlock"), Session->GetDial(0), Key[0]);
 	TestFalse(TEXT("No hint after unlock"), Session->UseHint());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSSDialSessionTimeTest, "SS.Decode.DialTimeLimit",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FSSDialSessionTimeTest::RunTest(const FString& Parameters)
+{
+	using namespace SSDialSessionTest;
+
+	// 실용 정보: 시간제한 있음, 다 쓰면 메시지가 사라짐
+	{
+		USSRunSubsystem* Run = MakeRunWithMessage(ESSTraceMessageKind::Info);
+		USSDialSession* Session = NewObject<USSDialSession>();
+		if (!TestTrue(TEXT("Info initialize"), Session->Initialize(Run, 0))) return false;
+
+		TestTrue(TEXT("Info has a time limit"), Session->HasTimeLimit());
+		TestTrue(TEXT("Starts with the full time"), FMath::IsNearlyEqual(Session->GetTimeLeft(), USSDialSession::InfoTimeLimit));
+
+		Session->Tick(USSDialSession::InfoTimeLimit - 1.f);
+		TestFalse(TEXT("Not failed before time runs out"), Session->IsFailed());
+		TestEqual(TEXT("Message still waiting"), Run->GetComms()->GetPendingMessages().Num(), 1);
+
+		Session->Tick(2.f);
+		TestTrue(TEXT("Fails when time runs out"), Session->IsFailed());
+		TestTrue(TEXT("Time left is 0"), FMath::IsNearlyZero(Session->GetTimeLeft()));
+		TestEqual(TEXT("Message lost"), Run->GetComms()->GetPendingMessages().Num(), 0);
+		TestTrue(TEXT("No effect from a lost message"), FMath::IsNearlyEqual(Run->GetHealth(), 100.f));
+		TestTrue(TEXT("Loss is recorded"), !Run->GetJournalEntries().IsEmpty()
+			&& Run->GetJournalEntries().Last().Event == ESSJournalEvent::Signal);
+
+		// 실패한 뒤엔 돌려도·힌트도 아무 일 없음
+		const int32 DialBefore = Session->GetDial(0);
+		Session->TurnDial(0, +1);
+		TestEqual(TEXT("Dials frozen after failure"), Session->GetDial(0), DialBefore);
+		TestFalse(TEXT("No hint after failure"), Session->UseHint());
+	}
+
+	// 실용 정보 포기: 창을 닫으면 사라짐
+	{
+		USSRunSubsystem* Run = MakeRunWithMessage(ESSTraceMessageKind::Info);
+		USSDialSession* Session = NewObject<USSDialSession>();
+		Session->Initialize(Run, 0);
+		Session->GiveUp();
+		TestTrue(TEXT("Giving up fails the info"), Session->IsFailed());
+		TestEqual(TEXT("Given-up message lost"), Run->GetComms()->GetPendingMessages().Num(), 0);
+	}
+
+	// 진실 단서: 시간제한 없음, 시간이 흘러도·포기해도 남음
+	{
+		USSRunSubsystem* Run = MakeRunWithMessage(ESSTraceMessageKind::Truth);
+		if (!TestEqual(TEXT("Truth waiting"), Run->GetComms()->GetPendingMessages().Num(), 1)) return false;
+
+		USSDialSession* Session = NewObject<USSDialSession>();
+		Session->Initialize(Run, 0);
+		TestFalse(TEXT("Truth has no time limit"), Session->HasTimeLimit());
+
+		Session->Tick(1000.f);
+		Session->GiveUp();
+		TestFalse(TEXT("Truth never fails"), Session->IsFailed());
+		TestEqual(TEXT("Truth stays in the queue"), Run->GetComms()->GetPendingMessages().Num(), 1);
+	}
 	return true;
 }
 #endif

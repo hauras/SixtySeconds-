@@ -19,6 +19,11 @@ bool USSDialSession::Initialize(USSRunSubsystem* InRun, int32 InPendingIndex)
 	Dials = Pending.Dials;
 	bUnlocked = false;
 
+	// 실용 정보만 시간제한 (진실 단서는 차분히)
+	bTimed = Pending.Row.Kind == ESSTraceMessageKind::Info;
+	TimeLeft = bTimed ? InfoTimeLimit : 0.f;
+	bFailed = false;
+	
 	if (Key.IsEmpty()) return false;
 
 	// 저장된 다이얼 개수가 열쇠와 다르면(예전 데이터 등) 0부터 다시
@@ -47,7 +52,7 @@ bool USSDialSession::Initialize(USSRunSubsystem* InRun, int32 InPendingIndex)
 void USSDialSession::TurnDial(int32 DialIndex, int32 Step)
 {
 	// 풀린 뒤엔 못 돌림
-	if (bUnlocked || !Dials.IsValidIndex(DialIndex)) return;
+	if (bUnlocked || bFailed || !Dials.IsValidIndex(DialIndex)) return;
 
 	// 0~25 안에서 돌기 (0에서 왼쪽으로 돌면 25)
 	Dials[DialIndex] = (Dials[DialIndex] + Step % 26 + 26) % 26;
@@ -61,7 +66,7 @@ void USSDialSession::TurnDial(int32 DialIndex, int32 Step)
 
 bool USSDialSession::UseHint()
 {
-	if (bUnlocked || !IsValid(Run)) return false;
+	if (bUnlocked || bFailed || !IsValid(Run)) return false;
 
 	// 아직 틀린 첫 번째 다이얼
 	int32 Wrong = INDEX_NONE;
@@ -131,4 +136,36 @@ void USSDialSession::CheckUnlock()
 
 	// 대기함에서 빠졌으니 더 이상 그 번호가 아님
 	PendingIndex = INDEX_NONE;
+}
+
+
+void USSDialSession::Tick(float DeltaSeconds)
+{
+	// 시간제한이 없거나 이미 끝난 판이면 멈춤
+	if (!bTimed || bUnlocked || bFailed) return;
+
+	TimeLeft = FMath::Max(0.f, TimeLeft - DeltaSeconds);
+	if (TimeLeft <= 0.f)
+	{
+		Fail();
+	}
+}
+
+void USSDialSession::GiveUp()
+{
+	// 진실 통신(시간제한 없음)이나 이미 끝난 판은 그냥 닫힘 (진행 저장)
+	if (!bTimed || bUnlocked || bFailed) return;
+	Fail();
+}
+
+void USSDialSession::Fail()
+{
+	bFailed = true;
+	TimeLeft = 0.f;
+
+	// 메시지가 터져서 사라짐
+	if (IsValid(Run)) Run->GetComms()->DiscardMessage(PendingIndex);
+	PendingIndex = INDEX_NONE;
+
+	OnDialChanged.Broadcast();
 }

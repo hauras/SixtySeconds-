@@ -11,6 +11,7 @@ class UProgressBar;
 class USSTraceMapWidget;
 class USSTraceConfig;
 class USSRunSubsystem;
+class USSEncryptedDataRewardWidget;
 
 // 판이 끝남 (결과를 RunSubsystem에 넘긴 뒤). HUD가 듣고 들킴이면 밤 습격을 예약할 수 있음
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FSSOnTraceFinished, ESSTraceOutcome, Outcome);
@@ -94,7 +95,7 @@ private:
 	void SetStatus(const FText& Text);
 
 	// 판을 끝까지 받았을 때 해독 대기함에 들어간 메시지와 기한을 기록 칸과 안내 문구에 표시
-	void ShowReceivedMessage();
+	void ShowReceivedMessage(bool bNewMessageReceived);
 
 	UPROPERTY(Transient)
 	TObjectPtr<USSTraceSession> Session;
@@ -104,6 +105,9 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<USSRunSubsystem> Run;
+
+	UPROPERTY(Transient)
+	TObjectPtr<USSEncryptedDataRewardWidget> RewardWidget;
 
 	// 결과를 RunSubsystem에 한 번만 넘기려고
 	bool bFinished = false;

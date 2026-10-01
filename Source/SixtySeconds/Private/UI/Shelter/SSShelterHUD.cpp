@@ -1,6 +1,7 @@
 #include "UI/Shelter/SSShelterHUD.h"
 #include "UI/Exploration/SSExpeditionWidget.h"
 #include "UI/Shelter/SSComputerWidget.h"
+#include "UI/Shelter/SSRadioWidget.h"
 #include "UI/Trace/SSTraceWidget.h"
 #include "UI/Shelter/Info/SSInfoPanelWidget.h"
 #include "UI/Shelter/Info/SSRobotInfoContentWidget.h"
@@ -37,6 +38,12 @@ void USSShelterHUD::NativeConstruct()
     {
         ComputerButton->OnClicked.AddUniqueDynamic(
             this, &USSShelterHUD::OnComputerClicked);
+    }
+
+    if (RadioButton)
+    {
+        RadioButton->OnClicked.AddUniqueDynamic(
+            this, &USSShelterHUD::OnRadioClicked);
     }
 
     if (NextDayButton)
@@ -97,6 +104,9 @@ void USSShelterHUD::NativeConstruct()
 
 void USSShelterHUD::NativeDestruct()
 {
+    if (ComputerButton) ComputerButton->OnClicked.RemoveDynamic(this, &ThisClass::OnComputerClicked);
+    if (RadioButton) RadioButton->OnClicked.RemoveDynamic(this, &ThisClass::OnRadioClicked);
+    if (NextDayButton) NextDayButton->OnClicked.RemoveDynamic(this, &ThisClass::OnNextDayClicked);
     if (GetWorld())
     {
         GetWorld()->GetTimerManager().ClearTimer(AraBlinkTimer);
@@ -133,6 +143,8 @@ void USSShelterHUD::NativeDestruct()
     AraPanelWidget = nullptr;
     if (IsValid(ComputerWidget)) ComputerWidget->CloseWindows();
     ComputerWidget = nullptr;
+    if (IsValid(RadioWidget)) RadioWidget->CloseWindows();
+    RadioWidget = nullptr;
     Super::NativeDestruct();
 }
 
@@ -319,16 +331,36 @@ void USSShelterHUD::RefreshDisplay()
 
 }
 
+bool USSShelterHUD::HasOpenTerminalWindow() const
+{
+	const bool bComputerOpen = IsValid(ComputerWidget)
+		&& (ComputerWidget->IsInViewport() || ComputerWidget->HasOpenExpedition());
+	const bool bRadioOpen = IsValid(RadioWidget)
+		&& (RadioWidget->IsInViewport() || RadioWidget->HasOpenWindow());
+	return bComputerOpen || bRadioOpen;
+}
+
 void USSShelterHUD::OnComputerClicked()
 {
-	if (IsValid(ComputerWidget) && (ComputerWidget->IsInViewport() || ComputerWidget->HasOpenExpedition() || ComputerWidget->HasOpenTrace() || ComputerWidget->HasOpenDecode())) return;
+	if (HasOpenTerminalWindow()) return;
 	ComputerWidget = CreateWidget<USSComputerWidget>(GetOwningPlayer());
 	if (!IsValid(ComputerWidget)) return;
 	ComputerWidget->SetExpeditionClass(ExpeditionWidgetClass);
+	ComputerWidget->AddToViewport(20);
+}
+
+void USSShelterHUD::OnRadioClicked()
+{
+	if (HasOpenTerminalWindow()) return;
+	RadioWidget = CreateWidget<USSRadioWidget>(GetOwningPlayer());
+	if (!IsValid(RadioWidget)) return;
+
+	// 역추적 창: 따로 지정하지 않으면 C++에서 구성하는 기본 통신 화면
 	const TSubclassOf<USSTraceWidget> ActiveTraceClass = TraceWidgetClass
 		? TraceWidgetClass : TSubclassOf<USSTraceWidget>(USSTraceWidget::StaticClass());
-	ComputerWidget->SetTraceSetup(ActiveTraceClass, TraceConfig);
-	ComputerWidget->AddToViewport(20);
+	RadioWidget->SetTraceSetup(ActiveTraceClass, TraceConfig);
+	RadioWidget->SetTruthDecodeClass(TruthDecodeWidgetClass);
+	RadioWidget->AddToViewport(20);
 }
 
 void USSShelterHUD::OnNextDayClicked()
@@ -665,6 +697,7 @@ void USSShelterHUD::SetDayControlsEnabled(bool bEnabled)
     if (FoodRationCheckBox) FoodRationCheckBox->SetIsEnabled(bEnabled);
     if (WaterRationCheckBox) WaterRationCheckBox->SetIsEnabled(bEnabled);
     if (ComputerButton) ComputerButton->SetIsEnabled(bEnabled);
+    if (RadioButton) RadioButton->SetIsEnabled(bEnabled);
     if (RobotButton) RobotButton->SetIsEnabled(bEnabled);
     TArray<UWidget*> Widgets;
     WidgetTree->GetAllWidgets(Widgets);

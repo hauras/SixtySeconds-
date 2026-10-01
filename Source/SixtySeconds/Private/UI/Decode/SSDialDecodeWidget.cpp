@@ -1,7 +1,6 @@
 #include "UI/Decode/SSDialDecodeWidget.h"
 #include "UI/Decode/SSDialControlWidget.h"
 #include "Decode/SSDialSession.h"
-#include "Decode/SSCipher.h"
 #include "Comms/SSCommsState.h"
 #include "Event/SSEventDirector.h"
 #include "Item/SSRunSubsystem.h"
@@ -16,10 +15,13 @@
 #include "Components/ProgressBar.h"
 #include "Components/ScrollBox.h"
 #include "Components/SizeBox.h"
+#include "Components/Spacer.h"
 #include "Components/TextBlock.h"
 #include "Components/VerticalBox.h"
 #include "Components/VerticalBoxSlot.h"
 #include "Engine/GameInstance.h"
+#include "Kismet/GameplayStatics.h"
+#include "Sound/SoundBase.h"
 #include "Styling/CoreStyle.h"
 
 namespace SSDecodeStyle
@@ -115,7 +117,21 @@ bool USSDialDecodeWidget::StartDecode(int32 PendingIndex)
 	}
 	if (ResultText) ResultText->SetText(FText::GetEmpty());
 
+	// 시간제한 해독은 닫으면 포기, 진실 통신은 진행 저장
+	if (CloseButton)
+	{
+		if (UTextBlock* CloseLabel = Cast<UTextBlock>(CloseButton->GetContent()))
+		{
+			CloseLabel->SetText(Session->HasTimeLimit()
+				? NSLOCTEXT("SSDecode", "GiveUp", "포기 (메시지 소실)")
+				: NSLOCTEXT("SSDecode", "Close", "닫기 (진행 저장)"));
+		}
+	}
+	if (TimerPanel) TimerPanel->SetVisibility(Session->HasTimeLimit()
+		? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::Collapsed);
+
 	Refresh();
+	UpdateTimerDisplay();
 	return true;
 }
 
@@ -185,24 +201,47 @@ TSharedRef<SWidget> USSDialDecodeWidget::RebuildWidget()
 		CipherScroll->AddChild(CipherText);
 		CipherPanel->AddChildToVerticalBox(CipherScroll)->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
 		TextPaper->SetContent(CipherPanel);
-		UVerticalBoxSlot* TextSlot = Left->AddChildToVerticalBox(TextPaper);
-		TextSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+		USizeBox* CipherHeight = WidgetTree->ConstructWidget<USizeBox>();
+		CipherHeight->SetHeightOverride(270.f);
+		CipherHeight->SetContent(TextPaper);
+		UVerticalBoxSlot* TextSlot = Left->AddChildToVerticalBox(CipherHeight);
 		TextSlot->SetPadding(FMargin(0, 0, 0, 10));
+
+		// 해독 결과는 암호문 바로 밑에서 읽을 수 있게 한다.
+		ResultPanel = WidgetTree->ConstructWidget<UBorder>();
+		ResultPanel->SetBrushColor(Color(TEXT("10251E")));
+		ResultPanel->SetPadding(FMargin(12, 8));
+		ResultPanel->SetVisibility(ESlateVisibility::Collapsed);
+		Left->AddChildToVerticalBox(ResultPanel)->SetPadding(FMargin(0, 0, 0, 12));
+		ResultText = Label(WidgetTree, FText::GetEmpty(), 17, TEXT("8FE0A0"));
+		ResultPanel->SetContent(ResultText);
+
+		USpacer* FlexibleGap = WidgetTree->ConstructWidget<USpacer>();
+		Left->AddChildToVerticalBox(FlexibleGap)->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
 
 		// 다이얼 칸들 (StartDecode에서 채움)
 		Left->AddChildToVerticalBox(Label(WidgetTree, NSLOCTEXT("SSDecode", "Dials", "복호화 다이얼"), 19, TEXT("EBCB99")))
 			->SetPadding(FMargin(0, 0, 0, 6));
 		DialRow = WidgetTree->ConstructWidget<UHorizontalBox>();
-		Left->AddChildToVerticalBox(DialRow)->SetPadding(FMargin(0, 0, 0, 10));
+		Left->AddChildToVerticalBox(DialRow);
 
-		// 잠금 해제 후 나타나는 기록
-		ResultPanel = WidgetTree->ConstructWidget<UBorder>();
-		ResultPanel->SetBrushColor(Color(TEXT("10251E")));
-		ResultPanel->SetPadding(FMargin(12, 8));
-		ResultPanel->SetVisibility(ESlateVisibility::Collapsed);
-		Left->AddChildToVerticalBox(ResultPanel);
-		ResultText = Label(WidgetTree, FText::GetEmpty(), 17, TEXT("8FE0A0"));
-		ResultPanel->SetContent(ResultText);
+		// 시간제한은 숫자와 게이지를 함께 보여주고 위험 구간을 강조한다.
+		TimerPanel = WidgetTree->ConstructWidget<UBorder>();
+		TimerPanel->SetBrushColor(Color(TEXT("18221F")));
+		TimerPanel->SetPadding(FMargin(14));
+		Right->AddChildToVerticalBox(TimerPanel)->SetPadding(FMargin(0, 0, 0, 12));
+		UVerticalBox* TimerColumn = WidgetTree->ConstructWidget<UVerticalBox>();
+		TimerPanel->SetContent(TimerColumn);
+		TimerColumn->AddChildToVerticalBox(Label(WidgetTree,
+			NSLOCTEXT("SSDecode", "TimerTitle", "신호 유지 시간"), 19, TEXT("EBCB99")));
+		TimerText = Label(WidgetTree, FText::GetEmpty(), 36, TEXT("74E3EE"));
+		TimerColumn->AddChildToVerticalBox(TimerText)->SetPadding(FMargin(0, 8, 0, 7));
+		TimerBar = WidgetTree->ConstructWidget<UProgressBar>();
+		TimerBar->SetFillColorAndOpacity(Color(TEXT("74E3EE")));
+		TimerColumn->AddChildToVerticalBox(TimerBar)->SetPadding(FMargin(0, 0, 0, 8));
+		TimerColumn->AddChildToVerticalBox(Label(WidgetTree,
+			NSLOCTEXT("SSDecode", "TimerHelp", "신호가 끊기기 전에 해독하세요. 시간이 끝나면 암호문이 사라집니다."),
+			14, TEXT("A7BCB4")));
 
 		// 오른쪽 고정 상태 패널
 		UBorder* SignalPanel = WidgetTree->ConstructWidget<UBorder>();
@@ -245,12 +284,19 @@ TSharedRef<SWidget> USSDialDecodeWidget::RebuildWidget()
 void USSDialDecodeWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
+
+	// 다이얼 소리 (WBP 없이 코드로 만드는 창이라 경로로 불러옴. 에셋이 없으면 소리 없이 동작)
+	DialTickSound = LoadObject<USoundBase>(nullptr, TEXT("/Game/Assets/Audio/Decode/SS_DialTurn_Click.SS_DialTurn_Click"));
+
 	if (HintButton) HintButton->OnClicked.AddUniqueDynamic(this, &ThisClass::HandleHint);
 	if (CloseButton) CloseButton->OnClicked.AddUniqueDynamic(this, &ThisClass::HandleClose);
 }
 
 void USSDialDecodeWidget::NativeDestruct()
 {
+	// 시간제한 해독 도중에 창이 닫히면 포기 (닫았다 다시 열어 시간을 벌지 못하게)
+	if (IsValid(Session)) Session->GiveUp();
+
 	if (HintButton) HintButton->OnClicked.RemoveDynamic(this, &ThisClass::HandleHint);
 	if (CloseButton) CloseButton->OnClicked.RemoveDynamic(this, &ThisClass::HandleClose);
 	if (IsValid(Session)) Session->OnDialChanged.RemoveDynamic(this, &ThisClass::Refresh);
@@ -261,9 +307,56 @@ void USSDialDecodeWidget::NativeDestruct()
 	Super::NativeDestruct();
 }
 
+void USSDialDecodeWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+{
+	Super::NativeTick(MyGeometry, InDeltaTime);
+	if (!IsValid(Session) || !Session->HasTimeLimit()) return;
+
+	// 시간 흘려보내기 (0이 되면 세션이 실패 처리 → Refresh로 화면 갱신)
+	Session->Tick(InDeltaTime);
+	UpdateTimerDisplay();
+}
+
+void USSDialDecodeWidget::UpdateTimerDisplay()
+{
+	if (!IsValid(Session) || !Session->HasTimeLimit()) return;
+	const bool bUnlocked = Session->IsUnlocked();
+	const bool bFailed = Session->IsFailed();
+	const float Remaining = Session->GetTimeLeft();
+	const bool bDanger = Remaining <= 10.f && !bUnlocked && !bFailed;
+	const bool bBlinkOn = FMath::Fmod(Remaining, 1.f) > .5f;
+	const TCHAR* TimerColor = bUnlocked ? TEXT("8FE0A0")
+		: bFailed ? TEXT("9AA39E")
+		: bDanger ? (bBlinkOn ? TEXT("EB8076") : TEXT("7A3A34"))
+		: TEXT("74E3EE");
+	if (TimerText)
+	{
+		const int32 Seconds = FMath::CeilToInt(Remaining);
+		TimerText->SetText(bUnlocked ? NSLOCTEXT("SSDecode", "TimerSuccess", "해독 완료")
+			: bFailed ? NSLOCTEXT("SSDecode", "TimerFailed", "신호 소실")
+			: FText::FromString(FString::Printf(TEXT("%02d:%02d"), Seconds / 60, Seconds % 60)));
+		TimerText->SetColorAndOpacity(FSlateColor(SSDecodeStyle::Color(TimerColor)));
+	}
+	if (TimerBar)
+	{
+		TimerBar->SetPercent(bUnlocked ? 1.f : Remaining / USSDialSession::InfoTimeLimit);
+		TimerBar->SetFillColorAndOpacity(SSDecodeStyle::Color(TimerColor));
+	}
+	if (TimerPanel)
+	{
+		TimerPanel->SetBrushColor(SSDecodeStyle::Color(bDanger ? TEXT("34201E") : TEXT("18221F")));
+	}
+}
+
 void USSDialDecodeWidget::HandleDialTurn(int32 DialIndex, int32 Step)
 {
-	if (IsValid(Session)) Session->TurnDial(DialIndex, Step);
+	// 풀린 뒤엔 돌아가지 않으니 소리도 안 냄
+	if (!IsValid(Session) || Session->IsUnlocked() || Session->IsFailed()) return;
+
+	Session->TurnDial(DialIndex, Step);
+
+	// 버튼·휠 모두 여기를 거치므로 한 곳에서 재생
+	if (DialTickSound) UGameplayStatics::PlaySound2D(this, DialTickSound);
 }
 
 void USSDialDecodeWidget::HandleHint()
@@ -285,6 +378,33 @@ void USSDialDecodeWidget::Refresh()
 	if (!IsValid(Session)) return;
 
 	const bool bUnlocked = Session->IsUnlocked();
+	const bool bFailed = Session->IsFailed();
+
+	// 신호 소실: 다이얼 멈추고 안내 (아래 문장·다이얼 갱신은 건너뜀)
+	if (bFailed)
+	{
+		if (LockStateText)
+		{
+			LockStateText->SetText(NSLOCTEXT("SSDecode", "LostBadge", "● 신호 소실"));
+			LockStateText->SetColorAndOpacity(FSlateColor(SSDecodeStyle::Color(TEXT("9AA39E"))));
+		}
+		if (CipherText) CipherText->SetColorAndOpacity(FSlateColor(SSDecodeStyle::Color(TEXT("5A6560"))));
+		for (USSDialControlWidget* Control : DialControls)
+		{
+			if (IsValid(Control)) Control->ShowState(0, 0.f, true);
+		}
+		if (HintButton) HintButton->SetIsEnabled(false);
+		if (StatusText) StatusText->SetText(NSLOCTEXT("SSDecode", "Lost", "신호가 끊겼어. 메시지가 사라졌어."));
+		if (CloseButton)
+		{
+			if (UTextBlock* CloseLabel = Cast<UTextBlock>(CloseButton->GetContent()))
+			{
+				CloseLabel->SetText(NSLOCTEXT("SSDecode", "Done", "닫기"));
+			}
+		}
+		return;
+	}
+
 	if (LockStateText)
 	{
 		LockStateText->SetText(bUnlocked
@@ -293,10 +413,10 @@ void USSDialDecodeWidget::Refresh()
 		LockStateText->SetColorAndOpacity(FSlateColor(SSDecodeStyle::Color(bUnlocked ? TEXT("8FE0A0") : TEXT("EB8076"))));
 	}
 
-	// 문장: 풀기 전엔 줄 밑에 다이얼 번호, 풀리면 원문만
+	// 다이얼 번호 줄은 암호문을 가려서 표시하지 않는다.
 	if (CipherText)
 	{
-		CipherText->SetText(FText::FromString(FormatWithMarks(Session->GetShownText(), Session->GetDialCount(), !bUnlocked)));
+		CipherText->SetText(FText::FromString(FormatCipherText(Session->GetShownText())));
 		CipherText->SetColorAndOpacity(FSlateColor(SSDecodeStyle::Color(bUnlocked ? TEXT("8FE0A0") : TEXT("CFE9E4"))));
 	}
 
@@ -348,7 +468,7 @@ void USSDialDecodeWidget::ShowResult()
 	}
 }
 
-FString USSDialDecodeWidget::FormatWithMarks(const FString& Text, int32 DialCount, bool bShowMarks)
+FString USSDialDecodeWidget::FormatCipherText(const FString& Text)
 {
 	constexpr int32 MaxLineLength = 44;
 
@@ -370,30 +490,5 @@ FString USSDialDecodeWidget::FormatWithMarks(const FString& Text, int32 DialCoun
 	}
 	if (!Line.IsEmpty()) Lines.Add(Line);
 
-	// 줄마다: 문장 줄, 그 밑에 글자별 다이얼 번호 줄 (글자가 아니면 빈칸, 순서는 줄을 넘어 이어짐)
-	FString Result;
-	int32 LetterCount = 0;
-	for (const FString& Each : Lines)
-	{
-		Result += Each;
-		Result.AppendChar(TEXT('\n'));
-		if (!bShowMarks) continue;
-
-		FString Marks;
-		for (const TCHAR Ch : Each)
-		{
-			if (FSSCipher::IsLetter(Ch) && DialCount > 0)
-			{
-				Marks.AppendChar(TCHAR(TEXT('1') + LetterCount % DialCount));
-				++LetterCount;
-			}
-			else
-			{
-				Marks.AppendChar(TEXT(' '));
-			}
-		}
-		Result += Marks;
-		Result.AppendChar(TEXT('\n'));
-	}
-	return Result;
+	return FString::Join(Lines, TEXT("\n"));
 }

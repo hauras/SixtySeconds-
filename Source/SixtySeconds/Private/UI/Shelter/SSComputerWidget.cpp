@@ -1,10 +1,6 @@
 #include "UI/Shelter/SSComputerWidget.h"
 #include "UI/Exploration/SSExpeditionWidget.h"
-#include "UI/Trace/SSTraceWidget.h"
-#include "UI/Decode/SSDialDecodeWidget.h"
-#include "Trace/SSTraceConfig.h"
 #include "Item/SSRunSubsystem.h"
-#include "Comms/SSCommsState.h"
 #include "Blueprint/WidgetTree.h"
 #include "Components/Border.h"
 #include "Components/Button.h"
@@ -94,14 +90,6 @@ TSharedRef<SWidget> USSComputerWidget::RebuildWidget()
         Header->AddChildToHorizontalBox(HeaderTitles)->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
         ExpeditionButton = Button(WidgetTree, NSLOCTEXT("SSJournal", "ExpeditionButton", "탐사 열기"));
         Header->AddChildToHorizontalBox(ExpeditionButton)->SetVerticalAlignment(VAlign_Center);
-        TraceButton = Button(WidgetTree, NSLOCTEXT("SSJournal", "TraceButton", "외부 통신"));
-        UHorizontalBoxSlot* TraceSlot = Header->AddChildToHorizontalBox(TraceButton);
-        TraceSlot->SetVerticalAlignment(VAlign_Center);
-        TraceSlot->SetPadding(FMargin(10, 0, 0, 0));
-        DecodeButton = Button(WidgetTree, NSLOCTEXT("SSJournal", "DecodeButton", "해독"));
-        UHorizontalBoxSlot* DecodeSlot = Header->AddChildToHorizontalBox(DecodeButton);
-        DecodeSlot->SetVerticalAlignment(VAlign_Center);
-        DecodeSlot->SetPadding(FMargin(10, 0, 0, 0));
         Column->AddChildToVerticalBox(Header)->SetPadding(FMargin(0, 0, 0, 19));
 
         UHorizontalBox* DayNavigationRow = WidgetTree->ConstructWidget<UHorizontalBox>();
@@ -141,20 +129,8 @@ void USSComputerWidget::NativeConstruct()
     PreviousButton->OnClicked.AddUniqueDynamic(this, &ThisClass::PreviousDay);
     NextButton->OnClicked.AddUniqueDynamic(this, &ThisClass::NextDay);
     ExpeditionButton->OnClicked.AddUniqueDynamic(this, &ThisClass::OpenExpedition);
-    TraceButton->OnClicked.AddUniqueDynamic(this, &ThisClass::OpenTrace);
-    DecodeButton->OnClicked.AddUniqueDynamic(this, &ThisClass::OpenDecode);
     CloseButton->OnClicked.AddUniqueDynamic(this, &ThisClass::CloseComputer);
     ExpeditionButton->SetIsEnabled(ExpeditionClass != nullptr);
-    TraceButton->SetIsEnabled(TraceClass != nullptr && IsValid(TraceConfig)
-        && IsValid(RunSubsystem) && RunSubsystem->GetComms()->CanStartTrace());
-
-    // 해독: 대기함에 메시지가 있을 때만, 버튼에 대기 개수 표시
-    const int32 PendingCount = IsValid(RunSubsystem) ? RunSubsystem->GetComms()->GetPendingMessages().Num() : 0;
-    DecodeButton->SetIsEnabled(PendingCount > 0);
-    if (UTextBlock* DecodeLabel = Cast<UTextBlock>(DecodeButton->GetContent()))
-    {
-        DecodeLabel->SetText(FText::Format(NSLOCTEXT("SSJournal", "DecodeButtonCount", "해독 ({0})"), PendingCount));
-    }
     RefreshJournal();
 }
 
@@ -164,8 +140,6 @@ void USSComputerWidget::NativeDestruct()
     PreviousButton->OnClicked.RemoveDynamic(this, &ThisClass::PreviousDay);
     NextButton->OnClicked.RemoveDynamic(this, &ThisClass::NextDay);
     ExpeditionButton->OnClicked.RemoveDynamic(this, &ThisClass::OpenExpedition);
-    TraceButton->OnClicked.RemoveDynamic(this, &ThisClass::OpenTrace);
-    DecodeButton->OnClicked.RemoveDynamic(this, &ThisClass::OpenDecode);
     CloseButton->OnClicked.RemoveDynamic(this, &ThisClass::CloseComputer);
     Super::NativeDestruct();
 }
@@ -213,55 +187,14 @@ void USSComputerWidget::OpenExpedition()
     }
 }
 
-void USSComputerWidget::OpenTrace()
-{
-    if (!TraceClass || !IsValid(TraceConfig) || HasOpenTrace()) return;
-    USSTraceWidget* NewTrace = CreateWidget<USSTraceWidget>(GetOwningPlayer(), TraceClass);
-    if (!IsValid(NewTrace) || !NewTrace->StartTrace(TraceConfig)) return;
-    TraceWidget = NewTrace;
-    TraceWidget->AddToViewport(25);
-    RemoveFromParent();
-}
-
-void USSComputerWidget::OpenDecode()
-{
-    if (HasOpenDecode()) return;
-
-    // 대기함 맨 앞(가장 먼저 받은 메시지)부터 풂
-    USSDialDecodeWidget* NewDecode = CreateWidget<USSDialDecodeWidget>(GetOwningPlayer(), USSDialDecodeWidget::StaticClass());
-    if (!IsValid(NewDecode)) return;
-
-    // 화면이 먼저 만들어져야 다이얼 칸을 채울 수 있어서 AddToViewport 뒤에 시작
-    NewDecode->AddToViewport(25);
-    if (!NewDecode->StartDecode(0))
-    {
-        NewDecode->RemoveFromParent();
-        return;
-    }
-    DecodeWidget = NewDecode;
-    RemoveFromParent();
-}
-
-bool USSComputerWidget::HasOpenDecode() const
-{
-    return IsValid(DecodeWidget) && DecodeWidget->IsInViewport();
-}
-
 bool USSComputerWidget::HasOpenExpedition() const
 {
     return IsValid(ExpeditionWidget) && ExpeditionWidget->IsInViewport();
 }
 
-bool USSComputerWidget::HasOpenTrace() const
-{
-    return IsValid(TraceWidget) && TraceWidget->IsInViewport();
-}
-
 void USSComputerWidget::CloseWindows()
 {
     if (IsValid(ExpeditionWidget)) ExpeditionWidget->RemoveFromParent();
-    if (IsValid(TraceWidget)) TraceWidget->RemoveFromParent();
-    if (IsValid(DecodeWidget)) DecodeWidget->RemoveFromParent();
     RemoveFromParent();
 }
 

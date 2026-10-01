@@ -83,6 +83,20 @@ struct SIXTYSECONDS_API FSSPendingMessage
 	// 플레이어가 지금 맞춰둔 다이얼 위치 (처음엔 전부 0, 창을 닫아도 남음)
 	UPROPERTY()
 	TArray<int32> Dials;
+
+	// ── 진실 통신 (치환 암호) ──
+
+	// 치환표: SubKey[원래 글자] = 암호 글자 (진실 단서만, 26칸)
+	UPROPERTY()
+	TArray<int32> SubKey;
+
+	// 지금 추측표: Guess[암호 글자] = 원래 글자, 모르면 INDEX_NONE (창을 닫아도 남음)
+	UPROPERTY()
+	TArray<int32> Guess;
+
+	// 자동 해독기를 이미 돌렸는지 (다시 열면 연출 없이 빈칸 채우기부터)
+	UPROPERTY()
+	bool bSolverDone = false;
 };
 
 // ─────────────────────────────────────────────

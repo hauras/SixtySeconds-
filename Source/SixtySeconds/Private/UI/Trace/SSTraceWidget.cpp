@@ -1,4 +1,5 @@
 #include "UI/Trace/SSTraceWidget.h"
+#include "UI/Trace/SSEncryptedDataRewardWidget.h"
 #include "UI/Trace/SSTraceMapWidget.h"
 #include "Trace/SSTraceConfig.h"
 #include "Item/SSRunSubsystem.h"
@@ -181,6 +182,7 @@ void USSTraceWidget::NativeConstruct()
 
 void USSTraceWidget::NativeDestruct()
 {
+	if (IsValid(RewardWidget)) RewardWidget->RemoveFromParent();
 	if (SendDirectButton) SendDirectButton->OnClicked.RemoveDynamic(this, &ThisClass::HandleSendDirect);
 	if (SendRelayButton) SendRelayButton->OnClicked.RemoveDynamic(this, &ThisClass::HandleSendRelay);
 	if (EndButton) EndButton->OnClicked.RemoveDynamic(this, &ThisClass::HandleEnd);
@@ -302,6 +304,7 @@ void USSTraceWidget::Refresh()
 
 	// ── 판이 끝남: 결과를 한 번만 넘기고 문구 표시 ──
 	bFinished = true;
+	const int32 PendingBefore = IsValid(Run) ? Run->GetComms()->GetPendingMessages().Num() : 0;
 	if (IsValid(Run)) Run->GetComms()->FinishTrace(*Session);
 
 	switch (Session->GetOutcome())
@@ -311,7 +314,8 @@ void USSTraceWidget::Refresh()
 		SetStatus(NSLOCTEXT("SSTrace", "ExposedStatus", "위치 노출. 적이 은신처를 확정했어. 오늘 밤 조심해."));
 		break;
 	case ESSTraceOutcome::Completed:
-		ShowReceivedMessage();
+		ShowReceivedMessage(IsValid(Run)
+			&& Run->GetComms()->GetPendingMessages().Num() > PendingBefore);
 		break;
 	default:
 		SetStatus(NSLOCTEXT("SSTrace", "StoppedStatus", "접속을 끊었어. 받은 만큼은 내일 이어서 받을 수 있어."));
@@ -321,13 +325,13 @@ void USSTraceWidget::Refresh()
 	OnTraceFinished.Broadcast(Session->GetOutcome());
 }
 
-void USSTraceWidget::ShowReceivedMessage()
+void USSTraceWidget::ShowReceivedMessage(bool bNewMessageReceived)
 {
 	if (!IsValid(Run)) return;
 
 	// 다 받은 메시지는 해독 대기함에 들어감 (비었으면 고를 메시지가 없었던 것)
 	const TArray<FSSPendingMessage>& Pending = Run->GetComms()->GetPendingMessages();
-	if (Pending.IsEmpty())
+	if (!bNewMessageReceived || Pending.IsEmpty())
 	{
 		SetStatus(NSLOCTEXT("SSTrace", "CompletedStatus", "메시지를 끝까지 받았어. 새로 알아낸 건 없어."));
 		return;
@@ -356,7 +360,15 @@ void USSTraceWidget::ShowReceivedMessage()
 			Deadline));
 	}
 
-	SetStatus(NSLOCTEXT("SSTrace", "QueuedStatus", "암호문 수신 완료. 컴퓨터에서 해독할 수 있어."));
+	SetStatus(NSLOCTEXT("SSTrace", "QueuedStatus", "암호문 수신 완료. 무전기에서 해독할 수 있어."));
+
+	RewardWidget = CreateWidget<USSEncryptedDataRewardWidget>(GetOwningPlayer(),
+		USSEncryptedDataRewardWidget::StaticClass());
+	if (IsValid(RewardWidget))
+	{
+		RewardWidget->AddToViewport(40);
+		RewardWidget->ShowReward(Pending.Num(), Deadline);
+	}
 }
 
 void USSTraceWidget::SetStatus(const FText& Text)

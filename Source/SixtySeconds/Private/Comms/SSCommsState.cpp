@@ -4,6 +4,7 @@
 #include "Trace/SSTraceSession.h"
 #include "Trace/SSTraceConfig.h"
 #include "Trace/SSTraceMessage.h"
+#include "Decode/SSCipher.h"
 
 USSRunSubsystem& USSCommsState::GetRun() const
 {
@@ -53,6 +54,14 @@ void USSCommsState::EnqueueMessage(const USSTraceConfig* Config)
 		Pending.Key.Add(MessageRandom.RandRange(1, 25));
 		Pending.Dials.Add(0);
 	}
+
+	// 진실 단서는 치환 암호: 무작위 치환표, 추측표는 전부 모름에서 시작
+	if (Row->Kind == ESSTraceMessageKind::Truth)
+	{
+		Pending.SubKey = FSSCipher::MakeSubstitutionKey(MessageRandom);
+		Pending.Guess.Init(INDEX_NONE, 26);
+	}
+
 	// 기록: 받았지만 아직 내용은 모름
 	Run.AddJournal(ESSJournalEvent::Signal,
 		NSLOCTEXT("SSTrace", "MessageQueued", "외부 통신: 암호화된 메시지를 받았다. 해독이 필요하다."));
@@ -176,6 +185,26 @@ void USSCommsState::SaveDials(int32 PendingIndex, const TArray<int32>& Dials)
 
 	// 그 메시지의 다이얼 위치를 새 값으로 덮어씀
 	PendingMessages[PendingIndex].Dials = Dials;
+}
+
+void USSCommsState::SaveGuess(int32 PendingIndex, const TArray<int32>& Guess, bool bSolverDone)
+{
+	if (!PendingMessages.IsValidIndex(PendingIndex)) return;
+
+	PendingMessages[PendingIndex].Guess = Guess;
+	PendingMessages[PendingIndex].bSolverDone = bSolverDone;
+}
+
+void USSCommsState::DiscardMessage(int32 PendingIndex)
+{
+	if (!PendingMessages.IsValidIndex(PendingIndex)) return;
+
+	// 기록 먼저 (지우고 나면 제목을 못 읽음)
+	GetRun().AddJournal(ESSJournalEvent::Signal, FText::Format(
+		NSLOCTEXT("SSTrace", "MessageLost", "외부 통신: 해독 중 신호가 끊겨 메시지({0})가 사라졌다."),
+		PendingMessages[PendingIndex].Row.Title));
+
+	PendingMessages.RemoveAt(PendingIndex);
 }
 
 void USSCommsState::OnNewDay()

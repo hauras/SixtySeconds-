@@ -13,6 +13,8 @@ class UButton;
 class USSRunSubsystem;
 class USSExpeditionWidget;
 class USSComputerWidget;
+class USSRadioWidget;
+class USSTruthDecodeWidget;
 class USSTraceWidget;
 class USSTraceConfig;
 class USSInfoPanelWidget;
@@ -99,6 +101,10 @@ protected:
 
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UButton> ComputerButton;
+
+	// 무전기 (B1 비상 수신기): 외부 통신·해독. WBP에서 무전기 그림 위에 투명 버튼으로 배치
+	UPROPERTY(meta=(BindWidgetOptional))
+	TObjectPtr<UButton> RadioButton;
 
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UButton> NextDayButton;
@@ -224,6 +230,12 @@ private:
 	void OnComputerClicked();
 
 	UFUNCTION()
+	void OnRadioClicked();
+
+	// 컴퓨터·무전기에서 연 창이 하나라도 떠 있는지 (둘이 동시에 열리지 않게)
+	bool HasOpenTerminalWindow() const;
+
+	UFUNCTION()
 	void OnNextDayClicked();
 
 	UPROPERTY(Transient)
@@ -238,10 +250,16 @@ private:
 	TSubclassOf<USSTraceWidget> TraceWidgetClass;
 
 	UPROPERTY(EditDefaultsOnly, Category="SS|UI")
+	TSubclassOf<USSTruthDecodeWidget> TruthDecodeWidgetClass;
+
+	UPROPERTY(EditDefaultsOnly, Category="SS|UI")
 	TObjectPtr<USSTraceConfig> TraceConfig;
 
 	// 컴퓨터가 기록 창과 탐사 창의 수명을 관리한다.
 	UPROPERTY(Transient) TObjectPtr<USSComputerWidget> ComputerWidget;
+
+	// 무전기가 역추적 창·해독 창의 수명을 관리한다.
+	UPROPERTY(Transient) TObjectPtr<USSRadioWidget> RadioWidget;
 
 	int32 CurrentDay = 1;
 	float CachedHealth = 0.f;

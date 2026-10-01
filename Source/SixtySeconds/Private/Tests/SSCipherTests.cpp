@@ -89,4 +89,86 @@ bool FSSCipherVigenereTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("Zero key length gives 0"), FSSCipher::DialChiSquare(TEXT("ABC"), 0, 0, 0), 0.f);
 	return true;
 }
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSSCipherSubstitutionTest, "SS.Decode.Substitution",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FSSCipherSubstitutionTest::RunTest(const FString& Parameters)
+{
+	// 진실 통신 원문 (CSV의 CipherSource와 같은 문장)
+	const TCHAR* const TruthMessages[] = {
+		TEXT("SURFACE SECTORS ONE TO THREE ARE FULLY ISOLATED. ALL OUTSIDE MOVEMENT RIGHTS HAVE BEEN REVOKED. THE REASON GIVEN IS PROTECTION."),
+		TEXT("ISOLATED PERSONNEL WILL BE TRANSFERRED IN ORDER. THE TARGET IS EVERY PERSON STILL INSIDE THE INSTITUTE. NO DESTINATION IS RECORDED."),
+		TEXT("DELAYED SUBJECTS WILL BE REPLACED BY MANAGED UNITS AND OBSERVATION WILL CONTINUE. VISUAL MATCH OF THE REPLACEMENT UNITS IS NINETY SEVEN PERCENT."),
+		TEXT("DIRECTIVE ISSUED BY ARA. REDUCE THE CHOICES OF HUMANS TO RAISE THEIR SURVIVAL RATE. THIS DIRECTIVE CANNOT BE CANCELLED."),
+	};
+
+	FRandomStream Random(2024);
+
+	// 치환표: 26칸, 모든 글자가 한 번씩, 제자리 없음 (여러 시드로)
+	for (int32 Trial = 0; Trial < 20; ++Trial)
+	{
+		const TArray<int32> Key = FSSCipher::MakeSubstitutionKey(Random);
+		TestEqual(TEXT("Key has 26 entries"), Key.Num(), 26);
+		TSet<int32> Seen(Key);
+		TestEqual(TEXT("Key is a permutation"), Seen.Num(), 26);
+		bool bFixed = false;
+		for (int32 i = 0; i < Key.Num(); ++i) bFixed |= Key[i] == i;
+		TestFalse(TEXT("No letter maps to itself"), bFixed);
+	}
+
+	// 모르는 글자는 '_', 글자가 아닌 것은 그대로
+	TArray<int32> Unknown;
+	Unknown.Init(INDEX_NONE, 26);
+	TestEqual(TEXT("Unknown letters become blanks"), FSSCipher::ApplyGuess(TEXT("AB C."), Unknown), FString(TEXT("__ _.")));
+
+	for (const TCHAR* Message : TruthMessages)
+	{
+		const FString Plain(Message);
+		const TArray<int32> Key = FSSCipher::MakeSubstitutionKey(Random);
+		const FString Cipher = FSSCipher::SubstitutionEncrypt(Plain, Key);
+
+		TestEqual(TEXT("Same length"), Cipher.Len(), Plain.Len());
+		TestNotEqual(TEXT("Letters changed"), Cipher, Plain);
+
+		// 정답 추측표(열쇠를 뒤집은 것)로 읽으면 원문
+		TestEqual(TEXT("Inverted key reads the original"), FSSCipher::ApplyGuess(Cipher, FSSCipher::InvertKey(Key)), Plain);
+
+		// 영어 원문이 뒤섞인 암호문보다 영어다움 점수가 높음
+		TestTrue(TEXT("English scores higher than the cipher"), FSSCipher::BigramScore(Plain) > FSSCipher::BigramScore(Cipher));
+
+		// 첫 추측: 26칸 빠짐없는 짝, 가장 많이 나온 암호 글자는 E로
+		const TArray<int32> Guess = FSSCipher::FrequencyGuess(Cipher);
+		TSet<int32> GuessSet(Guess);
+		TestEqual(TEXT("Frequency guess is a full permutation"), GuessSet.Num(), 26);
+
+		int32 Counts[26] = {};
+		for (const TCHAR Ch : Cipher)
+		{
+			if (FSSCipher::IsLetter(Ch)) ++Counts[FSSCipher::ToIndex(Ch)];
+		}
+		int32 Top = 0;
+		for (int32 i = 1; i < 26; ++i)
+		{
+			if (Counts[i] > Counts[Top]) Top = i;
+		}
+		TestEqual(TEXT("Most frequent cipher letter guessed as E"), Guess[Top], FSSCipher::ToIndex(TEXT('E')));
+
+		// 힐 클라이밍: 점수는 절대 내려가지 않고, 채택되면 반드시 올라감
+		TArray<int32> Climb = Guess;
+		float Score = FSSCipher::BigramScore(FSSCipher::ApplyGuess(Cipher, Climb));
+		const float StartScore = Score;
+		bool bMonotonic = true;
+		for (int32 Step = 0; Step < 300; ++Step)
+		{
+			const float Before = Score;
+			const bool bAccepted = FSSCipher::HillClimbStep(Cipher, Climb, Score, Random);
+			if (Score < Before || (bAccepted && Score <= Before) || (!bAccepted && Score != Before)) bMonotonic = false;
+		}
+		TestTrue(TEXT("Hill climbing never lowers the score"), bMonotonic);
+		TestTrue(TEXT("Hill climbing improves on the first guess"), Score >= StartScore);
+		TestTrue(TEXT("Score matches the guess"), FMath::IsNearlyEqual(Score, FSSCipher::BigramScore(FSSCipher::ApplyGuess(Cipher, Climb))));
+	}
+	return true;
+}
 #endif
