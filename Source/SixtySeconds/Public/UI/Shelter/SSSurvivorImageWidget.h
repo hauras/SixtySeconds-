@@ -6,6 +6,7 @@
 
 class UImage;
 class UButton;
+class UTextBlock;
 class USSSurvivorDefinition;
 class USSRunSubsystem;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FSSOnSurvivorSelected, FName, SurvivorId);
@@ -29,6 +30,9 @@ public:
     UPROPERTY(EditAnywhere, Category="SS|Survivor")
     bool bPreviewRescued = true;
 
+    // 밤에는 "!"를 숨김 (보고는 아침에 듣는 것). HUD가 낮/밤이 바뀔 때 부름
+    void SetReportMarkAllowed(bool bAllowed);
+
 protected:
     virtual TSharedRef<SWidget> RebuildWidget() override;
     virtual void NativePreConstruct() override;
@@ -46,6 +50,13 @@ private:
 
     UPROPERTY(Transient)
     TObjectPtr<UImage> SurvivorImage;
+
+    // 머리 위 "!" (어젯밤 조사 보고를 아직 안 들었을 때)
+    UPROPERTY(Transient)
+    TObjectPtr<UTextBlock> ReportMark;
+
+    // 지금 "!"를 보여도 되는 때인지 (낮 = true, 밤 = false)
+    bool bReportMarkAllowed = true;
 
     UPROPERTY(Transient)
     TObjectPtr<USSRunSubsystem> RunSubsystem;

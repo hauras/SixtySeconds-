@@ -8,6 +8,7 @@
 #include "SSRunSubsystem.generated.h"
 
 class USSCommsState;
+class USSCompanionState;
 
 class USSExpeditionDefinition;
 class USSEventDirector;
@@ -158,6 +159,8 @@ public:
 	void ModifySurvivorsHealth(float Delta);   // 살아 있는 모든 동료. 0이 되면 사망 처리
 	void AdjustActionPoints(int32 Delta);      // 0 ~ MaxActionPoints
 	void AddEventJournal(const FText& Message) { RecordEvent(ESSJournalEvent::Event, Message); }
+	void AddDetailedEventJournal(const FText& Message, const FText& Title, const FText& Body,
+		const FText& Choice, const FText& Outcome, const FText& Changes);
 
 	void BuildAraBriefing();   // 현재 날짜·물자로 아침 보고 문장을 만들어 저장
 
@@ -174,6 +177,10 @@ public:
 	// 다른 시스템(외부 통신 등)이 저널을 남기거나 행동력을 쓸 때
 	void AddJournal(ESSJournalEvent Event, const FText& Message) { RecordEvent(Event, Message); }
 	bool SpendActionPoints(int32 Cost) { return ConsumeActionPoints(Cost); }
+
+	// ── 동료 조사 ──
+	// 동료가 밤에 무엇을 조사했는지, 보고를 들었는지 기억하는 기록. 처음 부를 때 생성
+	USSCompanionState* GetCompanions();
 
 	// UI 등에 데이터 변경을 알리는 이벤트
 	// 하루가 지남 (다음 날 버튼, 직접 탐사 정산 모두). 날짜·플레이어 스탯이 바뀌었으니 다시 그리고 사망 확인
@@ -280,4 +287,8 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<USSCommsState> Comms;
+
+	// 동료가 조사 기록을 관리한다.
+	UPROPERTY(Transient)
+	TObjectPtr<USSCompanionState> Companions;
 };

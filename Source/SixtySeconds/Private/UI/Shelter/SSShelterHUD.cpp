@@ -2,6 +2,8 @@
 #include "UI/Exploration/SSExpeditionWidget.h"
 #include "UI/Shelter/SSComputerWidget.h"
 #include "UI/Shelter/SSRadioWidget.h"
+#include "UI/Companion/SSCompanionTalkWidget.h"
+#include "Companion/SSCompanionState.h"
 #include "UI/Trace/SSTraceWidget.h"
 #include "UI/Shelter/Info/SSInfoPanelWidget.h"
 #include "UI/Shelter/Info/SSRobotInfoContentWidget.h"
@@ -87,6 +89,9 @@ void USSShelterHUD::NativeConstruct()
         {
             Director->SetCatalog(EventCatalog);
         }
+
+        // 동료 단서·대사 표 연결
+        RunSubsystem->GetCompanions()->SetTables(ClueTable, CompanionLineTable);
     }
     RefreshRobotDisplay();
     RefreshDisplay();
@@ -145,6 +150,8 @@ void USSShelterHUD::NativeDestruct()
     ComputerWidget = nullptr;
     if (IsValid(RadioWidget)) RadioWidget->CloseWindows();
     RadioWidget = nullptr;
+    if (IsValid(TalkWidget)) TalkWidget->RemoveFromParent();
+    TalkWidget = nullptr;
     Super::NativeDestruct();
 }
 
@@ -231,6 +238,33 @@ void USSShelterHUD::OnSurvivorSelected(FName SurvivorId)
     // Build bindings before retrieving the observation section for the full-width slot.
     Content->TakeWidget();
     InfoPanelWidget->SetPanelObservation(Content->GetObservationWidget());
+
+    // [대화하기] 버튼 (살아 있는 동료만 누를 수 있음)
+    UButton* TalkButton = WidgetTree->ConstructWidget<UButton>();
+    UTextBlock* TalkLabel = WidgetTree->ConstructWidget<UTextBlock>();
+    TalkLabel->SetText(NSLOCTEXT("SS", "SurvivorTalk", "대화하기"));
+    TalkButton->SetContent(TalkLabel);
+    TalkButton->SetIsEnabled(State->bAlive);
+    TalkButton->OnClicked.AddUniqueDynamic(this, &ThisClass::OnTalkClicked);
+    InfoPanelWidget->SetPanelAction(TalkButton);
+}
+
+void USSShelterHUD::OnTalkClicked()
+{
+    if (InspectedSurvivorId.IsNone()) return;
+    if (IsValid(TalkWidget) && TalkWidget->IsInViewport()) return;
+    if (!CompanionTalkWidgetClass)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[UI] Assign WBP_CompanionTalk in shelter HUD defaults."));
+        return;
+    }
+
+    // 정보창을 닫고 대화창을 엶 (대화창을 닫으면 은신처 화면으로 돌아옴)
+    TalkWidget = CreateWidget<USSCompanionTalkWidget>(GetOwningPlayer(), CompanionTalkWidgetClass);
+    if (!IsValid(TalkWidget)) return;
+    if (IsValid(InfoPanelWidget)) InfoPanelWidget->RemoveFromParent();
+    TalkWidget->SetSurvivor(InspectedSurvivorId);
+    TalkWidget->AddToViewport(20);
 }
 
 void USSShelterHUD::OnSurvivorsUpdated()
@@ -703,5 +737,9 @@ void USSShelterHUD::SetDayControlsEnabled(bool bEnabled)
     WidgetTree->GetAllWidgets(Widgets);
     for (UWidget* Widget : Widgets)
         if (USSSurvivorImageWidget* Person = Cast<USSSurvivorImageWidget>(Widget))
+        {
             Person->SetIsEnabled(bEnabled);
+            // 밤에는 "!" 숨김, 아침 페이드가 끝나면 다시 보임
+            Person->SetReportMarkAllowed(bEnabled);
+        }
 }

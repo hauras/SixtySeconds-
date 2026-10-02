@@ -7,6 +7,8 @@
 #include "Components/CanvasPanelSlot.h"
 #include "Engine/GameInstance.h"
 #include "Item/SSRunSubsystem.h"
+#include "Companion/SSCompanionState.h"
+#include "Components/TextBlock.h"
 
 TSharedRef<SWidget> USSSurvivorImageWidget::RebuildWidget()
 {
@@ -24,6 +26,20 @@ TSharedRef<SWidget> USSSurvivorImageWidget::RebuildWidget()
         Style.Normal.DrawAs = Style.Hovered.DrawAs = Style.Pressed.DrawAs = Style.Disabled.DrawAs = ESlateBrushDrawType::NoDrawType;
         SurvivorButton->SetStyle(Style);
         SurvivorButton->SetCursor(EMouseCursor::Hand);
+
+        // "!" 표시: 클릭을 막지 않게 HitTestInvisible, 위치는 NativePreConstruct에서 머리 위로
+        ReportMark = WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), TEXT("ReportMark"));
+        ReportMark->SetText(FText::FromString(TEXT("!")));
+        FSlateFontInfo MarkFont = ReportMark->GetFont();
+        MarkFont.Size = 40;
+        ReportMark->SetFont(MarkFont);
+        ReportMark->SetColorAndOpacity(FSlateColor(FLinearColor(1.f, .78f, .25f)));
+        ReportMark->SetShadowOffset(FVector2D(2, 2));
+        ReportMark->SetShadowColorAndOpacity(FLinearColor(0, 0, 0, .8f));
+        UCanvasPanelSlot* MarkSlot = Canvas->AddChildToCanvas(ReportMark);
+        MarkSlot->SetAutoSize(true);
+        MarkSlot->SetZOrder(2);
+        ReportMark->SetVisibility(ESlateVisibility::Collapsed);
     }
     return Super::RebuildWidget();
 }
@@ -37,6 +53,16 @@ void USSSurvivorImageWidget::NativePreConstruct()
         {
             ButtonSlot->SetAnchors(FAnchors(ClickAreaMin.X, ClickAreaMin.Y, ClickAreaMax.X, ClickAreaMax.Y));
             ButtonSlot->SetOffsets(FMargin(0));
+        }
+    }
+    if (ReportMark)
+    {
+        // 클릭 영역 위쪽 가운데에 "!"의 아래 끝을 맞춤
+        if (UCanvasPanelSlot* MarkSlot = Cast<UCanvasPanelSlot>(ReportMark->Slot))
+        {
+            MarkSlot->SetAnchors(FAnchors((ClickAreaMin.X + ClickAreaMax.X) * .5f, ClickAreaMin.Y));
+            MarkSlot->SetAlignment(FVector2D(.5f, 1.f));
+            MarkSlot->SetPosition(FVector2D::ZeroVector);
         }
     }
     RefreshSurvivor();
@@ -82,6 +108,20 @@ void USSSurvivorImageWidget::RefreshSurvivor()
         SurvivorButton->SetVisibility(Texture ? ESlateVisibility::Visible : ESlateVisibility::Hidden);
         SurvivorButton->SetToolTipText(IsValid(SurvivorDefinition) ? SurvivorDefinition->DisplayName : FText::GetEmpty());
     }
+    if (ReportMark)
+    {
+        // 낮이고, 살아 있고, 안 들은 보고가 있으면 "!"
+        const FSSCompanionRecord* Record = State && State->bAlive
+            ? RunSubsystem->GetCompanions()->FindRecord(SurvivorDefinition->SurvivorId) : nullptr;
+        const bool bShowMark = bReportMarkAllowed && Record && Record->HasPendingReport();
+        ReportMark->SetVisibility(bShowMark ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
+    }
+}
+
+void USSSurvivorImageWidget::SetReportMarkAllowed(bool bAllowed)
+{
+    bReportMarkAllowed = bAllowed;
+    RefreshSurvivor();
 }
 
 void USSSurvivorImageWidget::OnSurvivorClicked()

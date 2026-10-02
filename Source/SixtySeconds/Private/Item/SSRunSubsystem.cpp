@@ -5,6 +5,7 @@
 #include "Exploration/SSExplorationTypes.h"
 #include "Event/SSEventDirector.h"
 #include "Comms/SSCommsState.h"
+#include "Companion/SSCompanionState.h"
 
 namespace
 {
@@ -141,6 +142,21 @@ void USSRunSubsystem::RecordEvent(ESSJournalEvent Event, const FText& Message)
 	OnJournalChanged.Broadcast();
 }
 
+void USSRunSubsystem::AddDetailedEventJournal(const FText& Message, const FText& Title,
+    const FText& Body, const FText& Choice, const FText& Outcome, const FText& Changes)
+{
+    FSSJournalEntry& Entry = JournalEntries.AddDefaulted_GetRef();
+    Entry.Day = CurrentDay;
+    Entry.Event = ESSJournalEvent::Event;
+    Entry.Message = Message;
+    Entry.Title = Title;
+    Entry.Body = Body;
+    Entry.Choice = Choice;
+    Entry.Outcome = Outcome;
+    Entry.Changes = Changes;
+    OnJournalChanged.Broadcast();
+}
+
 void USSRunSubsystem::RecordExpeditionReturn(const FSSExpeditionResult& Result, bool bSuccess)
 {
 	RecordEvent(ESSJournalEvent::Expedition, FText::Format(
@@ -200,6 +216,7 @@ void USSRunSubsystem::ResetRun()
 	AraLearningScore = 0;
 	BuildAraBriefing();
 	GetComms()->ResetRun();
+	GetCompanions()->ResetRun();
 	PlayerStats = FSSSurvivorStats{};
 
 	RobotState = ESSRobotState::Idle;
@@ -252,6 +269,12 @@ USSCommsState* USSRunSubsystem::GetComms()
 {
 	if (!IsValid(Comms)) Comms = NewObject<USSCommsState>(this);
 	return Comms;
+}
+
+USSCompanionState* USSRunSubsystem::GetCompanions()
+{
+	if (!IsValid(Companions)) Companions = NewObject<USSCompanionState>(this);
+	return Companions;
 }
 
 USSEventDirector* USSRunSubsystem::GetEventDirector()
@@ -687,6 +710,9 @@ bool USSRunSubsystem::AdvanceDayCore(bool bGiveFood, bool bGiveWater)
 				Survivor.Definition->DisplayName));
 		}
 	}
+
+	// 밤: 동료 조사 (보고는 다음 날 대화로 들음)
+	GetCompanions()->RunNight();
 
 	// 하루 배급 처리가 끝났으므로 다음 날 예약은 해제
 	for (FSSSurvivorState& Survivor : RescuedSurvivors)

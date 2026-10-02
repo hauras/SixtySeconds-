@@ -6,7 +6,7 @@
 UENUM(BlueprintType)
 enum class ESSJournalEvent : uint8
 {
-    Deposit, Rations, DayEnd, Expedition, Robot, ItemUse, Death, Event, Signal
+    Deposit, Rations, DayEnd, Expedition, Robot, ItemUse, Death, Event, Signal, Investigation
 };
 
 // 당시 내용을 보존한다. 현재 아이템 수량이나 DA 이름으로 과거 기록을 다시 만들지 않는다.
@@ -17,4 +17,10 @@ struct FSSJournalEntry
     UPROPERTY(BlueprintReadOnly) int32 Day = 1;
     UPROPERTY(BlueprintReadOnly) ESSJournalEvent Event = ESSJournalEvent::DayEnd;
     UPROPERTY(BlueprintReadOnly) FText Message;
+    // Optional presentation snapshot. Plain historical entries remain readable through Message.
+    UPROPERTY(BlueprintReadOnly) FText Title;
+    UPROPERTY(BlueprintReadOnly) FText Body;
+    UPROPERTY(BlueprintReadOnly) FText Choice;
+    UPROPERTY(BlueprintReadOnly) FText Outcome;
+    UPROPERTY(BlueprintReadOnly) FText Changes;
 };

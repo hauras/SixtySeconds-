@@ -14,6 +14,7 @@ class USSRunSubsystem;
 class USSExpeditionWidget;
 class USSComputerWidget;
 class USSRadioWidget;
+class USSCompanionTalkWidget;
 class USSTruthDecodeWidget;
 class USSTraceWidget;
 class USSTraceConfig;
@@ -24,6 +25,7 @@ class USSEventCatalog;
 class USSEventWidget;
 class USSAraWidget;
 class UWidget;
+class UDataTable;
 
 
 UCLASS(Abstract)
@@ -125,6 +127,17 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category="SS|Event")
 	TSubclassOf<USSEventWidget> EventWidgetClass;
+
+	// 동료 조사 단서 표 (DT_Clues, 줄 형식 FSSClueRow) — Class Defaults에서 지정
+	UPROPERTY(EditDefaultsOnly, Category="SS|Companion")
+	TObjectPtr<UDataTable> ClueTable;
+
+	// 동료 대사 표 (DT_CompanionLines, 줄 형식 FSSCompanionLineRow) — Class Defaults에서 지정
+	UPROPERTY(EditDefaultsOnly, Category="SS|Companion")
+	TObjectPtr<UDataTable> CompanionLineTable;
+
+	UPROPERTY(EditDefaultsOnly, Category="SS|Companion")
+	TSubclassOf<USSCompanionTalkWidget> CompanionTalkWidgetClass;
 	
 	// 밤 레이어 (어두운 막 + 진행 표시). 평소엔 숨김
 	UPROPERTY(meta = (BindWidgetOptional))
@@ -260,6 +273,14 @@ private:
 
 	// 무전기가 역추적 창·해독 창의 수명을 관리한다.
 	UPROPERTY(Transient) TObjectPtr<USSRadioWidget> RadioWidget;
+
+	// 정보창의 [대화하기]: 지금 보고 있는 동료와 대화창을 엶
+	UFUNCTION()
+	void OnTalkClicked();
+
+	// 동료 대화창
+	UPROPERTY(Transient)
+	TObjectPtr<USSCompanionTalkWidget> TalkWidget;
 
 	int32 CurrentDay = 1;
 	float CachedHealth = 0.f;

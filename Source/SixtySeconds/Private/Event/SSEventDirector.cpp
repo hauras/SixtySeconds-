@@ -192,7 +192,9 @@ bool USSEventDirector::ApplyChoice(FName EventId, FName ChoiceId, USSRunSubsyste
 	const FText Changes = DescribeChanges(OutResult);
 	if (!Changes.IsEmpty())          // 실제로 바뀐 게 있으면 괄호로
 		Line = FText::Format(NSLOCTEXT("SSEvent", "JournalChanges", "{0} ({1})"), Line, Changes);
-	Run.AddEventJournal(Line);
+	const FSSEventRow* RecordedEvent = FindEvent(EventId);
+	Run.AddDetailedEventJournal(Line, OutResult.Title, RecordedEvent ? RecordedEvent->Body : FText::GetEmpty(),
+		OutResult.ChoiceText, FText::Join(FText::FromString(TEXT(" ")), OutResult.Lines), Changes);
 	
 	return true;
 }
