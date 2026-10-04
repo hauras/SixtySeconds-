@@ -4,6 +4,7 @@
 #include "UI/Shelter/SSRadioWidget.h"
 #include "UI/Companion/SSCompanionTalkWidget.h"
 #include "Companion/SSCompanionState.h"
+#include "Ara/SSAraDirector.h"
 #include "UI/Trace/SSTraceWidget.h"
 #include "UI/Shelter/Info/SSInfoPanelWidget.h"
 #include "UI/Shelter/Info/SSRobotInfoContentWidget.h"
@@ -92,6 +93,15 @@ void USSShelterHUD::NativeConstruct()
 
         // 동료 단서·대사 표 연결
         RunSubsystem->GetCompanions()->SetTables(ClueTable, CompanionLineTable);
+
+        // 아라 대사 표 연결. 처음 연결할 때만 오늘 브리핑을 표 문장으로 다시 만듦
+        // (은신처 진입 때 표 없이 만든 첫날 브리핑을 바꾸기 위해. 이미 연결돼 있으면 아침 보고를 건드리지 않음)
+        USSAraDirector* Ara = RunSubsystem->GetAra();
+        if (AraLineTable && !Ara->HasLineTable())
+        {
+            Ara->SetLineTable(AraLineTable);
+            RunSubsystem->BuildAraBriefing();
+        }
     }
     RefreshRobotDisplay();
     RefreshDisplay();
@@ -482,7 +492,8 @@ bool USSShelterHUD::IsAraWarning() const
 {
     return IsValid(RunSubsystem) && RunSubsystem->GetHealth() > 0.f
         && (RunSubsystem->GetHealth() <= 25.f || RunSubsystem->GetSatiety() <= 20.f
-            || RunSubsystem->GetHydration() <= 20.f);
+            || RunSubsystem->GetHydration() <= 20.f
+            || RunSubsystem->GetAra()->HasTarget());   // 아라가 표적을 정함
 }
 
 void USSShelterHUD::ScheduleAraBlink()

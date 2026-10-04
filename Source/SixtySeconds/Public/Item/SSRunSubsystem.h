@@ -9,6 +9,7 @@
 
 class USSCommsState;
 class USSCompanionState;
+class USSAraDirector;
 
 class USSExpeditionDefinition;
 class USSEventDirector;
@@ -170,6 +171,12 @@ public:
 	bool AskAraQuestion(int32 QuestionIndex, FText& OutAnswer);
 	bool HasAskedAraQuestionToday(int32 QuestionIndex) const;
 
+	// 아라 학습도 (질문할수록 오름. 아라가 대피실 대화를 엿들을 확률에 씀)
+	int32 GetAraLearningScore() const { return AraLearningScore; }
+
+	// 아라의 판단 (누구를 의심하는지, 표적). 처음 부를 때 생성
+	USSAraDirector* GetAra();
+
 	// ── 외부 통신 (역추적 + 받은 메시지) ──
 	// 날을 넘어 이어지는 통신 상태. 처음 부를 때 생성
 	USSCommsState* GetComms();
@@ -291,4 +298,8 @@ private:
 	// 동료가 조사 기록을 관리한다.
 	UPROPERTY(Transient)
 	TObjectPtr<USSCompanionState> Companions;
+
+	// 아라가 동료를 의심하는 정도와 표적
+	UPROPERTY(Transient)
+	TObjectPtr<USSAraDirector> Ara;
 };

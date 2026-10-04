@@ -49,4 +49,8 @@ public:
 	// 장소별 선호 (클수록 자주 고름, 정하지 않은 장소는 0). 예: 연구원은 단말 로그 3
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "SS|Survivor|Investigation")
 	TMap<ESSInvestigationSpot, float> SpotPreference;
+
+	// 아라에게 얼마나 위협적인가 (위협도 = 의심 × 이 값). 연구원은 아라를 잘 알아서 높음 (임시값)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "SS|Survivor|Investigation", meta=(ClampMin="0"))
+	float AraInfluence = 1.f;
 };

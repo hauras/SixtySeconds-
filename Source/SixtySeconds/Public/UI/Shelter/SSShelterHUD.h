@@ -136,6 +136,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category="SS|Companion")
 	TObjectPtr<UDataTable> CompanionLineTable;
 
+	// 아라 대사 표 (DT_AraLines, 줄 형식 FSSAraLineRow) — Class Defaults에서 지정
+	UPROPERTY(EditDefaultsOnly, Category="SS|Ara")
+	TObjectPtr<UDataTable> AraLineTable;
+
 	UPROPERTY(EditDefaultsOnly, Category="SS|Companion")
 	TSubclassOf<USSCompanionTalkWidget> CompanionTalkWidgetClass;
 	

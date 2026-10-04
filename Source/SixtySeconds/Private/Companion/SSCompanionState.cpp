@@ -1,6 +1,7 @@
 #include "Companion/SSCompanionState.h"
 #include "Character/SSSurvivorDefinition.h"
 #include "Item/SSRunSubsystem.h"
+#include "Ara/SSAraDirector.h"
 #include "Engine/DataTable.h"
 
 USSRunSubsystem& USSCompanionState::GetRun() const
@@ -84,6 +85,9 @@ void USSCompanionState::RunNight()
 		// 들킨 건 플레이어에게 말하지 않음 (아라만 앎)
 		if (Result.bDetected) ++Record.TimesDetected;
 
+		// 아라는 들켰는지만 봄 (단서를 찾았는지는 모름)
+		Run.GetAra()->ObserveNight(Record.SurvivorId, Spot, Result.bDetected);
+
 		// 단서 없는 지난 보고는 새 보고로 대체 ("특이 사항 없음"이 쌓이지 않게)
 		// 단서가 있는 보고는 들을 때까지 남김 (하루 대화를 놓쳐도 단서는 안 사라짐)
 		Record.PendingReports.RemoveAll([](const FSSInvestigationReport& Old)
@@ -144,6 +148,9 @@ bool USSCompanionState::HearInvestigationReport(FName SurvivorId, FSSInvestigati
 
 	// 단서가 있으면 "들은 단서" 목록에 남김 (추리·사건에서 씀)
 	if (OutReport.bFoundClue) HeardClues.Add(OutReport);
+
+	// 대피실 대화는 아라가 엿들을 수 있음 (단말 로그 1단계 단서: 02:00 음성 기록 조회)
+	Run.GetAra()->TryEavesdrop(SurvivorId, OutReport.bFoundClue);
 
 	// 들은 순간에만 기록 (단서 내용은 대사 데이터 단계에서 장소·동료별 문장으로 바뀜)
 	// 단서가 있으면 단서 제목과 내용, 없으면 "특이 사항 없음"

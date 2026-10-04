@@ -6,6 +6,7 @@
 #include "Event/SSEventDirector.h"
 #include "Comms/SSCommsState.h"
 #include "Companion/SSCompanionState.h"
+#include "Ara/SSAraDirector.h"
 
 namespace
 {
@@ -217,6 +218,7 @@ void USSRunSubsystem::ResetRun()
 	BuildAraBriefing();
 	GetComms()->ResetRun();
 	GetCompanions()->ResetRun();
+	GetAra()->ResetRun();
 	PlayerStats = FSSSurvivorStats{};
 
 	RobotState = ESSRobotState::Idle;
@@ -235,10 +237,8 @@ void USSRunSubsystem::ResetRun()
 
 void USSRunSubsystem::BuildAraBriefing()
 {
-	AraBriefing = CurrentDay == 1
-		? NSLOCTEXT("SSAra", "DayOne", "Day 1. B1 비상 대피실의 인원을 확인했습니다. 현재 설비는 정상 범위에서 작동 중입니다. 안전한 하루를 권장합니다.")
-		: FText::Format(NSLOCTEXT("SSAra", "DailyBriefing", "Day {0}. 현재 보유 물자는 식량 {1}개, 물 {2}개입니다. 대피실 상태를 계속 관찰하겠습니다."),
-			CurrentDay, GetStoredQuantityById(SSItemIds::Food), GetStoredQuantityById(SSItemIds::Water));
+	// 아라의 문장은 아라 판단(USSAraDirector)이 대사 표에서 골라 만듦
+	AraBriefing = GetAra()->BuildBriefing();
 }
 
 bool USSRunSubsystem::HasAskedAraQuestionToday(int32 QuestionIndex) const
@@ -269,6 +269,12 @@ USSCommsState* USSRunSubsystem::GetComms()
 {
 	if (!IsValid(Comms)) Comms = NewObject<USSCommsState>(this);
 	return Comms;
+}
+
+USSAraDirector* USSRunSubsystem::GetAra()
+{
+	if (!IsValid(Ara)) Ara = NewObject<USSAraDirector>(this);
+	return Ara;
 }
 
 USSCompanionState* USSRunSubsystem::GetCompanions()
@@ -711,8 +717,11 @@ bool USSRunSubsystem::AdvanceDayCore(bool bGiveFood, bool bGiveWater)
 		}
 	}
 
-	// 밤: 동료 조사 (보고는 다음 날 대화로 들음)
+	// 밤: 아라의 기억이 조금 흐려진 뒤, 동료 조사(아라는 들킨 것만 봄), 표적 판단
+	// (보고는 다음 날 대화로 들음)
+	GetAra()->BeginNight();
 	GetCompanions()->RunNight();
+	GetAra()->UpdateTarget();
 
 	// 하루 배급 처리가 끝났으므로 다음 날 예약은 해제
 	for (FSSSurvivorState& Survivor : RescuedSurvivors)
