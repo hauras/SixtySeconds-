@@ -1,9 +1,9 @@
-#include "Event/SSEventDirector.h"
+﻿#include "Event/SSEventDirector.h"
+#include "Engine/DataTable.h"
 #include "Event/SSEventCatalog.h"
 #include "Item/SSRunSubsystem.h"
 #include "Item/SSItemDefinition.h"
 #include "Character/SSSurvivorDefinition.h"
-#include "Engine/DataTable.h"
 
 bool USSEventDirector::SetCatalog(USSEventCatalog* InCatalog)
 {
@@ -199,36 +199,50 @@ bool USSEventDirector::ApplyChoice(FName EventId, FName ChoiceId, USSRunSubsyste
 	return true;
 }
 
-FText USSEventDirector::DescribeChanges(const FSSEventResult& Result) const
+FText USSEventDirector::DescribeChange(const FSSEventChange& Change) const
 {
-	TArray<FText> Parts;
-	for (const FSSEventChange& Change : Result.Changes)
-	{
-		// 무엇이 바뀌었는지 이름
-		FText Label;
-		switch (Change.Type)
-		{
-		case ESSEventEffect::Item:
-			{
-				const USSItemDefinition* Item = IsValid(Catalog) ? Catalog->FindItem(Change.Target) : nullptr;
-				Label = Item ? Item->DisplayName : FText::FromName(Change.Target);   // 이름이 없으면 ID라도
-				break;
-			}
-		case ESSEventEffect::PlayerHealth:    Label = NSLOCTEXT("SSEvent", "ChangeHealth", "체력"); break;
-		case ESSEventEffect::PlayerSatiety:   Label = NSLOCTEXT("SSEvent", "ChangeSatiety", "포만감"); break;
-		case ESSEventEffect::PlayerHydration: Label = NSLOCTEXT("SSEvent", "ChangeHydration", "수분"); break;
-		case ESSEventEffect::SurvivorsHealth: Label = NSLOCTEXT("SSEvent", "ChangeSurvivors", "동료 체력"); break;
-		case ESSEventEffect::ActionPoints:    Label = NSLOCTEXT("SSEvent", "ChangeAP", "행동력"); break;
-		default: continue;   // 표시할 게 아니면 건너뜀
-		}
+    FText Label;
+    switch (Change.Type)
+    {
+    case ESSEventEffect::Item:
+    {
+        const USSItemDefinition* Item = IsValid(Catalog) ? Catalog->FindItem(Change.Target) : nullptr;
+        // 카탈로그에 이름이 없으면 아이템 식별자를 쓴다.
+        Label = Item ? Item->DisplayName : FText::FromName(Change.Target);
+        break;
+    }
+    case ESSEventEffect::PlayerHealth:
+        Label = NSLOCTEXT("SSEvent", "ChangeHealth", "체력"); break;
+    case ESSEventEffect::PlayerSatiety:
+        Label = NSLOCTEXT("SSEvent", "ChangeSatiety", "포만감"); break;
+    case ESSEventEffect::PlayerHydration:
+        Label = NSLOCTEXT("SSEvent", "ChangeHydration", "수분"); break;
+    case ESSEventEffect::SurvivorsHealth:
+        Label = NSLOCTEXT("SSEvent", "ChangeSurvivors", "동료 체력"); break;
+    case ESSEventEffect::ActionPoints:
+        Label = NSLOCTEXT("SSEvent", "ChangeAP", "행동력"); break;
+    default:
+        return FText::GetEmpty();
+    }
 
-		// "+2" / "-1"처럼 항상 부호를 붙임
-		const FText Amount = FText::FromString(FString::Printf(TEXT("%+d"), Change.Amount));
-		Parts.Add(FText::Format(NSLOCTEXT("SSEvent", "ChangeEntry", "{0} {1}"), Label, Amount));
-	}
-	return FText::Join(NSLOCTEXT("SSEvent", "ChangeSeparator", ", "), Parts);   // 변화가 없으면 빈 글자
+    // 수량은 기존 기록과 같이 항상 부호를 붙인다.
+    const FText Amount = FText::FromString(FString::Printf(TEXT("%+d"), Change.Amount));
+    return FText::Format(
+        NSLOCTEXT("SSEvent", "ChangeEntry", "{0} {1}"),
+        Label,
+        Amount);
 }
 
+FText USSEventDirector::DescribeChanges(const FSSEventResult& Result) const
+{
+    TArray<FText> Parts;
+    for (const FSSEventChange& Change : Result.Changes)
+    {
+        const FText Part = DescribeChange(Change);
+        if (!Part.IsEmpty()) Parts.Add(Part);
+    }
+    return FText::Join(NSLOCTEXT("SSEvent", "ChangeSeparator", ", "), Parts);
+}
 void USSEventDirector::ApplyEffect(const FSSEventEffectRow& Effect, USSRunSubsystem& Run, FSSEventResult& OutResult)
 {
 	// 실제로 바뀐 양이 있을 때만 결과에 한 줄 추가 (0이면 "아무 일 없음"이라 안 남김)

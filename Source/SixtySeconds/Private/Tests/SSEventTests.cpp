@@ -1,11 +1,20 @@
+﻿#include "Engine/DataTable.h"
+#include "Engine/GameInstance.h"
+#include "Misc/AutomationTest.h"
+#include "Engine/Engine.h"
+#include "Blueprint/WidgetTree.h"
+#include "Components/Border.h"
+#include "Components/Button.h"
+#include "Components/TextBlock.h"
+#include "Components/VerticalBox.h"
+#include "Components/WrapBox.h"
 #include "Event/SSEventCatalog.h"
 #include "Event/SSEventDirector.h"
 #include "Event/SSEventTypes.h"
 #include "Item/SSRunSubsystem.h"
 #include "Item/SSItemDefinition.h"
-#include "Engine/DataTable.h"
-#include "Engine/GameInstance.h"
-#include "Misc/AutomationTest.h"
+#include "UI/Event/SSEventWidget.h"
+#include "SSEventWidgetTestListener.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
 namespace SSEventTest
@@ -194,6 +203,146 @@ bool FSSEventDirectorTest::RunTest(const FString& Parameters)
     TestTrue(TEXT("Advance after reset"), Run->AdvanceDay(false, false));
     TestEqual(TEXT("Once-only event returns after reset"), Director->PickEventForToday(*Run), FName(TEXT("Knock")));
 
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSSEventChangeDescriptionTest, "SS.Event.ChangeDescription",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FSSEventChangeDescriptionTest::RunTest(const FString& Parameters)
+{
+    using namespace SSEventTest;
+    USSEventCatalog* Catalog = NewObject<USSEventCatalog>();
+    USSItemDefinition* Food = MakeItem(Catalog, TEXT("Food"), ESSItemUseEffect::RestoreSatiety);
+    Food->DisplayName = FText::FromString(TEXT("식량"));
+    Catalog->Items = { Food };
+    Catalog->EventTable = MakeTable(FSSEventRow::StaticStruct());
+    Catalog->EventTable->AddRow(TEXT("Sample"), FSSEventRow());
+    Catalog->ChoiceTable = MakeTable(FSSEventChoiceRow::StaticStruct());
+    Catalog->ChoiceTable->AddRow(TEXT("Pick"), Choice(TEXT("Sample"), 0));
+    Catalog->EffectTable = MakeTable(FSSEventEffectRow::StaticStruct());
+    USSEventDirector* Director = NewObject<USSEventDirector>();
+    Director->SetSeed(1234);
+    if (!TestTrue(TEXT("Description catalog is valid"), Director->SetCatalog(Catalog))) return false;
+
+    const FSSEventChange Gain{ ESSEventEffect::Item, TEXT("Food"), 2 };
+    const FSSEventChange Cost{ ESSEventEffect::ActionPoints, NAME_None, -1 };
+    const FSSEventChange Journal{ ESSEventEffect::Journal, NAME_None, 0 };
+    const FSSEventChange Scheduled{ ESSEventEffect::ScheduleEvent, TEXT("Sample"), 2 };
+    TestEqual(TEXT("Item uses display name and positive sign"), Director->DescribeChange(Gain).ToString(), FString(TEXT("식량 +2")));
+    TestEqual(TEXT("Action points keep negative sign"), Director->DescribeChange(Cost).ToString(), FString(TEXT("행동력 -1")));
+    TestTrue(TEXT("Journal is not a visible change"), Director->DescribeChange(Journal).IsEmpty());
+    TestTrue(TEXT("Scheduled event is not revealed"), Director->DescribeChange(Scheduled).IsEmpty());
+    TestEqual(TEXT("Unknown item falls back to ID"), Director->DescribeChange(
+        { ESSEventEffect::Item, TEXT("Unknown"), -2 }).ToString(), FString(TEXT("Unknown -2")));
+    FSSEventResult Result;
+    Result.Changes = { Gain, Journal, Cost, Scheduled };
+    TestEqual(TEXT("Joined description keeps previous formatting"), Director->DescribeChanges(Result).ToString(), FString(TEXT("식량 +2, 행동력 -1")));
+    Result.Changes.Reset();
+    TestTrue(TEXT("Empty changes keep empty journal description"), Director->DescribeChanges(Result).IsEmpty());
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSSEventWidgetResultTest, "SS.Event.WidgetResultStep",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FSSEventWidgetResultTest::RunTest(const FString& Parameters)
+{
+    using namespace SSEventTest;
+    UGameInstance* Game = NewObject<UGameInstance>(GEngine);
+    Game->InitializeStandalone();
+    USSRunSubsystem* Run = Game->GetSubsystem<USSRunSubsystem>();
+    Run->ResetRun();
+    USSEventCatalog* Catalog = NewObject<USSEventCatalog>(Run);
+    USSItemDefinition* Food = MakeItem(Catalog, TEXT("Food"), ESSItemUseEffect::RestoreSatiety);
+    Food->DisplayName = FText::FromString(TEXT("식량"));
+    Catalog->Items = { Food };
+    Catalog->EventTable = MakeTable(FSSEventRow::StaticStruct());
+    FSSEventRow Event;
+    Event.Title = FText::FromString(TEXT("밤의 소리"));
+    Event.Body = FText::FromString(TEXT("문밖에서 소리가 들린다."));
+    Catalog->EventTable->AddRow(TEXT("Sample"), Event);
+    Catalog->EventTable->AddRow(TEXT("Quiet"), Event);
+    Catalog->ChoiceTable = MakeTable(FSSEventChoiceRow::StaticStruct());
+    FSSEventChoiceRow Selected = Choice(TEXT("Sample"), 0);
+    Selected.Text = FText::FromString(TEXT("불을 끈다"));
+    Catalog->ChoiceTable->AddRow(TEXT("Pick"), Selected);
+    Catalog->ChoiceTable->AddRow(TEXT("Blocked"), Choice(
+        TEXT("Sample"),
+        1,
+        ESSEventCondition::HasItem,
+        TEXT("Food")));
+    Catalog->ChoiceTable->AddRow(TEXT("QuietPick"), Choice(TEXT("Quiet"), 0));
+    Catalog->EffectTable = MakeTable(FSSEventEffectRow::StaticStruct());
+    Catalog->EffectTable->AddRow(TEXT("Cost"), Effect(TEXT("Pick"), ESSEventEffect::ActionPoints, NAME_None, -1));
+    Catalog->EffectTable->AddRow(TEXT("Food"), Effect(TEXT("Pick"), ESSEventEffect::Item, TEXT("Food"), 2));
+    Catalog->EffectTable->AddRow(TEXT("Line1"), Effect(TEXT("Pick"), ESSEventEffect::Journal, NAME_None, 0, TEXT("빛이 지나갔다.")));
+    Catalog->EffectTable->AddRow(TEXT("Line2"), Effect(TEXT("Pick"), ESSEventEffect::Journal, NAME_None, 0, TEXT("소리가 멎었다.")));
+    USSEventDirector* Director = Run->GetEventDirector();
+    Director->SetSeed(1234);
+    if (!TestTrue(TEXT("Widget catalog is valid"), Director->SetCatalog(Catalog)))
+    {
+        Game->Shutdown();
+        return false;
+    }
+
+    USSEventWidget* Widget = CreateWidget<USSEventWidget>(Game);
+    USSEventWidgetTestListener* Listener = NewObject<USSEventWidgetTestListener>(Game);
+    Widget->OnEventFinished.AddUniqueDynamic(Listener, &USSEventWidgetTestListener::HandleFinished);
+    // 명령줄 테스트에는 게임 화면이 없으므로 부모 위젯에 붙여 닫힘을 확인한다.
+    UVerticalBox* Host = NewObject<UVerticalBox>(Game);
+    Host->AddChildToVerticalBox(Widget);
+    Host->TakeWidget();
+    Widget->ShowEvent(Director, Run, TEXT("Sample"));
+    Widget->HandleConfirm();
+    TestEqual(TEXT("Confirm before choosing does nothing"), Listener->FinishedCount, 0);
+    Widget->Choose(1);
+    TestFalse(TEXT("Failed choice keeps selection step"), Widget->bShowingResult);
+    TestTrue(TEXT("Failed choice keeps body visible"), Widget->BodyText->GetVisibility() == ESlateVisibility::Visible);
+    Widget->ChoiceButton0->OnClicked.Broadcast();
+    TestTrue(TEXT("Successful choice keeps window attached"), Widget->GetParent() == Host);
+    TestEqual(TEXT("Choosing does not finish night"), Listener->FinishedCount, 0);
+    TestTrue(TEXT("Result step is visible"), Widget->ResultBox->GetVisibility() == ESlateVisibility::Visible);
+    TestTrue(TEXT("Body and choices are hidden"), Widget->BodyText->GetVisibility() == ESlateVisibility::Collapsed
+        && Widget->ChoiceButton0->GetVisibility() == ESlateVisibility::Collapsed
+        && Widget->ChoiceButton1->GetVisibility() == ESlateVisibility::Collapsed
+        && Widget->ChoiceButton2->GetVisibility() == ESlateVisibility::Collapsed);
+    TestEqual(TEXT("Selected text is shown"), Widget->PickedText->GetText().ToString(), FString(TEXT("선택 · 불을 끈다")));
+    TestTrue(TEXT("Outcome joins both lines"), Widget->OutcomeText->GetText().ToString().Contains(TEXT("빛이 지나갔다."))
+        && Widget->OutcomeText->GetText().ToString().Contains(TEXT("소리가 멎었다.")));
+    TestEqual(TEXT("Both actual changes have chips"), Widget->ChangeList->GetChildrenCount(), 2);
+    bool bRed = false;
+    bool bGreen = false;
+    for (UWidget* Child : Widget->ChangeList->GetAllChildren())
+    {
+        const UBorder* Chip = Cast<UBorder>(Child);
+        const UTextBlock* Text = Chip ? Cast<UTextBlock>(Chip->GetContent()) : nullptr;
+        if (!Text) continue;
+        const FLinearColor Color = Text->GetColorAndOpacity().GetSpecifiedColor();
+        bRed |= Color.Equals(FLinearColor::FromSRGBColor(FColor::FromHex(TEXT("F08A7A"))));
+        bGreen |= Color.Equals(FLinearColor::FromSRGBColor(FColor::FromHex(TEXT("8FE0A0"))));
+    }
+    TestTrue(TEXT("Loss and gain use specified colors"), bRed && bGreen);
+    const int32 APAfterChoice = Run->GetActionPoints();
+    Widget->Choose(0);
+    TestEqual(TEXT("Repeated choice cannot apply effects again"), Run->GetActionPoints(), APAfterChoice);
+    Widget->ConfirmButton->OnClicked.Broadcast();
+    Widget->HandleConfirm();
+    TestEqual(TEXT("Confirm finishes exactly once"), Listener->FinishedCount, 1);
+    TestNull(TEXT("Confirm removes window"), Widget->GetParent());
+
+    Host->AddChildToVerticalBox(Widget);
+    Host->TakeWidget();
+    Widget->ShowEvent(Director, Run, TEXT("Quiet"));
+    TestTrue(TEXT("Reusing window restores choices"), Widget->ChoiceButton0->GetVisibility() == ESlateVisibility::Visible);
+    TestTrue(TEXT("Reusing window hides result"), Widget->ResultBox->GetVisibility() == ESlateVisibility::Collapsed);
+    Widget->Choose(0);
+    TestTrue(TEXT("Empty outcome is hidden"), Widget->OutcomeText->GetVisibility() == ESlateVisibility::Collapsed);
+    const UTextBlock* NoChange = Cast<UTextBlock>(Widget->ChangeList->GetChildAt(0));
+    TestTrue(TEXT("Empty changes show fallback"), NoChange && NoChange->GetText().ToString() == TEXT("변화 없음"));
+    Widget->HandleConfirm();
+    TestEqual(TEXT("Reused event has its own confirmation"), Listener->FinishedCount, 2);
+    Game->Shutdown();
     return true;
 }
 #endif

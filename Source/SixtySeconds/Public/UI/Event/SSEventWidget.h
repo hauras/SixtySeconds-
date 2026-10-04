@@ -7,6 +7,8 @@
 
 class UButton;
 class UTextBlock;
+class UVerticalBox;
+class UWrapBox;
 class USSEventDirector;
 class USSRunSubsystem;
 
@@ -40,11 +42,28 @@ protected:
 	UPROPERTY(meta=(BindWidgetOptional)) TObjectPtr<UTextBlock> ChoiceText1;
 	UPROPERTY(meta=(BindWidgetOptional)) TObjectPtr<UTextBlock> ChoiceText2;
 
+	UPROPERTY(meta=(BindWidgetOptional))
+	TObjectPtr<UVerticalBox> ResultBox;
+	UPROPERTY(meta=(BindWidgetOptional))
+	TObjectPtr<UTextBlock> PickedText;
+	UPROPERTY(meta=(BindWidgetOptional))
+	TObjectPtr<UTextBlock> OutcomeText;
+	UPROPERTY(meta=(BindWidgetOptional))
+	TObjectPtr<UWrapBox> ChangeList;
+	UPROPERTY(meta=(BindWidgetOptional))
+	TObjectPtr<UButton> ConfirmButton;
+
 private:
+	friend class FSSEventWidgetResultTest;
 	UFUNCTION() void HandleChoice0();
 	UFUNCTION() void HandleChoice1();
 	UFUNCTION() void HandleChoice2();
 	void Choose(int32 Index);
+	void ShowResult();
+	UFUNCTION()
+	void HandleConfirm();
+	bool bShowingResult = false;
+	bool bFinished = false;
 
 	UPROPERTY(Transient) TObjectPtr<USSEventDirector> Director;
 	UPROPERTY(Transient) TObjectPtr<USSRunSubsystem> Run;
