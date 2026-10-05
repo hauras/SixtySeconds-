@@ -76,6 +76,10 @@ struct FSSCompanionRecord
 	UPROPERTY()
 	ESSInvestigationSpot OrderedSpot = ESSInvestigationSpot::Storage;
 
+	// 아라가 바꿔치기한 안드로이드인지 (숨은 값. 화면에 절대 안 나옴)
+	UPROPERTY()
+	bool bIsAndroid = false;
+
 	// 안 들은 보고가 있나 (머리 위 "!" 표시)
 	bool HasPendingReport() const { return PendingReports.Num() > 0; }
 };
@@ -108,6 +112,17 @@ public:
 
 	// 동료 기록을 읽기만 함 (화면에서 "!" 표시 등). 없으면 nullptr
 	const FSSCompanionRecord* FindRecord(FName SurvivorId) const;
+
+	// ── 안드로이드 (아라가 부름) ──
+
+	// 이 동료를 안드로이드로 바꿈. 이후 조사하는 척만 함. 진짜가 못 한 보고는 사라짐
+	void MakeAndroid(FName SurvivorId);
+
+	// 안드로이드인지 (아라·테스트용. 화면에서 쓰지 말 것)
+	bool IsAndroid(FName SurvivorId) const;
+
+	// 정해준 장소가 있을 때 안드로이드가 다른 장소를 조사했다고 말할 확률 (플레이어가 눈치챌 단서)
+	static constexpr float AndroidWrongSpotChance = 0.3f;
 
 	// ── 단서·대사 표 ──
 
@@ -143,6 +158,9 @@ private:
 
 	// 동료 기록을 찾고, 없으면 새로 만들어서 돌려줌
 	FSSCompanionRecord& FindOrAddRecord(FName SurvivorId);
+
+	// 아침에 들을 보고 하나를 추가 (단서 없는 지난 보고는 이걸로 대체)
+	void AddReport(FSSCompanionRecord& Record, ESSInvestigationSpot Spot, bool bFoundClue, FName ClueId, bool bSpotExhausted);
 
 	// 이미 아는 단서 ID: 플레이어가 들은 것 + 동료들이 보고하려고 들고 있는 것
 	TSet<FName> GetKnownClueIds() const;

@@ -4,6 +4,7 @@
 #include "Item/SSRunSubsystem.h"
 #include "Item/SSItemDefinition.h"
 #include "Character/SSSurvivorDefinition.h"
+#include "Ara/SSAraDirector.h"
 
 bool USSEventDirector::SetCatalog(USSEventCatalog* InCatalog)
 {
@@ -67,6 +68,12 @@ bool USSEventDirector::CheckCondition(ESSEventCondition Condition, FName Target,
 		return Run.GetRobotState() == ESSRobotState::Idle;
 	case ESSEventCondition::RobotAway:
 		return Run.GetRobotState() == ESSRobotState::Exploring;
+	case ESSEventCondition::AraHasTarget:
+	{
+		// 아라가 아직 아무도 바꾸지 않았고, 살아 있는 표적이 있을 때만
+		const USSAraDirector* Ara = Run.FindAra();
+		return Ara && Ara->CanSwapTarget();
+	}
 	}
 	return false;
 }
@@ -154,7 +161,7 @@ TArray<FSSEventChoiceView> USSEventDirector::GetChoices(FName EventId, const USS
 		if (!Row) continue;
 		FSSEventChoiceView& View = Views.AddDefaulted_GetRef();
 		View.ChoiceId = ChoiceId;
-		View.Text = Row->Text;
+		View.Text = FillText(Row->Text, Run);
 		View.bAvailable = CheckCondition(Row->Condition, Row->ConditionTarget, Row->ConditionAmount, Run);
 	}
 	return Views;
@@ -170,9 +177,12 @@ bool USSEventDirector::ApplyChoice(FName EventId, FName ChoiceId, USSRunSubsyste
 
 	if (!Chosen || !Chosen->bAvailable) return false;
 
+	// {Target} 이름은 효과 적용 전에 정해 둠 (교체 효과가 표적을 지운 뒤에도 같은 이름으로 기록)
+	const FFormatNamedArguments TextArgs = MakeTextArgs(Run);
+
 	OutResult = FSSEventResult();
 	OutResult.EventId = EventId;
-	if (const FSSEventRow* Event = FindEvent(EventId)) OutResult.Title = Event->Title;
+	if (const FSSEventRow* Event = FindEvent(EventId)) OutResult.Title = FText::Format(Event->Title, TextArgs);
 	OutResult.ChoiceText = Chosen->Text;
 
 	if (const TArray<FSSEventEffectRow>* Effects = EffectsByChoice.Find(ChoiceId))
@@ -184,6 +194,12 @@ bool USSEventDirector::ApplyChoice(FName EventId, FName ChoiceId, USSRunSubsyste
 			ApplyEffect(Effect, Run, OutResult);
 		}
 	}
+
+	// 결과 문장의 {Target}도 같은 이름으로 채움
+	for (FText& Line : OutResult.Lines)
+	{
+		Line = FText::Format(Line, TextArgs);
+	}
 	
 	// 저널에 사건 한 줄: "지난 밤 · 제목 — 선택. 결과 문장 (변화)"
 	FText Line = FText::Format(NSLOCTEXT("SSEvent", "JournalHead", "지난 밤 · {0} — {1}."), OutResult.Title, OutResult.ChoiceText);
@@ -193,7 +209,7 @@ bool USSEventDirector::ApplyChoice(FName EventId, FName ChoiceId, USSRunSubsyste
 	if (!Changes.IsEmpty())          // 실제로 바뀐 게 있으면 괄호로
 		Line = FText::Format(NSLOCTEXT("SSEvent", "JournalChanges", "{0} ({1})"), Line, Changes);
 	const FSSEventRow* RecordedEvent = FindEvent(EventId);
-	Run.AddDetailedEventJournal(Line, OutResult.Title, RecordedEvent ? RecordedEvent->Body : FText::GetEmpty(),
+	Run.AddDetailedEventJournal(Line, OutResult.Title, RecordedEvent ? FText::Format(RecordedEvent->Body, TextArgs) : FText::GetEmpty(),
 		OutResult.ChoiceText, FText::Join(FText::FromString(TEXT(" ")), OutResult.Lines), Changes);
 	
 	return true;
@@ -311,6 +327,13 @@ void USSEventDirector::ApplyEffect(const FSSEventEffectRow& Effect, USSRunSubsys
 	case ESSEventEffect::ScheduleEvent:
 		Scheduled.Add({ Effect.Target, Run.GetCurrentDay() + FMath::Max(1, Effect.Amount) });
 		break;                                                   // 다음 날 일어날 일은 결과에 안 넣음 (복선)
+	case ESSEventEffect::AraSwapTarget:
+		// 비밀: 결과(Changes)에 넣지 않음 → 화면 칩·기록에 안 나옴
+		Run.GetAra()->SwapTarget();
+		break;
+	case ESSEventEffect::AraRefused:
+		Run.GetAra()->OnOfferRefused();
+		break;
 	default:
 		break;
 	}
@@ -321,6 +344,52 @@ void USSEventDirector::ApplyStandaloneEffect(const FSSEventEffectRow& Effect, US
 	// 아이템은 카탈로그에서 에셋을 찾아야 해서, 카탈로그가 없으면 적용하지 않음
 	if (Effect.Type == ESSEventEffect::Item && !IsValid(Catalog)) return;
 	ApplyEffect(Effect, Run, OutResult);
+}
+
+void USSEventDirector::ScheduleEvent(FName InEventId, int32 Day)
+{
+	if (InEventId.IsNone()) return;
+	Scheduled.Add({ InEventId, Day });
+}
+
+void USSEventDirector::CancelScheduled(FName InEventId)
+{
+	Scheduled.RemoveAll([InEventId](const FScheduled& Each)
+	{
+		return Each.EventId == InEventId;
+	});
+}
+
+int32 USSEventDirector::FindScheduledDay(FName InEventId) const
+{
+	int32 Earliest = -1;
+	for (const FScheduled& Each : Scheduled)
+	{
+		if (Each.EventId != InEventId) continue;
+		if (Earliest < 0 || Each.Day < Earliest) Earliest = Each.Day;
+	}
+	return Earliest;
+}
+
+FFormatNamedArguments USSEventDirector::MakeTextArgs(const USSRunSubsystem& Run)
+{
+	// 표적이 없으면 누구인지 드러나지 않게 "동료"
+	FText TargetName = NSLOCTEXT("SSEvent", "UnknownTarget", "동료");
+	const USSAraDirector* Ara = Run.FindAra();
+	if (Ara && Ara->HasTarget())
+	{
+		const FSSSurvivorState* Survivor = Run.FindRescuedSurvivor(Ara->GetTarget());
+		if (Survivor && IsValid(Survivor->Definition)) TargetName = Survivor->Definition->DisplayName;
+	}
+
+	FFormatNamedArguments Args;
+	Args.Add(TEXT("Target"), TargetName);
+	return Args;
+}
+
+FText USSEventDirector::FillText(const FText& Text, const USSRunSubsystem& Run)
+{
+	return FText::Format(Text, MakeTextArgs(Run));
 }
 
 void USSEventDirector::ResetRunState()

@@ -57,10 +57,27 @@ void USSCompanionState::RunNight()
 		}
 
 		// 정해준 장소가 있으면 거기, 없으면 성향대로 (정해준 건 한 번 쓰면 사라짐)
-		const ESSInvestigationSpot Spot = Record.bHasOrder
+		const bool bWasOrdered = Record.bHasOrder;
+		const ESSInvestigationSpot Spot = bWasOrdered
 			? Record.OrderedSpot
 			: FSSInvestigation::PickSpot(*Survivor.Definition, InvestigationRandom, ExhaustedSpots);
 		Record.bHasOrder = false;
+
+		// 안드로이드: 조사하는 척만 함 (단서 없음, 아라 편이라 들키지도 않음)
+		// 정해준 장소가 있으면 가끔 다른 곳을 조사했다고 말함 → 플레이어가 눈치챌 단서
+		if (Record.bIsAndroid)
+		{
+			ESSInvestigationSpot ReportedSpot = Spot;
+			if (bWasOrdered && InvestigationRandom.FRand() < AndroidWrongSpotChance)
+			{
+				// 정해준 장소를 뺀 나머지 중 하나
+				const int32 SpotCount = int32(ESSInvestigationSpot::Count);
+				const int32 Offset = InvestigationRandom.RandRange(1, SpotCount - 1);
+				ReportedSpot = ESSInvestigationSpot((int32(Spot) + Offset) % SpotCount);
+			}
+			AddReport(Record, ReportedSpot, false, NAME_None, false);
+			continue;
+		}
 
 		const FSSInvestigationResult Result = FSSInvestigation::Resolve(*Survivor.Definition, Spot, InvestigationRandom);
 
@@ -88,24 +105,44 @@ void USSCompanionState::RunNight()
 		// 아라는 들켰는지만 봄 (단서를 찾았는지는 모름)
 		Run.GetAra()->ObserveNight(Record.SurvivorId, Spot, Result.bDetected);
 
-		// 단서 없는 지난 보고는 새 보고로 대체 ("특이 사항 없음"이 쌓이지 않게)
-		// 단서가 있는 보고는 들을 때까지 남김 (하루 대화를 놓쳐도 단서는 안 사라짐)
-		Record.PendingReports.RemoveAll([](const FSSInvestigationReport& Old)
-		{
-			return !Old.bFoundClue;
-		});
-
-		// 아침에 들을 보고
-		FSSInvestigationReport& Report = Record.PendingReports.AddDefaulted_GetRef();
-		Report.SurvivorId = Record.SurvivorId;
-		Report.Day = Run.GetCurrentDay();
-		Report.Spot = Spot;
-		Report.bFoundClue = bFoundClue;
-		Report.ClueId = ClueId;
-		Report.bSpotExhausted = bSpotExhausted;
+		AddReport(Record, Spot, bFoundClue, ClueId, bSpotExhausted);
 	}
 
 	Run.OnSurvivorsChanged.Broadcast();
+}
+
+void USSCompanionState::AddReport(FSSCompanionRecord& Record, ESSInvestigationSpot Spot, bool bFoundClue, FName ClueId, bool bSpotExhausted)
+{
+	// 단서 없는 지난 보고는 새 보고로 대체 ("특이 사항 없음"이 쌓이지 않게)
+	// 단서가 있는 보고는 들을 때까지 남김 (하루 대화를 놓쳐도 단서는 안 사라짐)
+	Record.PendingReports.RemoveAll([](const FSSInvestigationReport& Old)
+	{
+		return !Old.bFoundClue;
+	});
+
+	// 아침에 들을 보고
+	FSSInvestigationReport& Report = Record.PendingReports.AddDefaulted_GetRef();
+	Report.SurvivorId = Record.SurvivorId;
+	Report.Day = GetRun().GetCurrentDay();
+	Report.Spot = Spot;
+	Report.bFoundClue = bFoundClue;
+	Report.ClueId = ClueId;
+	Report.bSpotExhausted = bSpotExhausted;
+}
+
+void USSCompanionState::MakeAndroid(FName SurvivorId)
+{
+	FSSCompanionRecord& Record = FindOrAddRecord(SurvivorId);
+	Record.bIsAndroid = true;
+
+	// 진짜가 아직 말하지 못한 보고는 아라가 기억째 가져감 (안드로이드가 단서를 대신 전하지 않게)
+	Record.PendingReports.Reset();
+}
+
+bool USSCompanionState::IsAndroid(FName SurvivorId) const
+{
+	const FSSCompanionRecord* Record = FindRecord(SurvivorId);
+	return Record && Record->bIsAndroid;
 }
 
 bool USSCompanionState::OrderInvestigation(FName SurvivorId, ESSInvestigationSpot Spot)

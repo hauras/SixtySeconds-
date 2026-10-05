@@ -151,8 +151,9 @@ void USSEventWidget::ShowEvent(USSEventDirector* InDirector, USSRunSubsystem* In
 
 	if (const FSSEventRow* Row = Director->FindEvent(EventId))
 	{
-		if (TitleText) TitleText->SetText(Row->Title);
-		if (BodyText)  BodyText->SetText(Row->Body);
+		// {Target}을 아라 표적 이름으로 채움
+		if (TitleText) TitleText->SetText(USSEventDirector::FillText(Row->Title, *Run));
+		if (BodyText)  BodyText->SetText(USSEventDirector::FillText(Row->Body, *Run));
 	}
 
 	const TArray<FSSEventChoiceView> Choices = Director->GetChoices(EventId, *Run);

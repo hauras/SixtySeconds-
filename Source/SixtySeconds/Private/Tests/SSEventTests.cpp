@@ -15,6 +15,9 @@
 #include "Item/SSItemDefinition.h"
 #include "UI/Event/SSEventWidget.h"
 #include "SSEventWidgetTestListener.h"
+#include "Ara/SSAraDirector.h"
+#include "Character/SSSurvivorDefinition.h"
+#include "Companion/SSCompanionState.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
 namespace SSEventTest
@@ -343,6 +346,81 @@ bool FSSEventWidgetResultTest::RunTest(const FString& Parameters)
     Widget->HandleConfirm();
     TestEqual(TEXT("Reused event has its own confirmation"), Listener->FinishedCount, 2);
     Game->Shutdown();
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSSEventAraEffectsTest, "SS.Event.AraEffects",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FSSEventAraEffectsTest::RunTest(const FString& Parameters)
+{
+    using namespace SSEventTest;
+    UGameInstance* GameInstance = NewObject<UGameInstance>();
+    USSRunSubsystem* Run = NewObject<USSRunSubsystem>(GameInstance);
+    Run->InitializeShelterStats(100.f, 100.f, 100.f);
+
+    // 동료 한 명 (이름 "하린")
+    USSSurvivorDefinition* Researcher = NewObject<USSSurvivorDefinition>(Run);
+    Researcher->SurvivorId = TEXT("Researcher");
+    Researcher->DisplayName = FText::FromString(TEXT("하린"));
+    Researcher->AraInfluence = 1.2f;
+    Run->RecruitSurvivor(Researcher);
+    Run->RescueFollowingSurvivors();
+
+    // 아라 제안 사건: 보내면 식량 +2 · 교체 · 결과 문장, 거절하면 아라가 다음 단계 예약
+    USSEventCatalog* Catalog = NewObject<USSEventCatalog>(Run);
+    Catalog->Items = { MakeItem(Catalog, TEXT("Food"), ESSItemUseEffect::RestoreSatiety) };
+    Catalog->EventTable = MakeTable(FSSEventRow::StaticStruct());
+    FSSEventRow Offer;
+    Offer.Title = FText::FromString(TEXT("{Target} 검진"));
+    Offer.Body = FText::FromString(TEXT("{Target}의 상태"));
+    Offer.Weight = 0;
+    Offer.bScheduledOnly = true;
+    Catalog->EventTable->AddRow(TEXT("Offer"), Offer);
+    Catalog->ChoiceTable = MakeTable(FSSEventChoiceRow::StaticStruct());
+    Catalog->ChoiceTable->AddRow(TEXT("Send"), Choice(TEXT("Offer"), 0, ESSEventCondition::AraHasTarget));
+    Catalog->ChoiceTable->AddRow(TEXT("Refuse"), Choice(TEXT("Offer"), 1, ESSEventCondition::AraHasTarget));
+    Catalog->EffectTable = MakeTable(FSSEventEffectRow::StaticStruct());
+    Catalog->EffectTable->AddRow(TEXT("Send_1"), Effect(TEXT("Send"), ESSEventEffect::Item, TEXT("Food"), 2));
+    Catalog->EffectTable->AddRow(TEXT("Send_2"), Effect(TEXT("Send"), ESSEventEffect::AraSwapTarget, NAME_None, 0));
+    Catalog->EffectTable->AddRow(TEXT("Send_3"), Effect(TEXT("Send"), ESSEventEffect::Journal, NAME_None, 0, TEXT("{Target} 돌아옴")));
+    Catalog->EffectTable->AddRow(TEXT("Refuse_1"), Effect(TEXT("Refuse"), ESSEventEffect::AraRefused, NAME_None, 0));
+
+    USSEventDirector* Director = Run->GetEventDirector();
+    Director->SetSeed(7);
+    if (!TestTrue(TEXT("Ara catalog is valid"), Director->SetCatalog(Catalog))) return false;
+
+    // 표적이 없으면 선택지가 닫혀 있고, {Target}은 "동료"
+    TestFalse(TEXT("No target closes the offer"), Director->GetChoices(TEXT("Offer"), *Run)[0].bAvailable);
+    TestEqual(TEXT("Unknown target name"), USSEventDirector::FillText(Offer.Title, *Run).ToString(), FString(TEXT("동료 검진")));
+
+    // 표적이 생기면 선택지가 열리고 이름이 채워짐
+    USSAraDirector* Ara = Run->GetAra();
+    Ara->ObserveNight(TEXT("Researcher"), ESSInvestigationSpot::TerminalLog, true);
+    Ara->ObserveEavesdrop(TEXT("Researcher"), true);
+    Ara->UpdateTarget();
+    if (!TestTrue(TEXT("Researcher targeted"), Ara->HasTarget())) return false;
+    TestTrue(TEXT("Target opens the offer"), Director->GetChoices(TEXT("Offer"), *Run)[0].bAvailable);
+    TestEqual(TEXT("Target name filled"), USSEventDirector::FillText(Offer.Title, *Run).ToString(), FString(TEXT("하린 검진")));
+
+    // 거절: 아라가 재제안을 예약
+    FSSEventResult Result;
+    TestTrue(TEXT("Refuse applies"), Director->ApplyChoice(TEXT("Offer"), TEXT("Refuse"), *Run, Result));
+    TestEqual(TEXT("Refusal counted"), Ara->GetRefusalCount(), 1);
+    TestTrue(TEXT("Repeat offer scheduled"), Director->FindScheduledDay(FName(USSAraDirector::RepeatOfferEventId)) > 0);
+    TestEqual(TEXT("Refusal is not a visible change"), Result.Changes.Num(), 0);
+
+    // 보냄: 보상만 보이고 교체는 비밀. 이름은 교체 뒤에도 그대로 채워짐
+    TestTrue(TEXT("Send applies"), Director->ApplyChoice(TEXT("Offer"), TEXT("Send"), *Run, Result));
+    TestTrue(TEXT("Researcher swapped"), Run->GetCompanions()->IsAndroid(TEXT("Researcher")));
+    TestEqual(TEXT("Title keeps the name"), Result.Title.ToString(), FString(TEXT("하린 검진")));
+    TestTrue(TEXT("Line keeps the name"), Result.Lines.Num() == 1 && Result.Lines[0].ToString() == TEXT("하린 돌아옴"));
+    TestTrue(TEXT("Only the reward is a visible change"), Result.Changes.Num() == 1 && Result.Changes[0].Type == ESSEventEffect::Item);
+    TestTrue(TEXT("Swap is never described"), Director->DescribeChange({ ESSEventEffect::AraSwapTarget, NAME_None, 0 }).IsEmpty());
+    TestTrue(TEXT("Refusal is never described"), Director->DescribeChange({ ESSEventEffect::AraRefused, NAME_None, 0 }).IsEmpty());
+
+    // 교체가 끝나면 제안 선택지는 다시 닫힘
+    TestFalse(TEXT("Offer closed after swap"), Director->GetChoices(TEXT("Offer"), *Run)[0].bAvailable);
     return true;
 }
 #endif

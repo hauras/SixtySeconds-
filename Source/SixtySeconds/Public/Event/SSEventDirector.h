@@ -41,6 +41,19 @@ public:
 
 	static bool CheckCondition(ESSEventCondition Condition, FName Target, int32 Amount, const USSRunSubsystem& Run);
 
+	// 며칠째 밤에 사건을 띄우도록 예약 (아라가 제안·강제 교체를 예약할 때)
+	void ScheduleEvent(FName InEventId, int32 Day);
+
+	// 예약된 그 사건을 모두 취소 (아라의 표적이 바뀌었을 때)
+	void CancelScheduled(FName InEventId);
+
+	// 그 사건이 며칠째 밤에 예약돼 있는지 (가장 이른 날. 없으면 -1)
+	int32 FindScheduledDay(FName InEventId) const;
+
+	// 사건 문장 안의 {Target}을 아라 표적 이름으로 채움 (표적이 없으면 "동료")
+	static FFormatNamedArguments MakeTextArgs(const USSRunSubsystem& Run);
+	static FText FillText(const FText& Text, const USSRunSubsystem& Run);
+
 private:
 	bool IsEligible(FName EventId, const FSSEventRow& Row, const USSRunSubsystem& Run) const;
 	bool HasAvailableChoice(FName EventId, const USSRunSubsystem& Run) const;

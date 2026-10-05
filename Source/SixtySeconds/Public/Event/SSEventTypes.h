@@ -14,6 +14,7 @@ enum class ESSEventCondition : uint8
 	SurvivorAlive,     // Target = SurvivorId
 	RobotIdle,         // 탐사 로봇이 은신처에서 대기 중
 	RobotAway,         // 탐사 로봇이 탐사 중
+	AraHasTarget,      // 아라에게 교체할 표적이 있음 (아직 아무도 교체 전)
 };
 
 // 선택지를 고르면 일어나는 일
@@ -29,6 +30,8 @@ enum class ESSEventEffect : uint8
 	ActionPoints,      // Amount = ± 오늘 행동력
 	Journal,           // Text = 저널에 남길 문장
 	ScheduleEvent,     // Target = EventId, Amount = 며칠 뒤 (1 이상)
+	AraSwapTarget,     // 아라의 표적을 안드로이드로 교체 (비밀: 결과·기록에 안 나옴)
+	AraRefused,        // 아라의 제안을 거절하거나 막아냄 (아라가 다음 단계를 예약)
 };
 
 // 밤 사건이 은신처 어디에서 느껴지는지. HUD가 이 위치에 발견 표시(!)를 띄움

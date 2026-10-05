@@ -2,6 +2,8 @@
 #include "Character/SSSurvivorDefinition.h"
 #include "Item/SSItemDefinition.h"
 #include "Item/SSRunSubsystem.h"
+#include "Companion/SSCompanionState.h"
+#include "Event/SSEventDirector.h"
 
 USSRunSubsystem& USSAraDirector::GetRun() const
 {
@@ -95,6 +97,9 @@ void USSAraDirector::BeginNight()
 
 void USSAraDirector::ObserveNight(FName SurvivorId, ESSInvestigationSpot Spot, bool bDetected)
 {
+	// 자기 편(안드로이드)은 관찰할 필요가 없음
+	if (IsAndroid(SurvivorId)) return;
+
 	FSSAraSuspicion& Suspicion = FindOrAddSuspicion(SurvivorId);
 
 	// 베이즈 갱신: 로그 오즈에 가능도 비율의 로그를 더함
@@ -111,32 +116,117 @@ void USSAraDirector::ObserveNight(FName SurvivorId, ESSInvestigationSpot Spot, b
 
 void USSAraDirector::UpdateTarget()
 {
-	// 지금 표적이 살아 있고 위협도가 풀릴 만큼 내려가지 않았으면 유지
-	if (HasTarget() && IsAliveSurvivor(TargetId) && GetThreat(TargetId) >= ReleaseThreat)
+	// 이미 한 명을 바꿨으면 다음 단계(모함)까지 새 표적을 잡지 않음
+	if (bSwapDone)
 	{
+		TargetId = NAME_None;
 		return;
 	}
-	TargetId = NAME_None;
 
-	// 기준을 넘은 동료 중 위협도가 가장 높은 사람
-	float BestThreat = TargetThreat;
-	for (const FSSAraSuspicion& Each : Suspicions)
+	const FName Before = TargetId;
+
+	// 지금 표적이 살아 있고 위협도가 풀릴 만큼 내려가지 않았으면 유지
+	const bool bKeep = HasTarget() && IsAliveSurvivor(TargetId) && GetThreat(TargetId) >= ReleaseThreat;
+	if (!bKeep)
 	{
-		if (!IsAliveSurvivor(Each.SurvivorId)) continue;
+		TargetId = NAME_None;
 
-		const float Threat = GetThreat(Each.SurvivorId);
-		if (Threat >= BestThreat)
+		// 기준을 넘은 동료 중 위협도가 가장 높은 사람
+		float BestThreat = TargetThreat;
+		for (const FSSAraSuspicion& Each : Suspicions)
 		{
-			BestThreat = Threat;
-			TargetId = Each.SurvivorId;
+			if (!IsAliveSurvivor(Each.SurvivorId) || IsAndroid(Each.SurvivorId)) continue;
+
+			const float Threat = GetThreat(Each.SurvivorId);
+			if (Threat >= BestThreat)
+			{
+				BestThreat = Threat;
+				TargetId = Each.SurvivorId;
+			}
 		}
 	}
+
+	// 표적이 바뀌면 제안을 처음부터: 예약된 아라 사건을 지우고, 새 표적이면 이틀 뒤 밤에 제안
+	// (내일 아침 브리핑에서 먼저 파견을 권한 뒤, 그다음 밤에 직접 묻는 순서)
+	if (TargetId != Before)
+	{
+		CancelAraEvents();
+		RefusalCount = 0;
+		if (HasTarget()) ScheduleAraEvent(OfferEventId, OfferDelay);
+	}
+}
+
+// ── 교체 ──
+
+bool USSAraDirector::IsAndroid(FName SurvivorId) const
+{
+	return GetRun().GetCompanions()->IsAndroid(SurvivorId);
+}
+
+bool USSAraDirector::CanSwapTarget() const
+{
+	return !bSwapDone && HasTarget() && IsAliveSurvivor(TargetId);
+}
+
+bool USSAraDirector::SwapTarget()
+{
+	if (!CanSwapTarget()) return false;
+
+	// 겉모습·말투는 그대로인 안드로이드로 바꾸고, 진짜는 B2 격리 구역에 붙잡아 둠
+	GetRun().GetCompanions()->MakeAndroid(TargetId);
+	CapturedRealId = TargetId;
+
+	// 아라 편이 됐으니 더는 의심하지 않음 → 브리핑에서 갑자기 사라짐 (플레이어가 눈치챌 단서)
+	FindOrAddSuspicion(TargetId).LogOdds = ToLogOdds(AndroidSuspicion);
+
+	bSwapDone = true;
+	TargetId = NAME_None;
+	CancelAraEvents();
+	return true;
+}
+
+void USSAraDirector::OnOfferRefused()
+{
+	if (!CanSwapTarget()) return;
+
+	++RefusalCount;
+
+	// 보호를 거부한 것도 증거: 의심이 오름
+	FindOrAddSuspicion(TargetId).LogOdds += FMath::Loge(RefusalRatio);
+
+	// 1번째 거절: 며칠 뒤 더 강하게 다시 제안
+	// 2번째부터: 밤에 직접 (강제 교체를 막아내면 이틀 뒤 다시)
+	if (RefusalCount == 1)
+	{
+		ScheduleAraEvent(RepeatOfferEventId, RepeatOfferDelay);
+	}
+	else
+	{
+		ScheduleAraEvent(SeizeEventId, RefusalCount == 2 ? SeizeDelay : ResistedSeizeDelay);
+	}
+}
+
+void USSAraDirector::ScheduleAraEvent(const TCHAR* EventId, int32 DaysLater)
+{
+	USSRunSubsystem& Run = GetRun();
+	Run.GetEventDirector()->ScheduleEvent(FName(EventId), Run.GetCurrentDay() + DaysLater);
+}
+
+void USSAraDirector::CancelAraEvents()
+{
+	USSEventDirector* Events = GetRun().GetEventDirector();
+	Events->CancelScheduled(FName(OfferEventId));
+	Events->CancelScheduled(FName(RepeatOfferEventId));
+	Events->CancelScheduled(FName(SeizeEventId));
 }
 
 // ── 낮 ──
 
 bool USSAraDirector::TryEavesdrop(FName SurvivorId, bool bFoundClue)
 {
+	// 안드로이드의 보고는 아라가 이미 앎
+	if (IsAndroid(SurvivorId)) return false;
+
 	// 아라에게 질문할수록(학습도) 대피실 대화를 더 잘 알아들음
 	if (Random.FRand() >= EavesdropChance(GetRun().GetAraLearningScore())) return false;
 
@@ -275,8 +365,58 @@ FText USSAraDirector::BuildBriefingNotes() const
 	return FText::Join(FText::FromString(TEXT("\n")), Notes);
 }
 
+// ── 디버그 ──
+
+bool USSAraDirector::DebugForceTarget(FName SurvivorId)
+{
+	if (bSwapDone || !IsAliveSurvivor(SurvivorId) || IsAndroid(SurvivorId)) return false;
+
+	// 밤에 표적 판단을 다시 해도 유지되도록 의심을 높게 둠 (95%)
+	FindOrAddSuspicion(SurvivorId).LogOdds = ToLogOdds(0.95f);
+	TargetId = SurvivorId;
+	RefusalCount = 0;
+
+	// 기다리지 않고 바로 다음 밤에 제안
+	CancelAraEvents();
+	ScheduleAraEvent(OfferEventId, 1);
+	return true;
+}
+
+bool USSAraDirector::DebugScheduleSeize()
+{
+	if (!CanSwapTarget()) return false;
+	CancelAraEvents();
+	ScheduleAraEvent(SeizeEventId, 1);
+	return true;
+}
+
+FString USSAraDirector::DebugDescribe() const
+{
+	FString Out = FString::Printf(TEXT("Target=%s SwapDone=%d Captured=%s Refusals=%d Learning=%d"),
+		*TargetId.ToString(), bSwapDone ? 1 : 0, *CapturedRealId.ToString(), RefusalCount, GetRun().GetAraLearningScore());
+
+	for (const FSSSurvivorState& Survivor : GetRun().GetRescuedSurvivors())
+	{
+		if (!IsValid(Survivor.Definition)) continue;
+		const FName Id = Survivor.Definition->SurvivorId;
+		const FSSAraSuspicion* Suspicion = FindSuspicion(Id);
+		Out += FString::Printf(TEXT("\n  %s: suspicion=%.2f threat=%.2f seen=%d heard=%d %s%s"),
+			*Id.ToString(),
+			GetSuspicion(Id),
+			GetThreat(Id),
+			Suspicion ? Suspicion->DetectionsSeen : 0,
+			Suspicion ? Suspicion->EavesdropsHeard : 0,
+			IsAndroid(Id) ? TEXT("ANDROID") : TEXT("human"),
+			Survivor.bAlive ? TEXT("") : TEXT(" (dead)"));
+	}
+	return Out;
+}
+
 void USSAraDirector::ResetRun()
 {
 	Suspicions.Reset();
 	TargetId = NAME_None;
+	bSwapDone = false;
+	CapturedRealId = NAME_None;
+	RefusalCount = 0;
 }

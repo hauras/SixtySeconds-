@@ -177,6 +177,9 @@ public:
 	// 아라의 판단 (누구를 의심하는지, 표적). 처음 부를 때 생성
 	USSAraDirector* GetAra();
 
+	// 아라 판단을 읽기만 할 때 (아직 없으면 nullptr. 사건 조건처럼 const에서 씀)
+	const USSAraDirector* FindAra() const { return Ara; }
+
 	// ── 외부 통신 (역추적 + 받은 메시지) ──
 	// 날을 넘어 이어지는 통신 상태. 처음 부를 때 생성
 	USSCommsState* GetComms();

@@ -102,6 +102,55 @@ public:
 	void SetLineTable(UDataTable* InLineTable);
 	bool HasLineTable() const { return LineTable != nullptr; }
 
+	// ── 교체 (제안 → 거절하면 다시 제안 → 그래도 거절하면 밤에 강제) ──
+	// 새 표적이 생기면 이틀 뒤 밤에 '제안' 사건을 예약. 표적이 바뀌거나 풀리면 예약을 지움
+
+	// 교체할 수 있는 표적이 있나 (살아 있고, 이번 판에 아직 아무도 교체하지 않음)
+	bool CanSwapTarget() const;
+
+	// 표적을 안드로이드로 교체 (진짜는 B2 격리 구역에 붙잡힘). 사건 효과가 부름. 성공하면 true
+	bool SwapTarget();
+
+	// 플레이어가 제안을 거절하거나 강제 교체를 막아냄: 다음 단계를 예약 (사건 효과가 부름)
+	void OnOfferRefused();
+
+	bool IsSwapDone() const { return bSwapDone; }
+
+	// 붙잡힌 진짜 동료 (B2 구출 목표. 없으면 NAME_None)
+	FName GetCapturedRealId() const { return CapturedRealId; }
+
+	// 이번 표적에게 받은 거절 횟수
+	int32 GetRefusalCount() const { return RefusalCount; }
+
+	// 아라 사건 ID (사건 CSV의 행 이름과 같아야 함)
+	static constexpr const TCHAR* OfferEventId = TEXT("Ara_Checkup");
+	static constexpr const TCHAR* RepeatOfferEventId = TEXT("Ara_Checkup_Again");
+	static constexpr const TCHAR* SeizeEventId = TEXT("Ara_Night_Door");
+
+	// 예약 간격 (며칠 뒤 밤): 첫 제안 / 거절 1번 뒤 재제안 / 거절 2번 뒤 강제 / 강제를 막아낸 뒤 다시
+	static constexpr int32 OfferDelay = 2;
+	static constexpr int32 RepeatOfferDelay = 3;
+	static constexpr int32 SeizeDelay = 1;
+	static constexpr int32 ResistedSeizeDelay = 2;
+
+	// 제안을 거절했을 때의 가능도 비율 ("보호를 거부하는 것도 기록됩니다")
+	// 거절 → 재제안 → 강제까지 일주일 가까이 걸리는 동안 의심이 식어 표적이 풀리지 않게 함
+	static constexpr float RefusalRatio = 4.f;
+
+	// 교체 직후 그 동료에 대한 의심 (아라 편이라 의심할 이유가 없음 → 브리핑에서 사라짐)
+	static constexpr float AndroidSuspicion = 0.01f;
+
+	// ── 디버그 (콘솔 명령 SS.Ara.* 이 부름. 확인·시연용) ──
+
+	// 그 동료를 바로 표적으로 만들고, 다음 밤에 검진 제안을 예약. 안 되면 false
+	bool DebugForceTarget(FName SurvivorId);
+
+	// 다음 밤에 새벽 02:10 강제 교체 사건을 예약 (표적이 있어야 함). 안 되면 false
+	bool DebugScheduleSeize();
+
+	// 동료별 의심·표적·거절 횟수·안드로이드 여부를 한 줄씩
+	FString DebugDescribe() const;
+
 	// 새 게임
 	void ResetRun();
 
@@ -177,6 +226,27 @@ private:
 	// 지금 표적
 	UPROPERTY(Transient)
 	FName TargetId = NAME_None;
+
+	// 이번 판에 이미 한 명을 바꿨는지 (한 판에 1명)
+	UPROPERTY(Transient)
+	bool bSwapDone = false;
+
+	// 붙잡힌 진짜 동료
+	UPROPERTY(Transient)
+	FName CapturedRealId = NAME_None;
+
+	// 지금 표적에게 받은 거절 횟수
+	UPROPERTY(Transient)
+	int32 RefusalCount = 0;
+
+	// 오늘부터 며칠 뒤 밤에 아라 사건을 예약
+	void ScheduleAraEvent(const TCHAR* EventId, int32 DaysLater);
+
+	// 예약해 둔 아라 사건을 모두 지움
+	void CancelAraEvents();
+
+	// 안드로이드인지 (아라는 자기 편을 의심하지 않음)
+	bool IsAndroid(FName SurvivorId) const;
 
 	// 엿듣기 굴림
 	FRandomStream Random = FRandomStream(FPlatformTime::Cycles());
