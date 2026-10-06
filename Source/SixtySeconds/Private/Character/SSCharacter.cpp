@@ -2,8 +2,8 @@
 #include "Character/SSCharacterStats.h"
 #include "Character/SSStatusComponent.h"
 #include "Item/SSCarryComponent.h"
-#include "Item/SSPickupActor.h"
-#include "Character/SSSurvivorPickup.h"
+#include "Item/SSInteractable.h"
+#include "GameMode/SSGameMode.h"
 #include "Controller/SSRPlayerController.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
@@ -81,6 +81,28 @@ void ASSCharacter::Look(const FInputActionValue& Value)
 	AddControllerPitchInput(Axis.Y);
 }
 
+AActor* ASSCharacter::FindInteractTarget() const
+{
+	TArray<AActor*> Overlapping;
+	GetOverlappingActors(Overlapping);
+
+	float Closest = MAX_FLT;
+	AActor* Target = nullptr;
+	for (AActor* Actor : Overlapping)
+	{
+		// 상호작용 대상만, 숨겨진 것(이미 주운 것·구조된 동료)은 빼고
+		if (!IsValid(Actor) || Actor->IsHidden() || !Actor->Implements<USSInteractable>()) continue;
+
+		const float Dist = FVector::DistSquared(GetActorLocation(), Actor->GetActorLocation());
+		if (Dist < Closest)
+		{
+			Closest = Dist;
+			Target = Actor;
+		}
+	}
+	return Target;
+}
+
 void ASSCharacter::Interact()
 {
 	const ASSGameMode* GameMode = GetWorld()->GetAuthGameMode<ASSGameMode>();
@@ -89,31 +111,9 @@ void ASSCharacter::Interact()
 		return;
 	}
 
-	// 현재 겹쳐 있는 SSPickupActor 중 가장 가까운 액터 탐색
-	TArray<AActor*> Pickups, Survivors;
-	GetOverlappingActors(Pickups, ASSPickupActor::StaticClass());
-	GetOverlappingActors(Survivors, ASSSurvivorPickup::StaticClass());
-	Pickups.Append(Survivors);
-
-	float Closest = MAX_FLT;
-	AActor* Target = nullptr;
-	for (AActor* Actor : Pickups)
+	// 가장 가까운 대상과 상호작용 (아이템이면 줍기, 동료면 데려가기)
+	if (ISSInteractable* Target = Cast<ISSInteractable>(FindInteractTarget()))
 	{
-		if (!IsValid(Actor) || Actor->IsHidden()) continue;
-		const float Dist = FVector::Dist(GetActorLocation(), Actor->GetActorLocation());
-		if (Dist < Closest)
-		{
-			Closest = Dist;
-			Target = Actor;
-		}
-	}
-
-	if (ASSSurvivorPickup* Survivor = Cast<ASSSurvivorPickup>(Target))
-    {
-        Survivor->TryRecruit(this);
-    }
-    else if (ASSPickupActor* Pickup = Cast<ASSPickupActor>(Target))
-	{
-		Pickup->TryPickup(CarryComponent);
+		Target->TryInteract(this);
 	}
 }

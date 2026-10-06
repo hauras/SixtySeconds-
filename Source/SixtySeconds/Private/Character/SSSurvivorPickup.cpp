@@ -33,6 +33,20 @@ ASSSurvivorPickup::ASSSurvivorPickup()
     Prompt->SetWorldSize(24);
     Prompt->SetText(FText::FromString(TEXT("SURVIVOR - [E] RESCUE")));
     Prompt->SetTextRenderColor(FColor::Green);
+
+    // 머리 위 영어 글자는 숨김 (가까이 가면 화면 안내가 대신 뜸)
+    Prompt->SetHiddenInGame(true);
+}
+
+bool ASSSurvivorPickup::CanInteract(const APawn* Interactor) const
+{
+    return !bRecruited && IsValid(Definition) && IsValid(Interactor);
+}
+
+FText ASSSurvivorPickup::GetInteractPrompt(const APawn* Interactor) const
+{
+    const FText Name = IsValid(Definition) ? Definition->DisplayName : NSLOCTEXT("SSSurvivor", "Unknown", "생존자");
+    return FText::Format(NSLOCTEXT("SSSurvivor", "Prompt", "{0} · [E] 데려가기"), Name);
 }
 
 bool ASSSurvivorPickup::TryRecruit(APawn* PlayerPawn)

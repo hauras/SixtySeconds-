@@ -29,6 +29,10 @@ public:
 	UFUNCTION(BlueprintPure, Category="SS|Character")
 	USSStatusComponent* GetStatusComponent() const { return StatusComponent; }
 
+	// 겹쳐 있는 상호작용 대상(ISSInteractable) 중 가장 가까운 것. 없으면 nullptr
+	// E키와 화면 안내가 같은 대상을 쓰도록 둘 다 이 함수로 고름
+	AActor* FindInteractTarget() const;
+
 protected:
 	virtual void BeginPlay() override;
 
