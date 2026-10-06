@@ -80,6 +80,14 @@ struct FSSCompanionRecord
 	UPROPERTY()
 	bool bIsAndroid = false;
 
+	// 마지막으로 검사한 날 (안 했으면 0). 검사는 그날의 사진일 뿐 (그 뒤에 바뀔 수 있음)
+	UPROPERTY()
+	int32 InspectedDay = 0;
+
+	// 그 검사에서 안드로이드로 나왔는지
+	UPROPERTY()
+	bool bInspectedAndroid = false;
+
 	// 안 들은 보고가 있나 (머리 위 "!" 표시)
 	bool HasPendingReport() const { return PendingReports.Num() > 0; }
 };
@@ -123,6 +131,28 @@ public:
 
 	// 정해준 장소가 있을 때 안드로이드가 다른 장소를 조사했다고 말할 확률 (플레이어가 눈치챌 단서)
 	static constexpr float AndroidWrongSpotChance = 0.3f;
+
+	// ── 정체 판별 (정보창 버튼) ──
+
+	// 검사 비용: 행동력 1 + 배터리 1
+	static constexpr int32 InspectActionCost = 1;
+	static constexpr int32 InspectBatteryCost = 1;
+
+	// 안드로이드가 검사에서 정상으로 위장할 확률 (사람이 이상으로 나오는 일은 없음)
+	static constexpr float AndroidMaskChance = 0.4f;
+
+	// 검사할 수 있나 (살아 있고, 행동력·배터리가 있음)
+	bool CanInspect(FName SurvivorId) const;
+
+	// 검사: 비용을 쓰고 결과를 기록 (정보창 관찰 칸에 보임). 못 하면 false
+	bool InspectCompanion(FName SurvivorId);
+
+	// 격리: 되돌릴 수 없음. 안드로이드면 제거, 사람이면 B2로 붙잡혀 감 (아라가 원하던 것)
+	// 결과는 bOutWasAndroid로. 못 하면 false
+	bool IsolateCompanion(FName SurvivorId, bool& bOutWasAndroid);
+
+	// 검사 결과 문장 (기록창·정보창 공용)
+	static FText GetInspectionText(bool bAndroid);
 
 	// ── 단서·대사 표 ──
 

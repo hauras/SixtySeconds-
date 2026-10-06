@@ -177,6 +177,23 @@ public:
 	// 아라의 판단 (누구를 의심하는지, 표적). 처음 부를 때 생성
 	USSAraDirector* GetAra();
 
+	// ── 붙잡힌 동료 (B2 격리 구역. 사망이 아니라 구출할 수 있음) ──
+
+	// 붙잡힌 동료들 (바꿔치기된 진짜, 잘못 격리된 사람)
+	const TArray<FSSSurvivorState>& GetCapturedSurvivors() const { return CapturedSurvivors; }
+
+	// 그 동료가 B2에 붙잡혀 있나
+	bool IsSurvivorCaptured(FName SurvivorId) const;
+
+	// 은신처 동료를 붙잡힌 목록으로 옮김 (사람을 격리했을 때). 은신처에서는 사라짐
+	bool MoveSurvivorToCaptured(FName SurvivorId);
+
+	// 은신처에는 그대로 두고 몸 상태만 붙잡힌 목록에 복사 (바꿔치기: 진짜는 B2, 같은 얼굴의 안드로이드는 은신처)
+	bool CopySurvivorToCaptured(FName SurvivorId);
+
+	// 은신처 목록에서 지움 (안드로이드를 격리해 제거했을 때)
+	bool RemoveRescuedSurvivor(FName SurvivorId);
+
 	// 아라 판단을 읽기만 할 때 (아직 없으면 nullptr. 사건 조건처럼 const에서 씀)
 	const USSAraDirector* FindAra() const { return Ara; }
 
@@ -244,6 +261,10 @@ private:
 
 	UPROPERTY(Transient)
 	TArray<FSSSurvivorState> RescuedSurvivors;
+
+	// B2에 붙잡힌 동료
+	UPROPERTY(Transient)
+	TArray<FSSSurvivorState> CapturedSurvivors;
 
 	// 일일 기록
 	UPROPERTY(Transient)

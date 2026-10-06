@@ -2,6 +2,7 @@
 #include "Character/SSSurvivorDefinition.h"
 #include "Item/SSRunSubsystem.h"
 #include "Ara/SSAraDirector.h"
+#include "Item/SSItemDefinition.h"
 #include "Engine/DataTable.h"
 
 USSRunSubsystem& USSCompanionState::GetRun() const
@@ -137,6 +138,84 @@ void USSCompanionState::MakeAndroid(FName SurvivorId)
 
 	// 진짜가 아직 말하지 못한 보고는 아라가 기억째 가져감 (안드로이드가 단서를 대신 전하지 않게)
 	Record.PendingReports.Reset();
+}
+
+bool USSCompanionState::CanInspect(FName SurvivorId) const
+{
+	const USSRunSubsystem& Run = GetRun();
+	const FSSSurvivorState* Survivor = Run.FindRescuedSurvivor(SurvivorId);
+	return Survivor && Survivor->bAlive
+		&& Run.GetActionPoints() >= InspectActionCost
+		&& Run.GetStoredQuantityById(SSItemIds::Battery) >= InspectBatteryCost;
+}
+
+bool USSCompanionState::InspectCompanion(FName SurvivorId)
+{
+	if (!CanInspect(SurvivorId)) return false;
+	USSRunSubsystem& Run = GetRun();
+
+	// 비용: 배터리를 먼저 빼고(실패하면 아무것도 안 바뀜), 행동력
+	if (!Run.RemoveStoredItemsById(SSItemIds::Battery, InspectBatteryCost)) return false;
+	Run.SpendActionPoints(InspectActionCost);
+
+	FSSCompanionRecord& Record = FindOrAddRecord(SurvivorId);
+	Record.InspectedDay = Run.GetCurrentDay();
+	// 사람은 늘 정상. 안드로이드는 위장해서 가끔 정상으로 나옴 (거짓 음성만, 거짓 양성은 없음)
+	// → "이상"이면 확실, "정상"이면 아직 모름. 단서·대화와 같이 판단하게
+	Record.bInspectedAndroid = Record.bIsAndroid && InvestigationRandom.FRand() >= AndroidMaskChance;
+
+	// 기록창에도 남김
+	const FSSSurvivorState* Survivor = Run.FindRescuedSurvivor(SurvivorId);
+	const FText Name = IsValid(Survivor->Definition) ? Survivor->Definition->DisplayName : FText::FromName(SurvivorId);
+	Run.AddJournal(ESSJournalEvent::Investigation, FText::Format(
+		NSLOCTEXT("SSJournal", "Inspection", "{0} 검사 — {1}"),
+		Name,
+		GetInspectionText(Record.bInspectedAndroid)));
+
+	Run.OnSurvivorsChanged.Broadcast();
+	return true;
+}
+
+FText USSCompanionState::GetInspectionText(bool bAndroid)
+{
+	return bAndroid
+		? NSLOCTEXT("SSCompanion", "InspectAndroid", "체온이 실내 온도와 같다. 맥박이 지나치게 규칙적이다.")
+		: NSLOCTEXT("SSCompanion", "InspectHuman", "맥박과 체온 모두 정상이다.");
+}
+
+bool USSCompanionState::IsolateCompanion(FName SurvivorId, bool& bOutWasAndroid)
+{
+	USSRunSubsystem& Run = GetRun();
+	const FSSSurvivorState* Survivor = Run.FindRescuedSurvivor(SurvivorId);
+	if (!Survivor || !Survivor->bAlive) return false;
+
+	const FText Name = IsValid(Survivor->Definition) ? Survivor->Definition->DisplayName : FText::FromName(SurvivorId);
+	bOutWasAndroid = IsAndroid(SurvivorId);
+
+	// 조사 기록은 새로 (안드로이드 표시·밀린 보고 정리. 나중에 진짜를 구출하면 처음부터)
+	FSSCompanionRecord& Record = FindOrAddRecord(SurvivorId);
+	Record = FSSCompanionRecord();
+	Record.SurvivorId = SurvivorId;
+
+	if (bOutWasAndroid)
+	{
+		// 안드로이드: 은신처에서 제거 (진짜는 여전히 B2에 있음)
+		Run.RemoveRescuedSurvivor(SurvivorId);
+		Run.AddJournal(ESSJournalEvent::Investigation, FText::Format(
+			NSLOCTEXT("SSJournal", "IsolateAndroid", "{0}의 모습을 한 그것을 문밖으로 내보냈다. 끌려 나가는 동안 한 번도 소리를 내지 않았다."),
+			Name));
+	}
+	else
+	{
+		// 사람: 아라가 데려감 (B2). 아라가 바라던 일
+		Run.MoveSurvivorToCaptured(SurvivorId);
+		Run.AddJournal(ESSJournalEvent::Investigation, FText::Format(
+			NSLOCTEXT("SSJournal", "IsolateHuman", "{0}을(를) 문밖으로 내보냈다. 잠시 뒤 단말이 켜졌다. '보호 대상을 인수했습니다. 협조에 감사드립니다.'"),
+			Name));
+	}
+
+	// 갱신 알림은 목록을 옮기거나 지울 때 이미 보냄 (여기서 또 보내면 HUD가 두 번 갱신됨)
+	return true;
 }
 
 bool USSCompanionState::IsAndroid(FName SurvivorId) const

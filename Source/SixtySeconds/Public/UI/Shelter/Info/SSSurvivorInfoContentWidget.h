@@ -64,6 +64,14 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> HealButton;
 
+	// [검사] 행동력 1 + 배터리 1 → 관찰 칸에 결과
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UButton> InspectButton;
+
+	// [격리] 되돌릴 수 없음. 한 번 누르면 확인 문구로 바뀌고, 한 번 더 눌러야 실행
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UButton> IsolateButton;
+
 private:
 	UFUNCTION()
 	void RefreshDisplay();
@@ -76,6 +84,15 @@ private:
 
 	UFUNCTION()
 	void OnHealClicked();
+
+	UFUNCTION()
+	void OnInspectClicked();
+
+	UFUNCTION()
+	void OnIsolateClicked();
+
+	// 격리 버튼을 한 번 눌러 확인을 기다리는 중인지
+	bool bIsolateArmed = false;
 	
 	UPROPERTY(Transient)
 	TObjectPtr<USSRunSubsystem> RunSubsystem;

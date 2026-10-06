@@ -173,6 +173,7 @@ bool USSAraDirector::SwapTarget()
 	if (!CanSwapTarget()) return false;
 
 	// 겉모습·말투는 그대로인 안드로이드로 바꾸고, 진짜는 B2 격리 구역에 붙잡아 둠
+	GetRun().CopySurvivorToCaptured(TargetId);
 	GetRun().GetCompanions()->MakeAndroid(TargetId);
 	CapturedRealId = TargetId;
 

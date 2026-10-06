@@ -208,6 +208,7 @@ void USSRunSubsystem::ResetRun()
 {
     FollowingSurvivors.Reset();
     RescuedSurvivors.Reset();
+    CapturedSurvivors.Reset();
 	StoredItems.Reset();
 	JournalEntries.Reset();
 
@@ -269,6 +270,48 @@ USSCommsState* USSRunSubsystem::GetComms()
 {
 	if (!IsValid(Comms)) Comms = NewObject<USSCommsState>(this);
 	return Comms;
+}
+
+bool USSRunSubsystem::MoveSurvivorToCaptured(FName SurvivorId)
+{
+	const int32 Index = RescuedSurvivors.IndexOfByPredicate([SurvivorId](const FSSSurvivorState& Each)
+	{
+		return IsValid(Each.Definition) && Each.Definition->SurvivorId == SurvivorId;
+	});
+	if (Index == INDEX_NONE) return false;
+
+	// 같은 동료가 이미 붙잡혀 있으면 한 번만 (구출할 때 한 명만 돌아오게)
+	if (!IsSurvivorCaptured(SurvivorId)) CapturedSurvivors.Add(RescuedSurvivors[Index]);
+	RescuedSurvivors.RemoveAt(Index);
+	OnSurvivorsChanged.Broadcast();
+	return true;
+}
+
+bool USSRunSubsystem::CopySurvivorToCaptured(FName SurvivorId)
+{
+	const FSSSurvivorState* Survivor = FindRescuedSurvivor(SurvivorId);
+	if (!Survivor || IsSurvivorCaptured(SurvivorId)) return false;
+
+	CapturedSurvivors.Add(*Survivor);
+	return true;
+}
+
+bool USSRunSubsystem::IsSurvivorCaptured(FName SurvivorId) const
+{
+	return CapturedSurvivors.ContainsByPredicate([SurvivorId](const FSSSurvivorState& Each)
+	{
+		return IsValid(Each.Definition) && Each.Definition->SurvivorId == SurvivorId;
+	});
+}
+
+bool USSRunSubsystem::RemoveRescuedSurvivor(FName SurvivorId)
+{
+	const int32 Removed = RescuedSurvivors.RemoveAll([SurvivorId](const FSSSurvivorState& Each)
+	{
+		return IsValid(Each.Definition) && Each.Definition->SurvivorId == SurvivorId;
+	});
+	if (Removed > 0) OnSurvivorsChanged.Broadcast();
+	return Removed > 0;
 }
 
 USSAraDirector* USSRunSubsystem::GetAra()
