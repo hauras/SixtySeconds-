@@ -10,7 +10,8 @@ enum class ESSGamePhase : uint8
 {
 	Scramble,  // 60초 스크램블 (3D 실시간)
 	Shelter,   // 은신처 생존 (2D 턴제)
-	Dead       // 사망
+	Dead,      // 사망
+	Lockdown   // 시간 종료 후 격벽 연출
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPhaseChanged, ESSGamePhase, NewPhase);
@@ -30,6 +31,9 @@ public:
 	// 은신처 페이즈로 전환
 	UFUNCTION(BlueprintCallable, Category="SS|Phase")
 	void StartShelter();
+
+	// 연출이 끝나면 시간 종료 순간에 확정한 대피 결과를 적용한다.
+	void CompleteScrambleTransition();
 
 	UFUNCTION(BlueprintPure, Category="SS|Phase")
 	ESSGamePhase GetCurrentPhase() const { return CurrentPhase; }
@@ -59,6 +63,7 @@ protected:
 private:
 	ESSGamePhase CurrentPhase = ESSGamePhase::Scramble;
 	FTimerHandle ScrambleTimerHandle;
+	bool bSurvivedScramble = false;
 
 	UPROPERTY()
 	TObjectPtr<ASSDepositZone> DepositZone;

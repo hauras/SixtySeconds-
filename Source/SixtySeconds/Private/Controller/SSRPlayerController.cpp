@@ -23,6 +23,10 @@ void ASSRPlayerController::BeginPlay()
 
 void ASSRPlayerController::HandlePhaseChanged(ESSGamePhase NewPhase)
 {
+	if (NewPhase == ESSGamePhase::Lockdown && IsValid(ScrambleHUD))
+	{
+		ScrambleHUD->RemoveFromParent();
+	}
 	if (NewPhase == ESSGamePhase::Shelter)
 	{
 		CreateShelterHUD();

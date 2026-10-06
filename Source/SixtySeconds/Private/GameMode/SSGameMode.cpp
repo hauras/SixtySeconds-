@@ -4,6 +4,7 @@
 #include "Item/SSRunSubsystem.h"
 #include "Engine/GameInstance.h"
 #include "GameFramework/Pawn.h"
+#include "Phase/SSLabLockdownDirector.h"
 
 ASSGameMode::ASSGameMode()
 {
@@ -42,7 +43,7 @@ void ASSGameMode::StartScramble()
 
 void ASSGameMode::StartShelter()
 {
-	if (CurrentPhase != ESSGamePhase::Scramble)
+	if (CurrentPhase != ESSGamePhase::Scramble && CurrentPhase != ESSGamePhase::Lockdown)
 	{
 		return;
 	}
@@ -88,7 +89,23 @@ void ASSGameMode::OnScrambleTimeUp()
 	const bool bInside = IsValid(DepositZone) && DepositZone->IsPlayerInside();
 	UE_LOG(LogTemp, Warning, TEXT("[GameMode] 타이머 종료 — 존 안: %s"), bInside ? TEXT("생존") : TEXT("사망"));
 
-	if (bInside)
+	bSurvivedScramble = bInside;
+	if (ASSLabLockdownDirector* Director = Cast<ASSLabLockdownDirector>(
+		UGameplayStatics::GetActorOfClass(this, ASSLabLockdownDirector::StaticClass())))
+	{
+		CurrentPhase = ESSGamePhase::Lockdown;
+		OnPhaseChanged.Broadcast(CurrentPhase);
+		Director->BeginLockdown();
+		return;
+	}
+	CompleteScrambleTransition();
+}
+
+void ASSGameMode::CompleteScrambleTransition()
+{
+	if (CurrentPhase != ESSGamePhase::Scramble && CurrentPhase != ESSGamePhase::Lockdown) return;
+
+	if (bSurvivedScramble)
 	{
 		StartShelter();
 	}
@@ -100,9 +117,9 @@ void ASSGameMode::OnScrambleTimeUp()
 
 void ASSGameMode::StartDeath()
 {
-    if (UGameInstance* Instance = GetGameInstance())
-        if (USSRunSubsystem* Run = Instance->GetSubsystem<USSRunSubsystem>())
-            Run->ClearFollowingSurvivors();
+	if (UGameInstance* Instance = GetGameInstance())
+		if (USSRunSubsystem* Run = Instance->GetSubsystem<USSRunSubsystem>())
+			Run->ClearFollowingSurvivors();
 	GetWorldTimerManager().ClearTimer(ScrambleTimerHandle);
 	CurrentPhase = ESSGamePhase::Dead;
 	OnPhaseChanged.Broadcast(CurrentPhase);
