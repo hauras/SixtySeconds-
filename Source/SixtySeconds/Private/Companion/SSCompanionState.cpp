@@ -224,6 +224,41 @@ bool USSCompanionState::IsAndroid(FName SurvivorId) const
 	return Record && Record->bIsAndroid;
 }
 
+void USSCompanionState::RestoreHuman(FName SurvivorId)
+{
+	FSSCompanionRecord* Record = Records.FindByPredicate([SurvivorId](const FSSCompanionRecord& Each)
+	{
+		return Each.SurvivorId == SurvivorId;
+	});
+	if (!Record) return;
+
+	Record->bIsAndroid = false;
+
+	// 검사 결과는 안드로이드를 찍은 사진이었으니 지움
+	Record->InspectedDay = 0;
+	Record->bInspectedAndroid = false;
+
+	// 안드로이드가 만든 가짜 보고도 지움
+	Record->PendingReports.Reset();
+}
+
+void USSCompanionState::DebugHearClue(FName ClueId)
+{
+	if (ClueId.IsNone() || HasHeardClue(ClueId)) return;
+
+	FSSInvestigationReport& Report = HeardClues.AddDefaulted_GetRef();
+	Report.bFoundClue = true;
+	Report.ClueId = ClueId;
+}
+
+bool USSCompanionState::HasHeardClue(FName ClueId) const
+{
+	return !ClueId.IsNone() && HeardClues.ContainsByPredicate([ClueId](const FSSInvestigationReport& Report)
+	{
+		return Report.ClueId == ClueId;
+	});
+}
+
 bool USSCompanionState::OrderInvestigation(FName SurvivorId, ESSInvestigationSpot Spot)
 {
 	USSRunSubsystem& Run = GetRun();

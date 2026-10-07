@@ -228,6 +228,10 @@ void USSRunSubsystem::ResetRun()
 	RepairDaysRemaining = 0;
 	LastExpeditionResult = FSSExpeditionResult{};
 	ActionPoints = MaxActionPoints;
+	ActiveRescue = nullptr;
+	RescueHelperId = NAME_None;
+	LastRescueDay = 0;
+	bSawPanelLog = false;
 	if (IsValid(EventDirector)) EventDirector->ResetRunState();   // 카탈로그는 유지, 1회성·예약만 초기화
 	OnJournalChanged.Broadcast();
 	OnRobotStateChanged.Broadcast();
@@ -302,6 +306,141 @@ bool USSRunSubsystem::IsSurvivorCaptured(FName SurvivorId) const
 	{
 		return IsValid(Each.Definition) && Each.Definition->SurvivorId == SurvivorId;
 	});
+}
+
+bool USSRunSubsystem::ReleaseCapturedSurvivor(FName SurvivorId, bool& bOutReplacedAndroid)
+{
+	bOutReplacedAndroid = false;
+
+	const int32 Index = CapturedSurvivors.IndexOfByPredicate([SurvivorId](const FSSSurvivorState& Each)
+	{
+		return IsValid(Each.Definition) && Each.Definition->SurvivorId == SurvivorId;
+	});
+	if (Index == INDEX_NONE) return false;
+
+	const FSSSurvivorState Released = CapturedSurvivors[Index];
+	CapturedSurvivors.RemoveAt(Index);
+
+	// 바꿔치기였으면 은신처에 같은 얼굴의 안드로이드가 있음 → 그 자리를 진짜가 채움
+	if (FSSSurvivorState* Double = FindRescuedSurvivorMutable(SurvivorId))
+	{
+		*Double = Released;
+		bOutReplacedAndroid = true;
+	}
+	else
+	{
+		RescuedSurvivors.Add(Released);
+	}
+
+	GetCompanions()->RestoreHuman(SurvivorId);
+	OnSurvivorsChanged.Broadcast();
+	return true;
+}
+
+ESSRescueBlock USSRunSubsystem::GetRescueBlock() const
+{
+	if (IsValid(ActiveRescue) && !ActiveRescue->IsFinished()) return ESSRescueBlock::InProgress;
+	if (CapturedSurvivors.IsEmpty()) return ESSRescueBlock::NobodyCaptured;
+	if (!IsValid(Companions) || !Companions->HasHeardClue(SSRescueIds::RouteClue())) return ESSRescueBlock::NoRoute;
+	if (LastRescueDay == CurrentDay) return ESSRescueBlock::AlreadyToday;
+	if (ActionPoints < RescueMinActionPoints) return ESSRescueBlock::NotEnoughActionPoints;
+	return ESSRescueBlock::None;
+}
+
+USSRescueSession* USSRunSubsystem::StartRescue(FName TargetId, int32 Seed)
+{
+	if (GetRescueBlock() != ESSRescueBlock::None || !IsSurvivorCaptured(TargetId)) return nullptr;
+
+	// 남은 행동력을 전부 씀
+	const int32 Points = ActionPoints;
+	if (!ConsumeActionPoints(Points)) return nullptr;
+	RescueActionPoints = Points;
+
+	// 태오가 은신처에 살아 있으면 도움 (안드로이드여도 겉으로는 똑같이 도움, 대신 아라가 바로 앎)
+	const FName TechnicianId = SSRescueIds::Technician();
+	const FSSSurvivorState* Technician = FindRescuedSurvivor(TechnicianId);
+	const bool bTechnicianHelps = Technician && Technician->bAlive;
+	const bool bAndroidHelper = bTechnicianHelps && GetCompanions()->IsAndroid(TechnicianId);
+	RescueHelperId = bTechnicianHelps ? TechnicianId : NAME_None;
+
+	ActiveRescue = NewObject<USSRescueSession>(this);
+	ActiveRescue->Start(TargetId,
+		USSRescueSession::CalcMoveBudget(Points, bTechnicianHelps),
+		bAndroidHelper,
+		Seed != 0 ? Seed : FMath::Rand());
+
+	LastRescueDay = CurrentDay;
+	bSawPanelLog = true;
+	return ActiveRescue;
+}
+
+bool USSRunSubsystem::FinishRescue(FSSRescueReport& OutReport)
+{
+	if (!IsValid(ActiveRescue) || !ActiveRescue->IsFinished()) return false;
+
+	OutReport = FSSRescueReport{};
+	OutReport.Outcome = ActiveRescue->GetOutcome();
+	OutReport.TargetId = ActiveRescue->GetTargetId();
+	OutReport.AlarmCount = ActiveRescue->GetAlarmCount();
+	OutReport.MovesUsed = ActiveRescue->GetMoveBudget() - ActiveRescue->GetRemainingMoves();
+	OutReport.ActionPointsSpent = RescueActionPoints;
+
+	// 이름은 귀환 전 붙잡힌 목록에서 (귀환하면 목록에서 빠지므로 먼저)
+	FText Name = FText::FromName(OutReport.TargetId);
+	for (const FSSSurvivorState& Captured : CapturedSurvivors)
+	{
+		if (IsValid(Captured.Definition) && Captured.Definition->SurvivorId == OutReport.TargetId) Name = Captured.Definition->DisplayName;
+	}
+
+	if (OutReport.Outcome == ESSRescueOutcome::Unlocked)
+	{
+		ReleaseCapturedSurvivor(OutReport.TargetId, OutReport.bReplacedAndroid);
+	}
+
+	// 경보: 도운 사람이 있으면 그 사람이 강하게 의심받고,
+	// 혼자였으면 아라는 "B1의 누군가"까지만 알아서 은신처의 살아 있는 동료 전원이 조금씩 의심받음
+	if (!RescueHelperId.IsNone())
+	{
+		GetAra()->ObserveAlarm(RescueHelperId, OutReport.AlarmCount);
+	}
+	else
+	{
+		for (const FSSSurvivorState& Survivor : RescuedSurvivors)
+		{
+			if (!Survivor.bAlive || !IsValid(Survivor.Definition)) continue;
+			GetAra()->ObserveAlarm(Survivor.Definition->SurvivorId, OutReport.AlarmCount, false);
+		}
+	}
+
+	// 기록 (건조한 기록체)
+	FText Message;
+	if (OutReport.Outcome == ESSRescueOutcome::Unlocked && OutReport.bReplacedAndroid)
+	{
+		Message = FText::Format(NSLOCTEXT("SSRescue", "UnlockedReplaced",
+			"B2 정비 패널: 격리실 잠금 해제. {0} 귀환. 은신처에 있던 같은 얼굴의 {0}: 작동 정지."), Name);
+	}
+	else if (OutReport.Outcome == ESSRescueOutcome::Unlocked)
+	{
+		Message = FText::Format(NSLOCTEXT("SSRescue", "Unlocked", "B2 정비 패널: 격리실 잠금 해제. {0} 귀환."), Name);
+	}
+	else if (OutReport.Outcome == ESSRescueOutcome::OutOfMoves)
+	{
+		Message = NSLOCTEXT("SSRescue", "OutOfMoves", "B2 정비 패널: 배선을 다 잇지 못하고 철수.");
+	}
+	else
+	{
+		Message = NSLOCTEXT("SSRescue", "Aborted", "B2 정비 패널: 작업 중단, 철수.");
+	}
+	if (OutReport.AlarmCount > 0)
+	{
+		Message = FText::Format(NSLOCTEXT("SSRescue", "WithAlarm", "{0} 경보 전송 {1}회."), Message, OutReport.AlarmCount);
+	}
+	RecordEvent(ESSJournalEvent::Event, Message);
+
+	ActiveRescue = nullptr;
+	RescueHelperId = NAME_None;
+	RescueActionPoints = 0;
+	return true;
 }
 
 bool USSRunSubsystem::RemoveRescuedSurvivor(FName SurvivorId)

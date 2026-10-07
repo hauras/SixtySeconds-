@@ -24,6 +24,7 @@ class USSSurvivorInfoContentWidget;
 class USSEventCatalog;
 class USSEventWidget;
 class USSAraWidget;
+class USSPowerPanelWidget;
 class UWidget;
 class UDataTable;
 
@@ -107,6 +108,14 @@ protected:
 	// 무전기 (B1 비상 수신기): 외부 통신·해독. WBP에서 무전기 그림 위에 투명 버튼으로 배치
 	UPROPERTY(meta=(BindWidgetOptional))
 	TObjectPtr<UButton> RadioButton;
+
+	// B2 정비 패널 (구출 퍼즐). 붙잡힌 사람이 있고 B2 덕트를 알 때만 보임. WBP에서 환풍구 그림 위에 배치
+	UPROPERTY(meta=(BindWidgetOptional))
+	TObjectPtr<UButton> RescueButton;
+
+	// B2 정비 패널 창 (WBP_PowerPanel) — Class Defaults에서 지정
+	UPROPERTY(EditDefaultsOnly, Category="SS|Rescue")
+	TSubclassOf<USSPowerPanelWidget> PowerPanelWidgetClass;
 
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UButton> NextDayButton;
@@ -209,6 +218,9 @@ private:
     void EndNight();                   // 사건 선택을 마치거나 조용한 밤을 넘기면 아침으로
     void SetDayControlsEnabled(bool bEnabled);
     bool bNight = false;
+
+    // 낮 행동 버튼이 켜져 있나 (밤·아침 페이드 동안 false). 구출 버튼이 알림으로 다시 켜지지 않게
+    bool bDayControlsEnabled = true;
     FTimerHandle NightFadeTimer;
     float NightFadeStartedAt = 0.f;
     bool bFadingToNight = false;
@@ -285,6 +297,22 @@ private:
 	// 동료 대화창
 	UPROPERTY(Transient)
 	TObjectPtr<USSCompanionTalkWidget> TalkWidget;
+
+	// [B2 정비 패널]: 붙잡힌 첫 동료를 대상으로 패널 작업 시작
+	UFUNCTION()
+	void OnRescueClicked();
+
+	// 퍼즐이 끝남: 결과를 여기서 한 번만 확정하고 패널에 결과 카드로 보여줌
+	void OnPowerPanelFinished();
+
+	// 패널 [돌아가기]: 창 닫기 (결과는 이미 확정됨)
+	void OnPowerPanelClosed();
+
+	// 패널 버튼 보이기·켜기·툴팁
+	void RefreshRescueButton();
+
+	UPROPERTY(Transient)
+	TObjectPtr<USSPowerPanelWidget> PowerPanel;
 
 	int32 CurrentDay = 1;
 	float CachedHealth = 0.f;

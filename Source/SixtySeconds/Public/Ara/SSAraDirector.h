@@ -79,6 +79,10 @@ public:
 	// 엿들은 보고 하나를 반영 (굴림 없이. 테스트와 TryEavesdrop이 씀)
 	void ObserveEavesdrop(FName SurvivorId, bool bFoundClue);
 
+	// B2 정비 패널 경보 (경보 수만큼)
+	// bIdentified: 패널을 도운 동료라 누군지 앎 (강하게). false면 "B1의 누군가"라 은신처 전원이 조금씩
+	void ObserveAlarm(FName SurvivorId, int32 AlarmCount, bool bIdentified = true);
+
 	// ── 읽기 ──
 
 	// 의심 확률 0~1 (기록이 없으면 처음 믿음)
@@ -182,6 +186,12 @@ public:
 	// 엿들은 보고의 가능도 비율 (단서 있는 보고 / 없는 보고)
 	static constexpr float EavesdropClueRatio = 8.f;
 	static constexpr float EavesdropPlainRatio = 2.f;
+
+	// B2 패널 경보 1회당 가능도 비율 (그냥 대화를 엿들은 것보다 강하고, 단서 대화보다는 약함)
+	static constexpr float AlarmRatio = 3.f;
+
+	// 도운 사람이 없을 때 은신처 동료 한 명당 경보 1회 가능도 비율 (누군지 몰라 약함)
+	static constexpr float UnidentifiedAlarmRatio = 1.5f;
 
 	// 엿들을 확률: 기본, 학습도 1마다 증가, 최대
 	static constexpr float EavesdropBaseChance = 0.25f;

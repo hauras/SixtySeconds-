@@ -242,6 +242,15 @@ void USSAraDirector::ObserveEavesdrop(FName SurvivorId, bool bFoundClue)
 	++Suspicion.EavesdropsHeard;
 }
 
+void USSAraDirector::ObserveAlarm(FName SurvivorId, int32 AlarmCount, bool bIdentified)
+{
+	if (SurvivorId.IsNone() || AlarmCount <= 0) return;
+
+	// 로그 오즈라 증거 N번 = 비율의 로그 × N (곱하기가 더하기가 됨)
+	FSSAraSuspicion& Suspicion = FindOrAddSuspicion(SurvivorId);
+	Suspicion.LogOdds += FMath::Loge(bIdentified ? AlarmRatio : UnidentifiedAlarmRatio) * AlarmCount;
+}
+
 // ── 읽기 ──
 
 float USSAraDirector::GetSuspicion(FName SurvivorId) const

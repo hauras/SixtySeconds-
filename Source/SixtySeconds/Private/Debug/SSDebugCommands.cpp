@@ -8,6 +8,7 @@
 #include "Engine/Engine.h"
 #include "Ara/SSAraDirector.h"
 #include "Item/SSRunSubsystem.h"
+#include "Companion/SSCompanionState.h"
 
 namespace SSDebugCommands
 {
@@ -71,6 +72,30 @@ namespace SSDebugCommands
 				return;
 			}
 			Print(TEXT("[SS.Ara.Status] ") + Run->GetAra()->DebugDescribe());
+		}));
+
+	// SS.Rescue.Setup [동료ID] : 동료를 B2에 붙잡고 덕트 단서를 들은 것으로 (패널 버튼 확인용)
+	FAutoConsoleCommandWithWorldAndArgs RescueSetup(
+		TEXT("SS.Rescue.Setup"),
+		TEXT("SS.Rescue.Setup [SurvivorId] - capture the survivor (default TestResearcher), learn the B2 duct clue and refill action points"),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+		{
+			USSRunSubsystem* Run = FindRun(World);
+			if (!Run)
+			{
+				Print(TEXT("[SS.Rescue.Setup] no run (use in the shelter)"));
+				return;
+			}
+
+			const FName Target = Args.Num() > 0 ? FName(*Args[0]) : FName(TEXT("TestResearcher"));
+			// 단서를 먼저 (붙잡을 때 화면이 갱신되며 패널 버튼이 나타나도록)
+			Run->GetCompanions()->DebugHearClue(SSRescueIds::RouteClue());
+			const bool bCaptured = Run->IsSurvivorCaptured(Target) || Run->MoveSurvivorToCaptured(Target);
+			Run->AdjustActionPoints(USSRunSubsystem::MaxActionPoints);
+			Print(FString::Printf(
+				TEXT("[SS.Rescue.Setup] %s %s, B2 route known, AP refilled"),
+				*Target.ToString(),
+				bCaptured ? TEXT("captured") : TEXT("NOT captured (unknown id?)")));
 		}));
 }
 #endif

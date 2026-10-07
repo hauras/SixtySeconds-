@@ -26,6 +26,7 @@
 #include "Event/SSEventDirector.h"
 #include "Event/SSEventCatalog.h"
 #include "UI/Ara/SSAraWidget.h"
+#include "UI/Rescue/SSPowerPanelWidget.h"
 #include "Components/CanvasPanelSlot.h"
 
 void USSShelterHUD::NativeConstruct()
@@ -57,6 +58,8 @@ void USSShelterHUD::NativeConstruct()
 
     if (RobotButton)
         RobotButton->OnClicked.AddUniqueDynamic(this, &USSShelterHUD::OnRobotClicked);
+    if (RescueButton)
+        RescueButton->OnClicked.AddUniqueDynamic(this, &ThisClass::OnRescueClicked);
     if (AraButton)
         AraButton->OnClicked.AddUniqueDynamic(this, &ThisClass::OnAraClicked);
     // 밤 버튼은 WBP에 배치 (BindWidgetOptional). 평소엔 숨김
@@ -122,6 +125,9 @@ void USSShelterHUD::NativeDestruct()
     if (ComputerButton) ComputerButton->OnClicked.RemoveDynamic(this, &ThisClass::OnComputerClicked);
     if (RadioButton) RadioButton->OnClicked.RemoveDynamic(this, &ThisClass::OnRadioClicked);
     if (NextDayButton) NextDayButton->OnClicked.RemoveDynamic(this, &ThisClass::OnNextDayClicked);
+    if (RescueButton) RescueButton->OnClicked.RemoveDynamic(this, &ThisClass::OnRescueClicked);
+    if (IsValid(PowerPanel)) PowerPanel->RemoveFromParent();
+    PowerPanel = nullptr;
     if (GetWorld())
     {
         GetWorld()->GetTimerManager().ClearTimer(AraBlinkTimer);
@@ -285,6 +291,7 @@ void USSShelterHUD::OnSurvivorsUpdated()
         if (IsValid(InfoPanelWidget)) InfoPanelWidget->RemoveFromParent();
         InspectedSurvivorId = NAME_None;
     }
+    RefreshRescueButton();
 }
 
 void USSShelterHUD::InitHUD(int32 InDay)
@@ -373,6 +380,7 @@ void USSShelterHUD::RefreshDisplay()
             USSRunSubsystem::MaxActionPoints));
     }
 
+    RefreshRescueButton();
 }
 
 bool USSShelterHUD::HasOpenTerminalWindow() const
@@ -744,6 +752,8 @@ void USSShelterHUD::SetDayControlsEnabled(bool bEnabled)
     if (ComputerButton) ComputerButton->SetIsEnabled(bEnabled);
     if (RadioButton) RadioButton->SetIsEnabled(bEnabled);
     if (RobotButton) RobotButton->SetIsEnabled(bEnabled);
+    bDayControlsEnabled = bEnabled;
+    RefreshRescueButton();   // 켤 때도 조건(행동력·하루 한 번)을 다시 봄
     TArray<UWidget*> Widgets;
     WidgetTree->GetAllWidgets(Widgets);
     for (UWidget* Widget : Widgets)
@@ -753,4 +763,94 @@ void USSShelterHUD::SetDayControlsEnabled(bool bEnabled)
             // 밤에는 "!" 숨김, 아침 페이드가 끝나면 다시 보임
             Person->SetReportMarkAllowed(bEnabled);
         }
+}
+
+void USSShelterHUD::RefreshRescueButton()
+{
+    if (!RescueButton || !IsValid(RunSubsystem)) return;
+
+    // 붙잡힌 사람이 없거나 B2 덕트를 모르면 버튼 자체를 숨김 (아직 모르는 곳)
+    const ESSRescueBlock Block = RunSubsystem->GetRescueBlock();
+    const bool bHidden = Block == ESSRescueBlock::NobodyCaptured || Block == ESSRescueBlock::NoRoute;
+    RescueButton->SetVisibility(bHidden ? ESlateVisibility::Collapsed : ESlateVisibility::Visible);
+    RescueButton->SetIsEnabled(Block == ESSRescueBlock::None && bDayControlsEnabled && !bNight);
+
+    FText Tooltip;
+    switch (Block)
+    {
+    case ESSRescueBlock::None:
+        Tooltip = NSLOCTEXT("SS", "RescueReady", "B2 정비 패널: 남은 행동력을 전부 써서 격리실 전력을 우회한다.");
+        break;
+    case ESSRescueBlock::AlreadyToday:
+        Tooltip = NSLOCTEXT("SS", "RescueToday", "오늘은 이미 패널을 열었다.");
+        break;
+    case ESSRescueBlock::NotEnoughActionPoints:
+        Tooltip = FText::Format(NSLOCTEXT("SS", "RescueAP", "행동력이 {0} 이상 있어야 한다."), USSRunSubsystem::RescueMinActionPoints);
+        break;
+    default:
+        break;
+    }
+    RescueButton->SetToolTipText(Tooltip);
+}
+
+void USSShelterHUD::OnRescueClicked()
+{
+    // 밤·페이드 중에는 열지 않음 (밤 사건과 겹치지 않게)
+    if (bNight || !bDayControlsEnabled || !IsValid(RunSubsystem) || IsValid(PowerPanel)) return;
+    if (!PowerPanelWidgetClass)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[UI] Assign WBP_PowerPanel in shelter HUD defaults."));
+        return;
+    }
+
+    // 대상: 붙잡힌 첫 동료 (여럿이면 고르는 창은 나중에)
+    const TArray<FSSSurvivorState>& Captured = RunSubsystem->GetCapturedSurvivors();
+    if (Captured.IsEmpty() || !IsValid(Captured[0].Definition)) return;
+    const USSSurvivorDefinition* Target = Captured[0].Definition;
+
+    // 창을 먼저 만들고, 성공해야 행동력을 씀 (창이 없는데 행동력만 날아가지 않게)
+    USSPowerPanelWidget* Panel = CreateWidget<USSPowerPanelWidget>(GetOwningPlayer(), PowerPanelWidgetClass);
+    if (!IsValid(Panel)) return;
+
+    USSRescueSession* Session = RunSubsystem->StartRescue(Target->SurvivorId);
+    if (!Session)
+    {
+        Panel->RemoveFromParent();
+        return;
+    }
+
+    PowerPanel = Panel;
+    PowerPanel->SetSession(Session, Target);
+    PowerPanel->OnFinished.AddUObject(this, &ThisClass::OnPowerPanelFinished);
+    PowerPanel->OnClosed.AddUObject(this, &ThisClass::OnPowerPanelClosed);
+    PowerPanel->AddToViewport(25);
+}
+
+void USSShelterHUD::OnPowerPanelFinished()
+{
+    // 결과 확정은 여기서 한 번만 (귀환·의심·기록). FinishRescue는 두 번째 호출부터 false
+    FSSRescueReport Report;
+    if (!IsValid(RunSubsystem) || !RunSubsystem->FinishRescue(Report)) return;
+
+    if (IsValid(PowerPanel)) PowerPanel->ShowResult(Report);
+    RefreshDisplay();
+}
+
+void USSShelterHUD::OnPowerPanelClosed()
+{
+    // 결과는 OnPowerPanelFinished에서 이미 확정됨. 혹시 확정 전에 닫히면(창이 사라지는 경우 등) 그때 한 번 확정
+    if (IsValid(RunSubsystem) && IsValid(RunSubsystem->GetActiveRescue()) && RunSubsystem->GetActiveRescue()->IsFinished())
+    {
+        FSSRescueReport Report;
+        RunSubsystem->FinishRescue(Report);
+    }
+
+    if (IsValid(PowerPanel))
+    {
+        PowerPanel->OnFinished.RemoveAll(this);
+        PowerPanel->OnClosed.RemoveAll(this);
+        PowerPanel->RemoveFromParent();
+    }
+    PowerPanel = nullptr;
+    RefreshDisplay();
 }

@@ -129,6 +129,15 @@ public:
 	// 안드로이드인지 (아라·테스트용. 화면에서 쓰지 말 것)
 	bool IsAndroid(FName SurvivorId) const;
 
+	// B2에서 진짜를 구해 왔을 때: 안드로이드 표시와 그동안의 검사 결과·가짜 보고를 지움
+	void RestoreHuman(FName SurvivorId);
+
+	// 플레이어가 대화로 들은 단서인지
+	bool HasHeardClue(FName ClueId) const;
+
+	// 단서를 들은 것으로 바로 기록 (테스트·디버그 명령용. 게임 흐름에서는 대화로만 들음)
+	void DebugHearClue(FName ClueId);
+
 	// 정해준 장소가 있을 때 안드로이드가 다른 장소를 조사했다고 말할 확률 (플레이어가 눈치챌 단서)
 	static constexpr float AndroidWrongSpotChance = 0.3f;
 

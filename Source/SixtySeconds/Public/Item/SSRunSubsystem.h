@@ -5,6 +5,7 @@
 #include "Item/SSInventoryTypes.h"
 #include "Item/SSJournalTypes.h"
 #include "Character/SSSurvivorTypes.h"
+#include "Rescue/SSRescueSession.h"
 #include "SSRunSubsystem.generated.h"
 
 class USSCommsState;
@@ -194,6 +195,33 @@ public:
 	// 은신처 목록에서 지움 (안드로이드를 격리해 제거했을 때)
 	bool RemoveRescuedSurvivor(FName SurvivorId);
 
+	// 붙잡힌 동료를 은신처로 돌려보냄. 은신처에 같은 얼굴의 안드로이드가 있으면 그 자리를 진짜가 채움
+	// bOutReplacedAndroid: 안드로이드를 밀어냈는지 (결과 카드 문장용)
+	bool ReleaseCapturedSurvivor(FName SurvivorId, bool& bOutReplacedAndroid);
+
+	// ── B2 정비 패널 (구출 퍼즐) ──
+
+	// 패널을 열 수 있는 최소 행동력 (패널 작업은 남은 행동력을 전부 씀)
+	static constexpr int32 RescueMinActionPoints = 2;
+
+	// 패널을 못 여는 이유 (None이면 열 수 있음)
+	ESSRescueBlock GetRescueBlock() const;
+
+	// 패널 작업 시작: 남은 행동력을 전부 쓰고 세션을 만듦. 못 하면 nullptr
+	// 회전 수 = 행동력 × 8 (태오가 은신처에 있으면) / × 4 (없으면). 태오가 안드로이드면 시작부터 경보 1회
+	// Seed 0이면 무작위 퍼즐
+	USSRescueSession* StartRescue(FName TargetId, int32 Seed = 0);
+
+	// 진행 중인 패널 작업 (없으면 nullptr)
+	USSRescueSession* GetActiveRescue() const { return ActiveRescue; }
+
+	// 끝난 패널 작업을 반영: 성공이면 동료 귀환, 경보만큼 도운 동료 의심 상승, 기록. 반영했으면 true
+	// 한 번만 반영됨 (반영 후 진행 중 작업을 비우므로 다시 부르면 false)
+	bool FinishRescue(FSSRescueReport& OutReport);
+
+	// 패널을 한 번이라도 열었나 (패널 기록 = 숨은 진실 단서 1, 엔딩 판정용)
+	bool HasSeenPanelLog() const { return bSawPanelLog; }
+
 	// 아라 판단을 읽기만 할 때 (아직 없으면 nullptr. 사건 조건처럼 const에서 씀)
 	const USSAraDirector* FindAra() const { return Ara; }
 
@@ -326,4 +354,23 @@ private:
 	// 아라가 동료를 의심하는 정도와 표적
 	UPROPERTY(Transient)
 	TObjectPtr<USSAraDirector> Ara;
+
+	// 진행 중인 B2 패널 작업
+	UPROPERTY(Transient)
+	TObjectPtr<USSRescueSession> ActiveRescue;
+
+	// 패널 작업을 도운 동료 (태오, 혼자면 None). 경보 의심을 받을 사람
+	UPROPERTY(Transient)
+	FName RescueHelperId = NAME_None;
+
+	// 마지막으로 패널을 연 날 (하루 한 번)
+	UPROPERTY(Transient)
+	int32 LastRescueDay = 0;
+
+	// 이번 패널 작업에 쓴 행동력 (결과 카드용)
+	UPROPERTY(Transient)
+	int32 RescueActionPoints = 0;
+
+	UPROPERTY(Transient)
+	bool bSawPanelLog = false;
 };
