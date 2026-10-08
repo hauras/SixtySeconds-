@@ -251,13 +251,38 @@ bool USSCompanionState::HearTestimony(FName SurvivorId, FText& OutLine)
 	return true;
 }
 
-void USSCompanionState::DebugHearClue(FName ClueId)
+void USSCompanionState::HearClueDirectly(FName ClueId)
 {
 	if (ClueId.IsNone() || HasHeardClue(ClueId)) return;
 
 	FSSInvestigationReport& Report = HeardClues.AddDefaulted_GetRef();
 	Report.bFoundClue = true;
 	Report.ClueId = ClueId;
+}
+
+bool USSCompanionState::IsClueKnownOrPending(FName ClueId) const
+{
+	if (HasHeardClue(ClueId)) return true;
+
+	const USSRunSubsystem& Run = GetRun();
+	for (const FSSCompanionRecord& Record : Records)
+	{
+		const FSSSurvivorState* Survivor = Run.FindRescuedSurvivor(Record.SurvivorId);
+		if (!Survivor || !Survivor->bAlive || Record.bIsAndroid) continue;
+
+		const bool bHolding = Record.PendingReports.ContainsByPredicate([ClueId](const FSSInvestigationReport& Report)
+		{
+			return Report.ClueId == ClueId;
+		});
+		if (bHolding) return true;
+	}
+	return false;
+}
+
+void USSCompanionState::QueueClueReport(FName SurvivorId, ESSInvestigationSpot Spot, FName ClueId)
+{
+	if (SurvivorId.IsNone() || ClueId.IsNone()) return;
+	AddReport(FindOrAddRecord(SurvivorId), Spot, true, ClueId, false);
 }
 
 bool USSCompanionState::HasHeardClue(FName ClueId) const

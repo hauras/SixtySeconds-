@@ -148,8 +148,15 @@ public:
 	// 증언 듣기: 대사를 OutLine에 담고 증언 대기를 지움. 들을 게 없으면 false
 	bool HearTestimony(FName SurvivorId, FText& OutLine);
 
-	// 단서를 들은 것으로 바로 기록 (테스트·디버그 명령용. 게임 흐름에서는 대화로만 들음)
-	void DebugHearClue(FName ClueId);
+	// 단서를 들은 것으로 바로 기록 (보고할 동료가 없을 때·테스트·디버그 명령)
+	void HearClueDirectly(FName ClueId);
+
+	// 그 단서를 플레이어가 들었거나, 은신처의 살아 있는 사람 동료가 보고하려고 들고 있나
+	// (붙잡힌 사람·안드로이드가 들고 있던 보고는 플레이어에게 닿지 않으므로 안 셈)
+	bool IsClueKnownOrPending(FName ClueId) const;
+
+	// 동료에게 단서 보고 하나를 바로 맡김 (밤 조사를 거치지 않는 고정 단서. 다음 대화에서 들음)
+	void QueueClueReport(FName SurvivorId, ESSInvestigationSpot Spot, FName ClueId);
 
 	// 정해준 장소가 있을 때 안드로이드가 다른 장소를 조사했다고 말할 확률 (플레이어가 눈치챌 단서)
 	static constexpr float AndroidWrongSpotChance = 0.3f;

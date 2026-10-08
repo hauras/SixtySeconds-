@@ -61,7 +61,7 @@ bool FSSRescueFlowTest::RunTest(const FString& Parameters)
 	Run->MoveSurvivorToCaptured(Researcher);
 	TestTrue(TEXT("Route unknown"), Run->GetRescue()->GetBlock() == ESSRescueBlock::NoRoute);
 
-	Run->GetCompanions()->DebugHearClue(SSRescueIds::RouteClue());
+	Run->GetCompanions()->HearClueDirectly(SSRescueIds::RouteClue());
 	TestTrue(TEXT("Can open the panel"), Run->GetRescue()->GetBlock() == ESSRescueBlock::None);
 	TestNull(TEXT("Cannot target someone not captured"), Run->GetRescue()->Start(Technician, 5));
 
@@ -116,14 +116,14 @@ bool FSSRescueFlowTest::RunTest(const FString& Parameters)
 
 	USSRunSubsystem* Tired = MakeRun();
 	Tired->MoveSurvivorToCaptured(Researcher);
-	Tired->GetCompanions()->DebugHearClue(SSRescueIds::RouteClue());
+	Tired->GetCompanions()->HearClueDirectly(SSRescueIds::RouteClue());
 	Tired->AdjustActionPoints(-(Tired->GetActionPoints() - 1));
 	TestTrue(TEXT("Needs at least 2 AP"), Tired->GetRescue()->GetBlock() == ESSRescueBlock::NotEnoughActionPoints);
 
 	// 행동력 3으로 시작하면 보고서에 3 (회전 수 24와 다름)
 	USSRunSubsystem* Partial = MakeRun();
 	Partial->MoveSurvivorToCaptured(Researcher);
-	Partial->GetCompanions()->DebugHearClue(SSRescueIds::RouteClue());
+	Partial->GetCompanions()->HearClueDirectly(SSRescueIds::RouteClue());
 	Partial->AdjustActionPoints(-2);
 	USSRescueSession* PartialSession = Partial->GetRescue()->Start(Researcher, 7);
 	if (!TestNotNull(TEXT("Partial-AP rescue started"), PartialSession)) return false;
@@ -136,7 +136,7 @@ bool FSSRescueFlowTest::RunTest(const FString& Parameters)
 	// ── 태오가 붙잡혀 있으면 혼자: × 4, 중단하면 그대로 붙잡혀 있음 ──
 	USSRunSubsystem* Alone = MakeRun();
 	Alone->MoveSurvivorToCaptured(Technician);
-	Alone->GetCompanions()->DebugHearClue(SSRescueIds::RouteClue());
+	Alone->GetCompanions()->HearClueDirectly(SSRescueIds::RouteClue());
 	USSRescueSession* AloneSession = Alone->GetRescue()->Start(Technician, 5);
 	if (!TestNotNull(TEXT("Alone rescue started"), AloneSession)) return false;
 	TestEqual(TEXT("Alone: 5 AP x 4"), AloneSession->GetMoveBudget(), 20);
@@ -151,7 +151,7 @@ bool FSSRescueFlowTest::RunTest(const FString& Parameters)
 	USSRunSubsystem* Swapped = MakeRun();
 	Swapped->CopySurvivorToCaptured(Researcher);
 	Swapped->GetCompanions()->MakeAndroid(Researcher);
-	Swapped->GetCompanions()->DebugHearClue(SSRescueIds::RouteClue());
+	Swapped->GetCompanions()->HearClueDirectly(SSRescueIds::RouteClue());
 	const int32 ShelterCount = Swapped->GetRescuedSurvivors().Num();
 	USSRescueSession* SwapSession = Swapped->GetRescue()->Start(Researcher, 9);
 	if (!TestNotNull(TEXT("Swap rescue started"), SwapSession)) return false;
@@ -166,7 +166,7 @@ bool FSSRescueFlowTest::RunTest(const FString& Parameters)
 	USSRunSubsystem* AndroidHelper = MakeRun();
 	AndroidHelper->MoveSurvivorToCaptured(Researcher);
 	AndroidHelper->GetCompanions()->MakeAndroid(Technician);
-	AndroidHelper->GetCompanions()->DebugHearClue(SSRescueIds::RouteClue());
+	AndroidHelper->GetCompanions()->HearClueDirectly(SSRescueIds::RouteClue());
 	const float SuspicionBefore = AndroidHelper->GetAra()->GetSuspicion(Technician);
 	USSRescueSession* AndroidSession = AndroidHelper->GetRescue()->Start(Researcher, 5);
 	if (!TestNotNull(TEXT("Android-helped rescue started"), AndroidSession)) return false;
@@ -191,6 +191,55 @@ bool FSSRescueFlowTest::RunTest(const FString& Parameters)
 	Ara->ObserveAlarm(TEXT("C"), 0);
 	TestTrue(TEXT("More alarms, more suspicion"), Ara->GetSuspicion(TEXT("B")) > Ara->GetSuspicion(TEXT("A")));
 	TestEqual(TEXT("Zero alarms change nothing"), Ara->GetSuspicion(TEXT("C")), USSAraDirector::PriorSuspicion);
+	return true;
+}
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSSRescueRouteTest, "SS.Rescue.RouteGuarantee",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FSSRescueRouteTest::RunTest(const FString& Parameters)
+{
+	using namespace SSRescueFlowTest;
+	const FName Technician = SSRescueIds::Technician();
+	const FName Route = SSRescueIds::RouteClue();
+
+	// 하린이 붙잡히면: 태오가 덕트 단서를 보고하려고 들고 있음 ("!" 표시), 아직 들은 건 아님
+	USSRunSubsystem* Run = MakeRun();
+	USSCompanionState* Companions = Run->GetCompanions();
+	TestFalse(TEXT("Route unknown at start"), Companions->IsClueKnownOrPending(Route));
+	Run->MoveSurvivorToCaptured(Researcher);
+	const FSSCompanionRecord* TaeoRecord = Companions->FindRecord(Technician);
+	TestTrue(TEXT("Technician will tell the route"), TaeoRecord && TaeoRecord->HasSomethingToSay());
+	TestTrue(TEXT("Route pending"), Companions->IsClueKnownOrPending(Route));
+	TestTrue(TEXT("Still blocked until heard"), Run->GetRescue()->GetBlock() == ESSRescueBlock::NoRoute);
+
+	// 듣고 나면 패널을 열 수 있음
+	FSSInvestigationReport Report;
+	TestTrue(TEXT("Hear the route report"), Companions->HearInvestigationReport(Technician, Report));
+	TestTrue(TEXT("Report carries the route clue"), Report.ClueId == Route);
+	TestTrue(TEXT("Panel available after hearing"), Run->GetRescue()->GetBlock() == ESSRescueBlock::None);
+
+	// 이미 알면 또 맡기지 않음
+	Run->MoveSurvivorToCaptured(Technician);
+	TestFalse(TEXT("No duplicate route report"), Run->GetCompanions()->FindRecord(Researcher) && Run->GetCompanions()->FindRecord(Researcher)->HasPendingReport());
+
+	// 단서를 들고 있던 태오까지 붙잡히면, 남은 사람이 없어 직접 알게 됨
+	USSRunSubsystem* Lonely = MakeRun();
+	Lonely->MoveSurvivorToCaptured(Researcher);
+	Lonely->MoveSurvivorToCaptured(Technician);
+	TestTrue(TEXT("Alone: route heard directly"), Lonely->GetCompanions()->HasHeardClue(Route));
+
+	// 남은 태오가 안드로이드면 알려 주지 않음 → 직접 알게 됨
+	USSRunSubsystem* AndroidOnly = MakeRun();
+	AndroidOnly->GetCompanions()->MakeAndroid(Technician);
+	AndroidOnly->MoveSurvivorToCaptured(Researcher);
+	TestTrue(TEXT("Android cannot tell, route heard directly"), AndroidOnly->GetCompanions()->HasHeardClue(Route));
+
+	// 아라의 바꿔치기로 붙잡혀도 같음 (하린이 안드로이드로 바뀐 뒤 태오가 알려 줌)
+	USSRunSubsystem* Swap = MakeRun();
+	Swap->GetAra()->DebugForceTarget(Researcher);
+	TestTrue(TEXT("Swap happens"), Swap->GetAra()->SwapTarget());
+	const FSSCompanionRecord* SwapTaeo = Swap->GetCompanions()->FindRecord(Technician);
+	TestTrue(TEXT("Technician tells the route after a swap"), SwapTaeo && SwapTaeo->HasSomethingToSay());
 	return true;
 }
 #endif

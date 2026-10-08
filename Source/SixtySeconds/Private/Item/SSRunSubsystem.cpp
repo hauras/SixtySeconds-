@@ -263,6 +263,10 @@ bool USSRunSubsystem::MoveSurvivorToCaptured(FName SurvivorId)
 	// 같은 동료가 이미 붙잡혀 있으면 한 번만 (구출할 때 한 명만 돌아오게)
 	if (!IsSurvivorCaptured(SurvivorId)) CapturedSurvivors.Add(RescuedSurvivors[Index]);
 	RescuedSurvivors.RemoveAt(Index);
+
+	// 구출 길을 모르면 남은 동료가 알려 줌
+	GetRescue()->OnSurvivorCaptured();
+
 	OnSurvivorsChanged.Broadcast();
 	return true;
 }

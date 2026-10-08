@@ -4,6 +4,7 @@
 #include "Item/SSRunSubsystem.h"
 #include "Companion/SSCompanionState.h"
 #include "Event/SSEventDirector.h"
+#include "Rescue/SSRescueState.h"
 
 USSRunSubsystem& USSAraDirector::GetRun() const
 {
@@ -206,6 +207,9 @@ bool USSAraDirector::SwapTarget()
 	TargetId = NAME_None;
 	bForcedTarget = false;
 	CancelAraEvents();
+
+	// 진짜가 B2로 끌려감: 구출 길을 모르면 남은 사람 동료가 알려 줌 (안드로이드로 바뀐 뒤에 판단)
+	GetRun().GetRescue()->OnSurvivorCaptured();
 	return true;
 }
 

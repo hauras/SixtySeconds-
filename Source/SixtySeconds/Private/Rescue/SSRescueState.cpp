@@ -126,6 +126,37 @@ bool USSRescueState::Finish(FSSRescueReport& OutReport)
 	return true;
 }
 
+void USSRescueState::OnSurvivorCaptured()
+{
+	USSRunSubsystem& Run = GetRun();
+	USSCompanionState* Companions = Run.GetCompanions();
+	const FName Route = SSRescueIds::RouteClue();
+	if (Companions->IsClueKnownOrPending(Route)) return;
+
+	// 알려 줄 사람: 은신처에 살아 있는 사람 동료, 환풍구를 잘 아는 태오가 먼저
+	const auto CanTell = [&Run, Companions](FName Id)
+	{
+		const FSSSurvivorState* Survivor = Run.FindRescuedSurvivor(Id);
+		return Survivor && Survivor->bAlive && !Companions->IsAndroid(Id);
+	};
+	FName Teller = CanTell(SSRescueIds::Technician()) ? SSRescueIds::Technician() : NAME_None;
+	for (const FSSSurvivorState& Survivor : Run.GetRescuedSurvivors())
+	{
+		if (!Teller.IsNone()) break;
+		if (IsValid(Survivor.Definition) && CanTell(Survivor.Definition->SurvivorId)) Teller = Survivor.Definition->SurvivorId;
+	}
+
+	if (!Teller.IsNone())
+	{
+		Companions->QueueClueReport(Teller, ESSInvestigationSpot::Vent, Route);
+		return;
+	}
+
+	// 혼자 남았으면 직접 들음
+	Companions->HearClueDirectly(Route);
+	Run.AddJournal(ESSJournalEvent::Investigation, NSLOCTEXT("SSRescue", "RouteAlone", "환풍구 안쪽에서 무언가 끌려 내려가는 소리가 났다. 3번 덕트가 아래층으로 꺾여 있다. 입구 표지: B2."));
+}
+
 void USSRescueState::ResetRun()
 {
 	Active = nullptr;

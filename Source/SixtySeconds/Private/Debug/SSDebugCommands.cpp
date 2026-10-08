@@ -107,7 +107,7 @@ namespace SSDebugCommands
 
 		const FName Target = Args.Num() > 0 ? FName(*Args[0]) : FName(TEXT("TestResearcher"));
 		// 단서를 먼저 (붙잡을 때 화면이 갱신되며 패널 버튼이 나타나도록)
-		Run->GetCompanions()->DebugHearClue(SSRescueIds::RouteClue());
+		Run->GetCompanions()->HearClueDirectly(SSRescueIds::RouteClue());
 		const bool bCaptured = Run->IsSurvivorCaptured(Target) || Run->MoveSurvivorToCaptured(Target);
 		Run->AdjustActionPoints(USSRunSubsystem::MaxActionPoints);
 		Print(FString::Printf(

@@ -40,6 +40,11 @@ public:
 	int32 GetSuccessCount() const { return SuccessCount; }
 	int32 GetAlarmTotal() const { return AlarmTotal; }
 
+	// 누군가 B2로 붙잡힌 뒤 (격리·바꿔치기): 구출 길(덕트 단서)을 아직 모르면
+	// 은신처의 사람 동료(태오 우선)가 다음 대화에서 알려 주게 함. 사람 동료가 없으면 기록창으로 바로 알게 됨
+	// 덕트 단서를 끝내 못 들어 구출·반전 엔딩이 막히는 판을 없애기 위함
+	void OnSurvivorCaptured();
+
 	// 새 판
 	void ResetRun();
 
