@@ -113,7 +113,7 @@ void USSSurvivorImageWidget::RefreshSurvivor()
         // 낮이고, 살아 있고, 안 들은 보고가 있으면 "!"
         const FSSCompanionRecord* Record = State && State->bAlive
             ? RunSubsystem->GetCompanions()->FindRecord(SurvivorDefinition->SurvivorId) : nullptr;
-        const bool bShowMark = bReportMarkAllowed && Record && Record->HasPendingReport();
+        const bool bShowMark = bReportMarkAllowed && Record && Record->HasSomethingToSay();
         ReportMark->SetVisibility(bShowMark ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
     }
 }

@@ -88,8 +88,15 @@ struct FSSCompanionRecord
 	UPROPERTY()
 	bool bInspectedAndroid = false;
 
-	// 안 들은 보고가 있나 (머리 위 "!" 표시)
+	// B2에서 구출돼 아직 증언을 안 들었나
+	UPROPERTY()
+	bool bPendingTestimony = false;
+
+	// 안 들은 보고가 있나
 	bool HasPendingReport() const { return PendingReports.Num() > 0; }
+
+	// 할 얘기가 있나 (보고 또는 증언 → 머리 위 "!" 표시)
+	bool HasSomethingToSay() const { return HasPendingReport() || bPendingTestimony; }
 };
 
 // ─────────────────────────────────────────────
@@ -134,6 +141,12 @@ public:
 
 	// 플레이어가 대화로 들은 단서인지
 	bool HasHeardClue(FName ClueId) const;
+
+	// B2에서 구출된 동료가 다음 대화에서 증언하게 함
+	void QueueTestimony(FName SurvivorId);
+
+	// 증언 듣기: 대사를 OutLine에 담고 증언 대기를 지움. 들을 게 없으면 false
+	bool HearTestimony(FName SurvivorId, FText& OutLine);
 
 	// 단서를 들은 것으로 바로 기록 (테스트·디버그 명령용. 게임 흐름에서는 대화로만 들음)
 	void DebugHearClue(FName ClueId);

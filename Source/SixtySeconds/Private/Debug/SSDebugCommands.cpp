@@ -74,6 +74,22 @@ namespace SSDebugCommands
 			Print(TEXT("[SS.Ara.Status] ") + Run->GetAra()->DebugDescribe());
 		}));
 
+	// SS.Day <날짜> : 날짜를 바로 옮김 (예: SS.Day 11 → 다음 밤이 마지막 밤)
+	FAutoConsoleCommandWithWorldAndArgs SetDay(
+		TEXT("SS.Day"),
+		TEXT("SS.Day <Day> - jump to that day (SS.Day 11 then press next day to reach the final server room night)"),
+		FConsoleCommandWithWorldAndArgsDelegate::CreateLambda([](const TArray<FString>& Args, UWorld* World)
+		{
+			USSRunSubsystem* Run = FindRun(World);
+			if (!Run || Args.Num() < 1)
+			{
+				Print(TEXT("[SS.Day] usage: SS.Day 11 (in the shelter)"));
+				return;
+			}
+			Run->DebugSetDay(FCString::Atoi(*Args[0]));
+			Print(FString::Printf(TEXT("[SS.Day] day = %d (final night comes when the day reaches %d)"), Run->GetCurrentDay(), USSRunSubsystem::FinalDay));
+		}));
+
 	// SS.Rescue.Setup [동료ID] : 동료를 B2에 붙잡고 덕트 단서를 들은 것으로 (패널 버튼 확인용)
 	FAutoConsoleCommandWithWorldAndArgs RescueSetup(
 		TEXT("SS.Rescue.Setup"),

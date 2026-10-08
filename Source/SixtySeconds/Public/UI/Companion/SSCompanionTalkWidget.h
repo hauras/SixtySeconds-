@@ -85,6 +85,9 @@ private:
 	// 보고에 단서가 있으면 대사 아래 단서 카드를 보여줌
 	void ShowClueCard(const FSSInvestigationReport& Report);
 
+	// 단서 카드 자리에 숨은 진실 카드 (구출된 하린의 증언)
+	void ShowTruthCard();
+
 	// 대화 상대
 	FName SurvivorId = NAME_None;
 

@@ -45,6 +45,7 @@ enum class ESSCompanionLine : uint8
 	OrderReminder,   // 오늘 밤 조사 장소가 정해져 있을 때 ({Spot})
 	OrderAccept,     // 조사 장소를 정해 줬을 때 ({Spot})
 	Exhausted,       // 단서를 다 찾은 장소를 또 조사했을 때 ({Spot})
+	Testimony,       // B2에서 구출된 뒤 처음 하는 증언 (숨은 진실)
 };
 
 // ─────────────────────────────────────────────

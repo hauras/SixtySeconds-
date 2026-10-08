@@ -27,6 +27,7 @@
 #include "Event/SSEventCatalog.h"
 #include "UI/Ara/SSAraWidget.h"
 #include "UI/Rescue/SSPowerPanelWidget.h"
+#include "UI/Ending/SSEndingWidget.h"
 #include "Components/CanvasPanelSlot.h"
 
 void USSShelterHUD::NativeConstruct()
@@ -737,6 +738,9 @@ void USSShelterHUD::EndNight()
     // 사건 효과로 죽었으면 사망 처리가 화면을 가져감. 낮 버튼을 다시 풀지 않음
     if (!IsValid(RunSubsystem) || RunSubsystem->GetHealth() <= 0.f) return;
 
+    // 서버실에서 엔딩이 정해졌으면 아침이 오지 않음 (낮 버튼도 잠근 채)
+    if (TryShowEnding()) return;
+
     RunSubsystem->BuildAraBriefing();   // 밤사이 결과(압수 등)까지 반영한 아침 보고
     RefreshAraIndicator();               // 아침이 되어서야 안 읽음 표시
 
@@ -853,4 +857,21 @@ void USSShelterHUD::OnPowerPanelClosed()
     }
     PowerPanel = nullptr;
     RefreshDisplay();
+}
+
+bool USSShelterHUD::TryShowEnding()
+{
+    if (!IsValid(RunSubsystem) || !RunSubsystem->HasEnded()) return false;
+    if (IsValid(EndingWidget)) return true;
+    if (!EndingWidgetClass)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[UI] Assign WBP_Ending in shelter HUD defaults."));
+        return false;
+    }
+
+    EndingWidget = CreateWidget<USSEndingWidget>(GetOwningPlayer(), EndingWidgetClass);
+    if (!IsValid(EndingWidget)) return false;
+    EndingWidget->ShowEnding(RunSubsystem->GetEndingReport());
+    EndingWidget->AddToViewport(60);   // 사건 창(50)보다 위
+    return true;
 }

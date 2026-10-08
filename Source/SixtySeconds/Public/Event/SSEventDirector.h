@@ -21,8 +21,11 @@ public:
 	bool SetCatalog(USSEventCatalog* InCatalog);
 	const USSEventCatalog* GetCatalog() const { return Catalog; }
 
-	// 오늘 나올 사건. 예약된 사건이 먼저, 없으면 확률·가중치로 뽑음. 없으면 NAME_None
+	// 오늘 나올 사건. 마지막 밤이면 서버실, 그다음 예약된 사건, 없으면 확률·가중치로 뽑음. 없으면 NAME_None
 	FName PickEventForToday(const USSRunSubsystem& Run);
+
+	// 마지막 밤 서버실 사건 (엔딩을 정함)
+	static FName GetFinalEventId() { return FName(TEXT("ServerRoom")); }
 
 	const FSSEventRow* FindEvent(FName EventId) const;
 	TArray<FSSEventChoiceView> GetChoices(FName EventId, const USSRunSubsystem& Run) const;

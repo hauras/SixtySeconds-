@@ -242,6 +242,24 @@ void USSCompanionState::RestoreHuman(FName SurvivorId)
 	Record->PendingReports.Reset();
 }
 
+void USSCompanionState::QueueTestimony(FName SurvivorId)
+{
+	FindOrAddRecord(SurvivorId).bPendingTestimony = true;
+}
+
+bool USSCompanionState::HearTestimony(FName SurvivorId, FText& OutLine)
+{
+	FSSCompanionRecord* Record = Records.FindByPredicate([SurvivorId](const FSSCompanionRecord& Each)
+	{
+		return Each.SurvivorId == SurvivorId;
+	});
+	if (!Record || !Record->bPendingTestimony) return false;
+
+	Record->bPendingTestimony = false;
+	OutLine = GetLine(SurvivorId, ESSCompanionLine::Testimony);
+	return true;
+}
+
 void USSCompanionState::DebugHearClue(FName ClueId)
 {
 	if (ClueId.IsNone() || HasHeardClue(ClueId)) return;

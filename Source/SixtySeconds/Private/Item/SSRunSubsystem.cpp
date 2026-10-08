@@ -231,7 +231,10 @@ void USSRunSubsystem::ResetRun()
 	ActiveRescue = nullptr;
 	RescueHelperId = NAME_None;
 	LastRescueDay = 0;
-	bSawPanelLog = false;
+	HiddenTruths.Reset();
+	RescueSuccessCount = 0;
+	RescueAlarmTotal = 0;
+	EndingReport = FSSEndingReport{};
 	if (IsValid(EventDirector)) EventDirector->ResetRunState();   // 카탈로그는 유지, 1회성·예약만 초기화
 	OnJournalChanged.Broadcast();
 	OnRobotStateChanged.Broadcast();
@@ -333,7 +336,44 @@ bool USSRunSubsystem::ReleaseCapturedSurvivor(FName SurvivorId, bool& bOutReplac
 	}
 
 	GetCompanions()->RestoreHuman(SurvivorId);
+
+	// 하린은 돌아오면 다음 대화에서 폐기 회의를 증언함 (숨은 진실 2)
+	if (SurvivorId == SSRescueIds::Researcher() && !HasHiddenTruth(SSRescueIds::TestimonyTruth()))
+	{
+		GetCompanions()->QueueTestimony(SurvivorId);
+	}
+
 	OnSurvivorsChanged.Broadcast();
+	return true;
+}
+
+void USSRunSubsystem::ReachEnding(ESSEnding Requested)
+{
+	if (HasEnded() || Requested == ESSEnding::None) return;
+
+	FSSEndingReport Report;
+	Report.Ending = Requested;
+	Report.bKnewTruth = CountHiddenTruths() > 0;
+	Report.DaysSurvived = CurrentDay;
+	Report.RescuedCount = RescueSuccessCount;
+	Report.AlarmCount = RescueAlarmTotal;
+
+	// 종료하러 데려간 하린이 사실 아라의 안드로이드면 종료는 실패 → 지배
+	if (Requested == ESSEnding::Resolve && GetCompanions()->IsAndroid(SSRescueIds::Researcher()))
+	{
+		Report.Ending = ESSEnding::Dominion;
+		Report.bSabotaged = true;
+	}
+
+	EndingReport = Report;
+}
+
+bool USSRunSubsystem::AddHiddenTruth(FName TruthId, const FText& JournalLine)
+{
+	if (TruthId.IsNone() || HiddenTruths.Contains(TruthId)) return false;
+
+	HiddenTruths.Add(TruthId);
+	if (!JournalLine.IsEmpty()) RecordEvent(ESSJournalEvent::Event, JournalLine);
 	return true;
 }
 
@@ -370,7 +410,10 @@ USSRescueSession* USSRunSubsystem::StartRescue(FName TargetId, int32 Seed)
 		Seed != 0 ? Seed : FMath::Rand());
 
 	LastRescueDay = CurrentDay;
-	bSawPanelLog = true;
+
+	// 패널을 처음 열면 전력 예약 기록을 봄 (숨은 진실 1)
+	AddHiddenTruth(SSRescueIds::PanelLogTruth(), NSLOCTEXT("SSRescue", "PanelLogJournal",
+		"B2 정비 패널 기록: 정화 프로토콜 전력 예약 · 대상 구역: 제7연구소 전 층 · 상태: 대기. 정화가 무엇을 태우는지는 적혀 있지 않다."));
 	return ActiveRescue;
 }
 
@@ -384,6 +427,7 @@ bool USSRunSubsystem::FinishRescue(FSSRescueReport& OutReport)
 	OutReport.AlarmCount = ActiveRescue->GetAlarmCount();
 	OutReport.MovesUsed = ActiveRescue->GetMoveBudget() - ActiveRescue->GetRemainingMoves();
 	OutReport.ActionPointsSpent = RescueActionPoints;
+	RescueAlarmTotal += OutReport.AlarmCount;
 
 	// 이름은 귀환 전 붙잡힌 목록에서 (귀환하면 목록에서 빠지므로 먼저)
 	FText Name = FText::FromName(OutReport.TargetId);
@@ -395,6 +439,7 @@ bool USSRunSubsystem::FinishRescue(FSSRescueReport& OutReport)
 	if (OutReport.Outcome == ESSRescueOutcome::Unlocked)
 	{
 		ReleaseCapturedSurvivor(OutReport.TargetId, OutReport.bReplacedAndroid);
+		++RescueSuccessCount;
 	}
 
 	// 경보: 도운 사람이 있으면 그 사람이 강하게 의심받고,

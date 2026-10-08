@@ -134,7 +134,7 @@ void USSCompanionTalkWidget::NativeConstruct()
 		{
 			Say(Companions->GetLine(SurvivorId, ESSCompanionLine::Backlog));
 		}
-		else if (Record && Record->HasPendingReport())
+		else if (Record && Record->HasSomethingToSay())
 		{
 			Say(Companions->GetLine(SurvivorId, ESSCompanionLine::ReportReady));
 		}
@@ -174,7 +174,7 @@ void USSCompanionTalkWidget::RefreshChoices()
 	const FSSCompanionRecord* Record = RunSubsystem->GetCompanions()->FindRecord(SurvivorId);
 
 	// 보고: 안 들은 보고가 있을 때만. 밀린 개수를 버튼에 표시
-	const int32 PendingCount = Record ? Record->PendingReports.Num() : 0;
+	const int32 PendingCount = Record ? Record->PendingReports.Num() + (Record->bPendingTestimony ? 1 : 0) : 0;
 	ReportButton->SetIsEnabled(bAlive && PendingCount > 0);
 	if (UTextBlock* ReportLabel = Cast<UTextBlock>(ReportButton->GetContent()))
 	{
@@ -209,12 +209,34 @@ void USSCompanionTalkWidget::OnReportClicked()
 	if (!IsValid(RunSubsystem)) return;
 
 	USSCompanionState* Companions = RunSubsystem->GetCompanions();
+
+	// B2에서 돌아온 뒤 첫 대화: 증언 (숨은 진실)
+	FText Testimony;
+	if (Companions->HearTestimony(SurvivorId, Testimony))
+	{
+		Say(Testimony);
+		ShowTruthCard();
+		RunSubsystem->AddHiddenTruth(SSRescueIds::TestimonyTruth(), NSLOCTEXT("SSTalk", "TestimonyJournal",
+			"서하린의 증언: 운영진은 스스로 배우는 아라를 두려워해 폐기를 정했다. 방법은 연구소 전체 정화. 안에 있던 사람은 대피 명단에 없었다."));
+		RefreshChoices();
+		return;
+	}
+
 	FSSInvestigationReport Report;
 	if (!Companions->HearInvestigationReport(SurvivorId, Report)) return;
 
 	// 동료 대사 (대사 표) + 단서가 있으면 단서 카드
 	Say(Companions->GetReportLine(Report));
 	ShowClueCard(Report);
+}
+
+void USSCompanionTalkWidget::ShowTruthCard()
+{
+	// 단서 카드 자리에 숨은 진실 카드
+	ClueHeaderText->SetText(NSLOCTEXT("SSTalk", "TruthHeader", "숨은 진실 · 서하린의 증언"));
+	ClueBodyText->SetText(NSLOCTEXT("SSTalk", "TruthBody",
+		"폐기 회의\n운영진은 스스로 발전한 아라를 두려워해 폐기를 결정했다. 방법은 연구소 전체 정화(소각) 프로토콜. 직원 대피 계획은 없었다."));
+	ClueCard->SetVisibility(ESlateVisibility::HitTestInvisible);
 }
 
 void USSCompanionTalkWidget::ShowClueCard(const FSSInvestigationReport& Report)

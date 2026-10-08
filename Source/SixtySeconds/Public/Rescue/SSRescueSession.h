@@ -23,6 +23,13 @@ namespace SSRescueIds
 
 	// 패널을 돕는 정비사 강태오
 	inline FName Technician() { return FName(TEXT("Technician")); }
+
+	// 증언하는 연구원 서하린 (아라 학습 모델 설계자, 폐기 회의 참석자)
+	inline FName Researcher() { return FName(TEXT("TestResearcher")); }
+
+	// 숨은 진실 단서 (반전 엔딩 조건)
+	inline FName PanelLogTruth() { return FName(TEXT("Truth_PanelLog")); }
+	inline FName TestimonyTruth() { return FName(TEXT("Truth_HarinTestimony")); }
 }
 
 // 패널을 못 여는 이유 (은신처 버튼 툴팁)

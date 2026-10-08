@@ -25,6 +25,7 @@ class USSEventCatalog;
 class USSEventWidget;
 class USSAraWidget;
 class USSPowerPanelWidget;
+class USSEndingWidget;
 class UWidget;
 class UDataTable;
 
@@ -112,6 +113,10 @@ protected:
 	// B2 정비 패널 (구출 퍼즐). 붙잡힌 사람이 있고 B2 덕트를 알 때만 보임. WBP에서 환풍구 그림 위에 배치
 	UPROPERTY(meta=(BindWidgetOptional))
 	TObjectPtr<UButton> RescueButton;
+
+	// 엔딩 카드 (WBP_Ending) — Class Defaults에서 지정
+	UPROPERTY(EditDefaultsOnly, Category="SS|Ending")
+	TSubclassOf<USSEndingWidget> EndingWidgetClass;
 
 	// B2 정비 패널 창 (WBP_PowerPanel) — Class Defaults에서 지정
 	UPROPERTY(EditDefaultsOnly, Category="SS|Rescue")
@@ -313,6 +318,12 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<USSPowerPanelWidget> PowerPanel;
+
+	// 마지막 밤 서버실 선택으로 엔딩이 정해졌으면 아침 대신 엔딩 카드. 띄웠으면 true
+	bool TryShowEnding();
+
+	UPROPERTY(Transient)
+	TObjectPtr<USSEndingWidget> EndingWidget;
 
 	int32 CurrentDay = 1;
 	float CachedHealth = 0.f;

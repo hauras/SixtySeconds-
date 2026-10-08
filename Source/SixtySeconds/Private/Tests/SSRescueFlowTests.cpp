@@ -69,6 +69,7 @@ bool FSSRescueFlowTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("Technician helps: 5 AP x 8"), Session->GetMoveBudget(), 40);
 	TestEqual(TEXT("All action points spent"), Run->GetActionPoints(), 0);
 	TestTrue(TEXT("Panel log seen"), Run->HasSeenPanelLog());
+	TestEqual(TEXT("Panel log is hidden truth 1"), Run->CountHiddenTruths(), 1);
 	TestTrue(TEXT("Blocked while in progress"), Run->GetRescueBlock() == ESSRescueBlock::InProgress);
 
 	FSSRescueReport Report;
@@ -86,6 +87,17 @@ bool FSSRescueFlowTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("Journal entry added"), Run->GetJournalEntries().Num(), JournalBefore + 1);
 	TestNull(TEXT("Session cleared"), Run->GetActiveRescue());
 	TestEqual(TEXT("Report shows action points actually spent"), Report.ActionPointsSpent, 5);
+
+	// 하린이 돌아오면 다음 대화에서 증언 (숨은 진실 2). "!"가 뜨고, 한 번만 들음
+	const FSSCompanionRecord* HarinRecord = Run->GetCompanions()->FindRecord(Researcher);
+	TestTrue(TEXT("Rescued Harin has something to say"), HarinRecord && HarinRecord->HasSomethingToSay());
+	FText Testimony;
+	TestTrue(TEXT("Testimony heard"), Run->GetCompanions()->HearTestimony(Researcher, Testimony));
+	TestFalse(TEXT("Testimony line not empty"), Testimony.IsEmpty());
+	TestFalse(TEXT("Testimony only once"), Run->GetCompanions()->HearTestimony(Researcher, Testimony));
+	TestTrue(TEXT("Testimony truth added"), Run->AddHiddenTruth(SSRescueIds::TestimonyTruth(), FText::FromString(TEXT("t"))));
+	TestFalse(TEXT("Same truth not added twice"), Run->AddHiddenTruth(SSRescueIds::TestimonyTruth(), FText::FromString(TEXT("t"))));
+	TestEqual(TEXT("Two hidden truths"), Run->CountHiddenTruths(), 2);
 
 	// 결과 확정은 한 번만: 다시 불러도 아무 일 없음 (중복 귀환·기록·경보 없음)
 	const int32 JournalAfter = Run->GetJournalEntries().Num();
@@ -130,6 +142,8 @@ bool FSSRescueFlowTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("Finish aborted rescue"), Alone->FinishRescue(Report));
 	TestTrue(TEXT("Aborted"), Report.Outcome == ESSRescueOutcome::Aborted);
 	TestTrue(TEXT("Still captured after abort"), Alone->IsSurvivorCaptured(Technician));
+	const FSSCompanionRecord* TaeoRecord = Alone->GetCompanions()->FindRecord(Technician);
+	TestFalse(TEXT("No testimony for the technician"), TaeoRecord && TaeoRecord->bPendingTestimony);
 
 	// ── 바꿔치기된 하린을 구하면: 은신처의 안드로이드가 진짜로 교체 ──
 	USSRunSubsystem* Swapped = MakeRun();

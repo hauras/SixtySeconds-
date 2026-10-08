@@ -74,6 +74,8 @@ bool USSEventDirector::CheckCondition(ESSEventCondition Condition, FName Target,
 		const USSAraDirector* Ara = Run.FindAra();
 		return Ara && Ara->CanSwapTarget();
 	}
+	case ESSEventCondition::HiddenTruthCount:
+		return Run.CountHiddenTruths() >= FMath::Max(1, Amount);
 	}
 	return false;
 }
@@ -104,6 +106,15 @@ FName USSEventDirector::PickEventForToday(const USSRunSubsystem& Run)
 	const int32 Day = Run.GetCurrentDay();
 
 	FName Picked = NAME_None;
+
+	// 0. 마지막 밤: 서버실 사건은 확률·예약과 상관없이 한 번
+	const FName FinalEvent = GetFinalEventId();
+	if (Day >= USSRunSubsystem::FinalDay && !FiredOnce.Contains(FinalEvent) && FindEvent(FinalEvent) && HasAvailableChoice(FinalEvent, Run))
+	{
+		FiredOnce.Add(FinalEvent);
+		LastFiredDay.Add(FinalEvent, Day);
+		return FinalEvent;
+	}
 
 	// 1. 예약된 사건이 먼저 (가장 오래된 것부터, 확률과 상관없이)
 	for (int32 i = 0; i < Scheduled.Num(); ++i)
@@ -334,6 +345,13 @@ void USSEventDirector::ApplyEffect(const FSSEventEffectRow& Effect, USSRunSubsys
 	case ESSEventEffect::AraRefused:
 		Run.GetAra()->OnOfferRefused();
 		break;
+	case ESSEventEffect::Ending:
+	{
+		// 비밀: 결과(Changes)에 넣지 않음. 밤이 끝나면 HUD가 엔딩 카드를 띄움
+		const int64 Value = StaticEnum<ESSEnding>()->GetValueByNameString(Effect.Target.ToString());
+		if (Value != INDEX_NONE) Run.ReachEnding(static_cast<ESSEnding>(Value));
+		break;
+	}
 	default:
 		break;
 	}
