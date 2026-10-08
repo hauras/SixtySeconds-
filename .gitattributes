@@ -1,0 +1,10 @@
+# 줄바꿈 고정: C++ 소스는 저장소에 LF, 작업 폴더에서 CRLF (Windows·Visual Studio·Rider 기본)
+* text=auto
+*.h text eol=crlf
+*.cpp text eol=crlf
+*.inl text eol=crlf
+*.cs text eol=crlf
+*.py text eol=lf
+*.csv text eol=lf
+*.uasset binary
+*.umap binary

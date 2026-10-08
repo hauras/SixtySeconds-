@@ -1,0 +1,47 @@
+# SixtySeconds C++ 모양 (언리얼 코딩 표준에 가깝게)
+# - 탭 들여쓰기, 중괄호는 새 줄
+# - 줄 길이 제한 없음: 긴 인자를 한 줄에 하나씩 나눈 모양을 그대로 둠
+# - include 순서는 손대지 않음 (자기 헤더가 맨 위)
+BasedOnStyle: LLVM
+Language: Cpp
+Standard: c++20
+
+UseTab: ForContinuationAndIndentation
+TabWidth: 4
+IndentWidth: 4
+ContinuationIndentWidth: 4
+ColumnLimit: 0
+
+BreakBeforeBraces: Allman
+AccessModifierOffset: -4
+IndentCaseLabels: false
+NamespaceIndentation: All
+PointerAlignment: Left
+SortIncludes: Never
+ReflowComments: false
+
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: WithoutElse
+AllowShortLoopsOnASingleLine: true
+AllowShortBlocksOnASingleLine: Never
+AllowShortLambdasOnASingleLine: Empty
+AllowShortCaseLabelsOnASingleLine: true
+AlwaysBreakTemplateDeclarations: Yes
+
+AlignAfterOpenBracket: DontAlign
+AlignOperands: DontAlign
+AlignTrailingComments: true
+AlignConsecutiveAssignments: None
+AlignConsecutiveDeclarations: None
+BinPackArguments: true
+BinPackParameters: true
+LambdaBodyIndentation: OuterScope
+SpaceBeforeParens: ControlStatements
+SpacesBeforeTrailingComments: 1
+MaxEmptyLinesToKeep: 1
+KeepEmptyLinesAtTheStartOfBlocks: false
+InsertNewlineAtEOF: true
+
+# 언리얼 매크로 안의 글자는 그대로 (Category="SS|..." / meta=(BindWidget) 모양 유지)
+WhitespaceSensitiveMacros: [UPROPERTY, UFUNCTION, UCLASS, USTRUCT, UENUM, UMETA, UPARAM, UINTERFACE, UDELEGATE]
+FixNamespaceComments: false
