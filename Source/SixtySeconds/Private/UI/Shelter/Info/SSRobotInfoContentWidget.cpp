@@ -8,6 +8,7 @@
 #include "Components/VerticalBoxSlot.h"
 #include "Engine/GameInstance.h"
 #include "Item/SSRunSubsystem.h"
+#include "Item/SSExpeditionState.h"
 #include "Item/SSItemDefinition.h"
 
 namespace SSRobotInfoStyle
@@ -80,7 +81,7 @@ void USSRobotInfoContentWidget::NativeConstruct()
 		RunSubsystem = RunGameInstance->GetSubsystem<USSRunSubsystem>();
 	if (IsValid(RunSubsystem))
 	{
-		RunSubsystem->OnRobotStateChanged.AddUniqueDynamic(this, &ThisClass::RefreshDisplay);
+		RunSubsystem->GetExpedition()->OnRobotStateChanged.AddUniqueDynamic(this, &ThisClass::RefreshDisplay);
 		RunSubsystem->OnStoredItemsChanged.AddUniqueDynamic(this, &ThisClass::RefreshDisplay);
 	}
 	if (RepairButton) RepairButton->OnClicked.AddUniqueDynamic(this, &ThisClass::OnRepairClicked);
@@ -91,7 +92,7 @@ void USSRobotInfoContentWidget::NativeDestruct()
 {
 	if (IsValid(RunSubsystem))
 	{
-		RunSubsystem->OnRobotStateChanged.RemoveDynamic(this, &ThisClass::RefreshDisplay);
+		RunSubsystem->GetExpedition()->OnRobotStateChanged.RemoveDynamic(this, &ThisClass::RefreshDisplay);
 		RunSubsystem->OnStoredItemsChanged.RemoveDynamic(this, &ThisClass::RefreshDisplay);
 	}
 	if (RepairButton) RepairButton->OnClicked.RemoveDynamic(this, &ThisClass::OnRepairClicked);
@@ -108,7 +109,7 @@ void USSRobotInfoContentWidget::RefreshDisplay()
 	FText Description;
 	FText RepairInfo;
 	FLinearColor StateColor = SSRobotInfoStyle::Color(TEXT("A9BF87"));
-	switch (RunSubsystem->GetRobotState())
+	switch (RunSubsystem->GetExpedition()->GetRobotState())
 	{
 	case ESSRobotState::Idle:
 		Status = NSLOCTEXT("SS", "RobotIdle", "현재 상태  ·  대기 중");
@@ -125,12 +126,12 @@ void USSRobotInfoContentWidget::RefreshDisplay()
 	case ESSRobotState::Repairing:
 		Status = NSLOCTEXT("SS", "RobotRepairing", "현재 상태  ·  수리 중");
 		Description = NSLOCTEXT("SS", "RobotRepairDescription", "손상된 부품을 복구하고 있습니다.");
-		RepairInfo = FText::Format(NSLOCTEXT("SS", "RobotRepairDays", "수리 완료까지 {0}일"), RunSubsystem->GetRemainingRepairDays());
+		RepairInfo = FText::Format(NSLOCTEXT("SS", "RobotRepairDays", "수리 완료까지 {0}일"), RunSubsystem->GetExpedition()->GetRemainingRepairDays());
 		break;
 	case ESSRobotState::Exploring:
 		Status = NSLOCTEXT("SS", "RobotExploring", "현재 상태  ·  탐사 중");
 		Description = NSLOCTEXT("SS", "RobotExploringDescription", "은신처 밖에서 탐사하고 있습니다.");
-		RepairInfo = FText::Format(NSLOCTEXT("SS", "RobotReturnDays", "귀환까지 {0}일"), RunSubsystem->GetRemainingExpeditionDays());
+		RepairInfo = FText::Format(NSLOCTEXT("SS", "RobotReturnDays", "귀환까지 {0}일"), RunSubsystem->GetExpedition()->GetRemainingExpeditionDays());
 		break;
 	}
 	StatusText->SetText(Status);
@@ -142,6 +143,6 @@ void USSRobotInfoContentWidget::RefreshDisplay()
 void USSRobotInfoContentWidget::OnRepairClicked()
 {
 	if (IsValid(RunSubsystem) && RunSubsystem->GetHealth() > 0.f)
-		RunSubsystem->RepairRobot();
+		RunSubsystem->GetExpedition()->RepairRobot();
 	RefreshDisplay();
 }

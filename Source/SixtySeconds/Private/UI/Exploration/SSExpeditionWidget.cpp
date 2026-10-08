@@ -5,6 +5,7 @@
 #include "Item/SSExpeditionDefinition.h"
 #include "Item/SSItemDefinition.h"
 #include "Item/SSRunSubsystem.h"
+#include "Item/SSExpeditionState.h"
 #include "UI/Exploration/SSExplorationWidget.h"
 #include "Exploration/SSExplorationMapDefinition.h" // IsValid(DirectExplorationMap)에 완전한 타입 필요
 #include "Engine/GameInstance.h"
@@ -27,8 +28,8 @@ void USSExpeditionWidget::NativeConstruct()
 
 	if (IsValid(RunSubsystem))
 	{
-		RunSubsystem->OnRobotReturned.AddUniqueDynamic(this, &USSExpeditionWidget::OnRobotReturnedHandler);
-		RunSubsystem->OnRobotStateChanged.AddUniqueDynamic(this, &USSExpeditionWidget::RefreshDisplay);
+		RunSubsystem->GetExpedition()->OnRobotReturned.AddUniqueDynamic(this, &USSExpeditionWidget::OnRobotReturnedHandler);
+		RunSubsystem->GetExpedition()->OnRobotStateChanged.AddUniqueDynamic(this, &USSExpeditionWidget::RefreshDisplay);
 		RunSubsystem->OnStoredItemsChanged.AddUniqueDynamic(this, &USSExpeditionWidget::RefreshDisplay);
 		RunSubsystem->OnActionPointsChanged.AddUniqueDynamic(this, &USSExpeditionWidget::RefreshDisplay);
 	}
@@ -41,8 +42,8 @@ void USSExpeditionWidget::NativeDestruct()
 {
 	if (IsValid(RunSubsystem))
 	{
-		RunSubsystem->OnRobotReturned.RemoveDynamic(this, &USSExpeditionWidget::OnRobotReturnedHandler);
-		RunSubsystem->OnRobotStateChanged.RemoveDynamic(this, &USSExpeditionWidget::RefreshDisplay);
+		RunSubsystem->GetExpedition()->OnRobotReturned.RemoveDynamic(this, &USSExpeditionWidget::OnRobotReturnedHandler);
+		RunSubsystem->GetExpedition()->OnRobotStateChanged.RemoveDynamic(this, &USSExpeditionWidget::RefreshDisplay);
 		RunSubsystem->OnStoredItemsChanged.RemoveDynamic(this, &USSExpeditionWidget::RefreshDisplay);
 		RunSubsystem->OnActionPointsChanged.RemoveDynamic(this, &USSExpeditionWidget::RefreshDisplay);
 	}
@@ -56,7 +57,7 @@ void USSExpeditionWidget::NativeDestruct()
 
 void USSExpeditionWidget::RefreshDisplay()
 {
-	if (DispatchButton) DispatchButton->SetIsEnabled(IsValid(RunSubsystem) && IsValid(ExpeditionDefinition) && RunSubsystem->GetHealth() > 0.f && RunSubsystem->GetRobotState() == ESSRobotState::Idle && RunSubsystem->GetActionPoints() >= USSRunSubsystem::ExpeditionActionCost);
+	if (DispatchButton) DispatchButton->SetIsEnabled(IsValid(RunSubsystem) && IsValid(ExpeditionDefinition) && RunSubsystem->GetHealth() > 0.f && RunSubsystem->GetExpedition()->GetRobotState() == ESSRobotState::Idle && RunSubsystem->GetActionPoints() >= USSExpeditionState::ExpeditionActionCost);
 
 	if (DirectExploreButton)
 	{
@@ -122,7 +123,7 @@ void USSExpeditionWidget::RefreshDisplay()
 	// 로봇 상태
 	if (RobotStatusText)
 	{
-		switch (RunSubsystem->GetRobotState())
+		switch (RunSubsystem->GetExpedition()->GetRobotState())
 		{
 		case ESSRobotState::Idle:
 			RobotStatusText->SetText(NSLOCTEXT("SSExpeditionUI", "Idle", "로봇 대기 중 · 파견 가능"));
@@ -130,13 +131,13 @@ void USSExpeditionWidget::RefreshDisplay()
 		case ESSRobotState::Exploring:
 			RobotStatusText->SetText(FText::Format(
 				NSLOCTEXT("SS", "RobotExploring", "탐사 중 · 남은 {0}일"),
-				RunSubsystem->GetRemainingExpeditionDays()));
+				RunSubsystem->GetExpedition()->GetRemainingExpeditionDays()));
 			break;
 		case ESSRobotState::Broken:
 			RobotStatusText->SetText(NSLOCTEXT("SS", "RobotBroken", "고장 — 수리키트 필요"));
 			break;
 		case ESSRobotState::Repairing:
-			RobotStatusText->SetText(FText::Format(NSLOCTEXT("SSExpeditionUI", "Repairing", "수리 중 · 완료까지 {0}일"), RunSubsystem->GetRemainingRepairDays()));
+			RobotStatusText->SetText(FText::Format(NSLOCTEXT("SSExpeditionUI", "Repairing", "수리 중 · 완료까지 {0}일"), RunSubsystem->GetExpedition()->GetRemainingRepairDays()));
 			break;
 		}
 	}
@@ -157,7 +158,7 @@ void USSExpeditionWidget::OnDispatchClicked()
 		return;
 	}
 
-	const ESSExpeditionStartResult Result = RunSubsystem->StartExpedition(ExpeditionDefinition);
+	const ESSExpeditionStartResult Result = RunSubsystem->GetExpedition()->StartExpedition(ExpeditionDefinition);
 
 	FText Msg;
 	switch (Result)

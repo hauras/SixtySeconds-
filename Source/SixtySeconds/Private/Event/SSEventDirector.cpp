@@ -2,6 +2,7 @@
 #include "Engine/DataTable.h"
 #include "Event/SSEventCatalog.h"
 #include "Item/SSRunSubsystem.h"
+#include "Item/SSExpeditionState.h"
 #include "Ending/SSEndingState.h"
 #include "Item/SSItemDefinition.h"
 #include "Character/SSSurvivorDefinition.h"
@@ -72,9 +73,16 @@ bool USSEventDirector::CheckCondition(ESSEventCondition Condition, FName Target,
 		return Survivor && Survivor->bAlive;
 	}
 	case ESSEventCondition::RobotIdle:
-		return Run.GetRobotState() == ESSRobotState::Idle;
+	{
+		// 로봇을 한 번도 안 썼으면(상태 객체가 아직 없음) 대기 중
+		const USSExpeditionState* Expedition = Run.FindExpedition();
+		return !Expedition || Expedition->GetRobotState() == ESSRobotState::Idle;
+	}
 	case ESSEventCondition::RobotAway:
-		return Run.GetRobotState() == ESSRobotState::Exploring;
+	{
+		const USSExpeditionState* Expedition = Run.FindExpedition();
+		return Expedition && Expedition->GetRobotState() == ESSRobotState::Exploring;
+	}
 	case ESSEventCondition::AraHasTarget:
 	{
 		// 아라가 아직 아무도 바꾸지 않았고, 살아 있는 표적이 있을 때만

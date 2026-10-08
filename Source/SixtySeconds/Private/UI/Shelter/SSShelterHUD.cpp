@@ -13,6 +13,7 @@
 #include "Components/Image.h"
 #include "Components/Button.h"
 #include "Item/SSRunSubsystem.h"
+#include "Item/SSExpeditionState.h"
 #include "Rescue/SSRescueState.h"
 #include "Ending/SSEndingState.h"
 #include "Item/SSItemDefinition.h"
@@ -84,7 +85,7 @@ void USSShelterHUD::NativeConstruct()
 	if (IsValid(RunSubsystem))
 	{
 		RunSubsystem->OnStoredItemsChanged.AddUniqueDynamic(this, &USSShelterHUD::RefreshDisplay);
-		RunSubsystem->OnRobotStateChanged.AddUniqueDynamic(this, &USSShelterHUD::RefreshRobotDisplay);
+		RunSubsystem->GetExpedition()->OnRobotStateChanged.AddUniqueDynamic(this, &USSShelterHUD::RefreshRobotDisplay);
 		RunSubsystem->OnActionPointsChanged.AddUniqueDynamic(this, &USSShelterHUD::RefreshDisplay);
 		RunSubsystem->OnSurvivorsChanged.AddUniqueDynamic(this, &ThisClass::OnSurvivorsUpdated);
 		RunSubsystem->OnDayAdvanced.AddUniqueDynamic(this, &ThisClass::HandleDayAdvanced);
@@ -143,7 +144,7 @@ void USSShelterHUD::NativeDestruct()
 	if (IsValid(RunSubsystem))
 	{
 		RunSubsystem->OnStoredItemsChanged.RemoveDynamic(this, &USSShelterHUD::RefreshDisplay);
-		RunSubsystem->OnRobotStateChanged.RemoveDynamic(this, &USSShelterHUD::RefreshRobotDisplay);
+		RunSubsystem->GetExpedition()->OnRobotStateChanged.RemoveDynamic(this, &USSShelterHUD::RefreshRobotDisplay);
 		RunSubsystem->OnActionPointsChanged.RemoveDynamic(this, &USSShelterHUD::RefreshDisplay);
 		RunSubsystem->OnSurvivorsChanged.RemoveDynamic(this, &ThisClass::OnSurvivorsUpdated);
 		RunSubsystem->OnDayAdvanced.RemoveDynamic(this, &ThisClass::HandleDayAdvanced);
@@ -176,7 +177,7 @@ void USSShelterHUD::NativeDestruct()
 
 void USSShelterHUD::RefreshRobotDisplay()
 {
-	const bool bShowRobot = IsValid(RunSubsystem) && RunSubsystem->GetRobotState() != ESSRobotState::Exploring;
+	const bool bShowRobot = IsValid(RunSubsystem) && RunSubsystem->GetExpedition()->GetRobotState() != ESSRobotState::Exploring;
 	if (RobotButton)
 		RobotButton->SetVisibility(bShowRobot ? ESlateVisibility::Visible : ESlateVisibility::Hidden);
 	if (!bShowRobot && bShowingRobotInfo && IsValid(InfoPanelWidget))
@@ -185,7 +186,7 @@ void USSShelterHUD::RefreshRobotDisplay()
 
 void USSShelterHUD::OnRobotClicked()
 {
-	if (!IsValid(RunSubsystem) || RunSubsystem->GetRobotState() == ESSRobotState::Exploring)
+	if (!IsValid(RunSubsystem) || RunSubsystem->GetExpedition()->GetRobotState() == ESSRobotState::Exploring)
 		return;
 	if (IsValid(InfoPanelWidget) && InfoPanelWidget->IsInViewport())
 		return;

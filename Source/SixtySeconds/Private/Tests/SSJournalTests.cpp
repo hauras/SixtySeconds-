@@ -1,4 +1,5 @@
 #include "Item/SSRunSubsystem.h"
+#include "Item/SSExpeditionState.h"
 #include "Item/SSExpeditionDefinition.h"
 #include "Engine/GameInstance.h"
 #include "Misc/AutomationTest.h"
@@ -44,9 +45,9 @@ bool FSSJournalTest::RunTest(const FString& Parameters)
 	Reward.MinQuantity = 2;
 	Reward.MaxQuantity = 2;
 	Expedition->Rewards.Add(Reward);
-	TestTrue(TEXT("Dispatch succeeds"), Run->StartExpedition(Expedition) == ESSExpeditionStartResult::Success);
+	TestTrue(TEXT("Dispatch succeeds"), Run->GetExpedition()->StartExpedition(Expedition) == ESSExpeditionStartResult::Success);
 	const int32 AfterDispatch = Run->GetJournalEntries().Num();
-	TestTrue(TEXT("Repeated dispatch rejected"), Run->StartExpedition(Expedition) == ESSExpeditionStartResult::RobotBusy);
+	TestTrue(TEXT("Repeated dispatch rejected"), Run->GetExpedition()->StartExpedition(Expedition) == ESSExpeditionStartResult::RobotBusy);
 	TestEqual(TEXT("Rejected dispatch not logged"), Run->GetJournalEntries().Num(), AfterDispatch);
 	TestTrue(TEXT("Ration and return"), Run->AdvanceDay(true, false));
 	TestEqual(TEXT("Current day advances"), Run->GetCurrentDay(), 2);
@@ -63,18 +64,18 @@ bool FSSJournalTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("Stats belong to finished day"), DayOneEnd, 1);
 	TestEqual(TEXT("Breakdown belongs to return day"), DayTwoRobot, 1);
 	TestEqual(TEXT("Return and actual reward recorded"), DayTwoExpedition, 2);
-	TestTrue(TEXT("Repair succeeds"), Run->RepairRobot());
+	TestTrue(TEXT("Repair succeeds"), Run->GetExpedition()->RepairRobot());
 	TestEqual(TEXT("Repair starts on day 2"), Run->GetJournalEntries().Last().Day, 2);
 	TestTrue(TEXT("Repair day advances"), Run->AdvanceDay(false, false));
-	TestTrue(TEXT("Repair completes"), Run->GetRobotState() == ESSRobotState::Idle);
+	TestTrue(TEXT("Repair completes"), Run->GetExpedition()->GetRobotState() == ESSRobotState::Idle);
 	TestEqual(TEXT("Completion on day 3"), Run->GetJournalEntries().Last().Day, 3);
 
 	Expedition->SuccessRate = 0;
 	Expedition->BreakdownChance = 0;
-	TestTrue(TEXT("Second dispatch"), Run->StartExpedition(Expedition) == ESSExpeditionStartResult::Success);
+	TestTrue(TEXT("Second dispatch"), Run->GetExpedition()->StartExpedition(Expedition) == ESSExpeditionStartResult::Success);
 	Run->AdvanceDay(false, false);
-	TestTrue(TEXT("Failed return replaces old successful result"), Run->GetLastExpeditionResult().ReceivedItems.IsEmpty());
-	TestEqual(TEXT("Failed return date"), Run->GetLastExpeditionResult().ReturnDay, 4);
+	TestTrue(TEXT("Failed return replaces old successful result"), Run->GetExpedition()->GetLastExpeditionResult().ReceivedItems.IsEmpty());
+	TestEqual(TEXT("Failed return date"), Run->GetExpedition()->GetLastExpeditionResult().ReturnDay, 4);
 	Run->InitializeShelterStats(5, 0, 0);
 	Run->AdvanceDay(false, false);
 	TestTrue(TEXT("Death recorded"), Run->GetJournalEntries().Last().Event == ESSJournalEvent::Death);

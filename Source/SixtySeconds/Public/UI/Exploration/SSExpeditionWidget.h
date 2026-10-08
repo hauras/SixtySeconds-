@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "Item/SSRunSubsystem.h"
+#include "Item/SSExpeditionState.h"         // UFUNCTION 매개변수 FSSExpeditionResult
 #include "Exploration/SSExplorationTypes.h" // UFUNCTION 매개변수 FSSExplorationResult
 #include "SSExpeditionWidget.generated.h"
 

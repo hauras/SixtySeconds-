@@ -14,49 +14,16 @@ class USSRescueState;
 class USSEndingState;
 
 class USSExpeditionDefinition;
+class USSExpeditionState;
 class USSEventDirector;
 struct FSSExplorationResult;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FSSOnDayAdvanced);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FSSOnPlayerStatsChanged);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FSSOnStoredItemsChanged);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FSSOnRobotStateChanged);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FSSOnJournalChanged);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FSSOnActionPointsChanged);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FSSOnSurvivorsChanged);
-
-UENUM(BlueprintType)
-enum class ESSRobotState : uint8
-{
-	Idle,
-	Exploring,
-	Broken,    // 고장 — 수리키트 필요
-	Repairing, // 수리 중 — 1일 후 Idle 복귀
-};
-
-UENUM(BlueprintType)
-enum class ESSExpeditionStartResult : uint8
-{
-	Success,
-	PlayerDead,
-	RobotBusy,
-	RobotBroken,
-	InvalidExpedition,
-	NotEnoughBattery,
-	NotEnoughActionPoints,
-};
-
-USTRUCT(BlueprintType)
-struct FSSExpeditionResult
-{
-	GENERATED_BODY()
-
-	UPROPERTY(BlueprintReadOnly) int32 ReturnDay = 0;
-	UPROPERTY(BlueprintReadOnly) TArray<FSSItemStack> ReceivedItems;
-	UPROPERTY(BlueprintReadOnly) FText RegionName;
-};
-
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnRobotReturned, const FSSExpeditionResult&, Result);
 
 // 씬 전환(스크램블↔은신처)에도 유지되는 플레이 데이터 관리
 UCLASS()
@@ -87,16 +54,14 @@ public:
 
 	// 행동력
 	static constexpr int32 MaxActionPoints = 5;
-	static constexpr int32 ExpeditionActionCost = 2;
-	static constexpr int32 RepairActionCost = 4;
 	static constexpr int32 HealActionCost = 1;
 
 	int32 GetActionPoints() const { return ActionPoints; }
 
 	// 보관함 및 아이템 사용
-	// 운반 목록을 은신처 보관함으로 이전
+	// 운반 목록을 은신처 보관함으로 이전 (bRecordJournal: 입고 기록을 남길지. 탐사 보상은 귀환 기록을 따로 남김)
 	UFUNCTION(BlueprintCallable, Category="SS|Run")
-	void DepositItems(const TArray<FSSItemStack>& CarriedItems);
+	void DepositItems(const TArray<FSSItemStack>& CarriedItems, bool bRecordJournal = true);
 
 	// 보관된 아이템 수량 반환 (없으면 0)
 	UFUNCTION(BlueprintPure, Category="SS|Run")
@@ -130,25 +95,11 @@ public:
 	UFUNCTION(BlueprintPure, Category="SS|Survivor")
 	const TArray<FSSSurvivorState>& GetRescuedSurvivors() const { return RescuedSurvivors; }
 
-	// 로봇 탐사 및 수리
-	// 탐사 파견. 실패 시 배터리·로봇 상태 변화 없음.
-	UFUNCTION(BlueprintCallable, Category="SS|Expedition")
-	ESSExpeditionStartResult StartExpedition(USSExpeditionDefinition* Expedition);
+	// 탐사 로봇 (파견·귀환·수리). 처음 부를 때 생성
+	USSExpeditionState* GetExpedition();
 
-	UFUNCTION(BlueprintPure, Category="SS|Expedition")
-	ESSRobotState GetRobotState() const { return RobotState; }
-
-	UFUNCTION(BlueprintPure, Category="SS|Expedition")
-	int32 GetRemainingExpeditionDays() const { return RemainingExpeditionDays; }
-
-	UFUNCTION(BlueprintPure, Category="SS|Expedition")
-	const FSSExpeditionResult& GetLastExpeditionResult() const { return LastExpeditionResult; }
-
-	// 수리키트 1개 + 행동력 4 소모 후 수리 시작. 성공 시 true.
-	UFUNCTION(BlueprintCallable, Category="SS|Expedition")
-	bool RepairRobot();
-
-	int32 GetRemainingRepairDays() const { return RepairDaysRemaining; }
+	// 읽기만 할 때 (아직 없으면 nullptr. 사건 조건처럼 const에서 씀)
+	const USSExpeditionState* FindExpedition() const { return Expedition; }
 
 	// 일일 기록
 	const TArray<FSSJournalEntry>& GetJournalEntries() const { return JournalEntries; }
@@ -243,18 +194,11 @@ public:
 	UPROPERTY(BlueprintAssignable, Category="SS|Journal")
 	FSSOnJournalChanged OnJournalChanged;
 
-	UPROPERTY(BlueprintAssignable, Category="SS|Expedition")
-	FSSOnRobotStateChanged OnRobotStateChanged;
-
 	UPROPERTY(BlueprintAssignable, Category="SS|Run")
 	FSSOnActionPointsChanged OnActionPointsChanged;
 
 	UPROPERTY(BlueprintAssignable, Category="SS|Run")
 	FSSOnStoredItemsChanged OnStoredItemsChanged;
-
-	// 귀환 결과 전달
-	UPROPERTY(BlueprintAssignable, Category="SS|Expedition")
-	FOnRobotReturned OnRobotReturned;
 
 private:
 	// 내부 처리 함수
@@ -267,12 +211,7 @@ private:
 	bool ConsumeItem(FName ItemId);
 	bool ConsumeStoredItems(FName ItemId, int32 Quantity);
 
-	void TickExpedition();
-	void FulfillExpedition();
-	void TickRepair();
-
 	void RecordEvent(ESSJournalEvent Event, const FText& Message);
-	void RecordExpeditionReturn(const FSSExpeditionResult& Result, bool bSuccess);
 
 	// 동료 데이터
 	UPROPERTY(Transient)
@@ -312,21 +251,9 @@ private:
 	UPROPERTY(Transient)
 	FSSSurvivorStats PlayerStats;
 
-	// 로봇 상태 및 탐사 결과
+	// 탐사 로봇
 	UPROPERTY(Transient)
-	ESSRobotState RobotState = ESSRobotState::Idle;
-
-	UPROPERTY(Transient)
-	TObjectPtr<USSExpeditionDefinition> ActiveExpedition = nullptr;
-
-	UPROPERTY(Transient)
-	int32 RemainingExpeditionDays = 0;
-
-	UPROPERTY(Transient)
-	int32 RepairDaysRemaining = 0;
-
-	UPROPERTY(Transient)
-	FSSExpeditionResult LastExpeditionResult;
+	TObjectPtr<USSExpeditionState> Expedition;
 
 	// 남은 행동력
 	UPROPERTY(Transient)

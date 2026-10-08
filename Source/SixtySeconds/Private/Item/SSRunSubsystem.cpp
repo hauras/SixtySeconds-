@@ -9,6 +9,7 @@
 #include "Ara/SSAraDirector.h"
 #include "Rescue/SSRescueState.h"
 #include "Ending/SSEndingState.h"
+#include "Item/SSExpeditionState.h"
 
 namespace
 {
@@ -156,19 +157,7 @@ void USSRunSubsystem::AddDetailedEventJournal(const FText& Message, const FText&
 	OnJournalChanged.Broadcast();
 }
 
-void USSRunSubsystem::RecordExpeditionReturn(const FSSExpeditionResult& Result, bool bSuccess)
-{
-	RecordEvent(ESSJournalEvent::Expedition, FText::Format(bSuccess ? NSLOCTEXT("SSJournal", "ReturnSuccess", "{0} 탐사에서 귀환했다.") : NSLOCTEXT("SSJournal", "ReturnFailure", "{0} 탐사에 실패하여 물자 없이 귀환했다."), Result.RegionName));
-	for (const FSSItemStack& Stack : Result.ReceivedItems)
-		if (IsValid(Stack.Item) && Stack.Quantity > 0)
-			RecordEvent(ESSJournalEvent::Expedition, FText::Format(NSLOCTEXT("SSJournal", "Reward", "획득: {0} ×{1}"), Stack.Item->DisplayName, Stack.Quantity));
-	if (bSuccess && Result.ReceivedItems.IsEmpty())
-		RecordEvent(ESSJournalEvent::Expedition, NSLOCTEXT("SSJournal", "NoReward", "가져온 물자는 없다."));
-	if (RobotState == ESSRobotState::Broken)
-		RecordEvent(ESSJournalEvent::Robot, NSLOCTEXT("SSJournal", "Broken", "귀환한 탐사로봇에 고장이 발생했다."));
-}
-
-void USSRunSubsystem::DepositItems(const TArray<FSSItemStack>& CarriedItems)
+void USSRunSubsystem::DepositItems(const TArray<FSSItemStack>& CarriedItems, bool bRecordJournal)
 {
 	bool bChanged = false;
 	for (const FSSItemStack& Incoming : CarriedItems)
@@ -185,7 +174,7 @@ void USSRunSubsystem::DepositItems(const TArray<FSSItemStack>& CarriedItems)
 			Existing->Quantity += Incoming.Quantity;
 		else
 			StoredItems.Add(Incoming);
-		RecordEvent(ESSJournalEvent::Deposit, FText::Format(NSLOCTEXT("SSJournal", "Deposit", "보관함에 {0} ×{1}을 옮겼다."), Incoming.Item->DisplayName, Incoming.Quantity));
+		if (bRecordJournal) RecordEvent(ESSJournalEvent::Deposit, FText::Format(NSLOCTEXT("SSJournal", "Deposit", "보관함에 {0} ×{1}을 옮겼다."), Incoming.Item->DisplayName, Incoming.Quantity));
 	}
 	if (bChanged) OnStoredItemsChanged.Broadcast();
 }
@@ -218,17 +207,12 @@ void USSRunSubsystem::ResetRun()
 	GetAra()->ResetRun();
 	PlayerStats = FSSSurvivorStats{};
 
-	RobotState = ESSRobotState::Idle;
-	ActiveExpedition = nullptr;
-	RemainingExpeditionDays = 0;
-	RepairDaysRemaining = 0;
-	LastExpeditionResult = FSSExpeditionResult{};
+	GetExpedition()->ResetRun();
 	ActionPoints = MaxActionPoints;
 	GetRescue()->ResetRun();
 	GetEnding()->ResetRun();
 	if (IsValid(EventDirector)) EventDirector->ResetRunState(); // 카탈로그는 유지, 1회성·예약만 초기화
 	OnJournalChanged.Broadcast();
-	OnRobotStateChanged.Broadcast();
 	OnStoredItemsChanged.Broadcast();
 	OnActionPointsChanged.Broadcast();
 	OnSurvivorsChanged.Broadcast();
@@ -334,6 +318,12 @@ bool USSRunSubsystem::ReleaseCapturedSurvivor(FName SurvivorId, bool& bOutReplac
 
 	OnSurvivorsChanged.Broadcast();
 	return true;
+}
+
+USSExpeditionState* USSRunSubsystem::GetExpedition()
+{
+	if (!IsValid(Expedition)) Expedition = NewObject<USSExpeditionState>(this);
+	return Expedition;
 }
 
 USSRescueState* USSRunSubsystem::GetRescue()
@@ -491,152 +481,6 @@ bool USSRunSubsystem::ConsumeActionPoints(int32 Cost)
 	ActionPoints -= Cost;
 	OnActionPointsChanged.Broadcast();
 	return true;
-}
-
-ESSExpeditionStartResult USSRunSubsystem::StartExpedition(USSExpeditionDefinition* Expedition)
-{
-	if (PlayerStats.Health <= 0.f)
-		return ESSExpeditionStartResult::PlayerDead;
-
-	if (ActionPoints < ExpeditionActionCost)
-		return ESSExpeditionStartResult::NotEnoughActionPoints;
-
-	if (RobotState == ESSRobotState::Exploring)
-		return ESSExpeditionStartResult::RobotBusy;
-
-	if (RobotState == ESSRobotState::Broken || RobotState == ESSRobotState::Repairing)
-		return ESSExpeditionStartResult::RobotBroken;
-
-	if (!IsValid(Expedition) || Expedition->DurationDays < 1)
-		return ESSExpeditionStartResult::InvalidExpedition;
-
-	// 비용 유효성 + ItemId 검사
-	for (const FSSItemStack& CostStack : Expedition->Cost)
-	{
-		if (!IsValid(CostStack.Item) || CostStack.Item->ItemId.IsNone() || CostStack.Quantity <= 0)
-			return ESSExpeditionStartResult::InvalidExpedition;
-	}
-
-	// 보상 유효성 검사 — 출발 전에 확인해서 비용만 내고 보상 없는 상황 방지
-	for (const FSSItemStackRange& Reward : Expedition->Rewards)
-	{
-		if (!IsValid(Reward.Item) || Reward.Item->ItemId.IsNone() || Reward.MaxQuantity <= 0)
-			return ESSExpeditionStartResult::InvalidExpedition;
-	}
-
-	// ItemId별 필요 총량 합산 후 보유량 검사
-	TMap<FName, int32> RequiredTotals;
-	for (const FSSItemStack& CostStack : Expedition->Cost)
-		RequiredTotals.FindOrAdd(CostStack.Item->ItemId) += CostStack.Quantity;
-
-	for (const auto& Pair : RequiredTotals)
-	{
-		if (GetStoredQuantityById(Pair.Key) < Pair.Value)
-			return ESSExpeditionStartResult::NotEnoughBattery;
-	}
-
-	// 검사 통과 후 비용 차감
-	for (const auto& Pair : RequiredTotals)
-		ConsumeStoredItems(Pair.Key, Pair.Value);
-
-	ConsumeActionPoints(ExpeditionActionCost);
-
-	ActiveExpedition = Expedition;
-	RemainingExpeditionDays = Expedition->DurationDays;
-	RobotState = ESSRobotState::Exploring;
-	RecordEvent(ESSJournalEvent::Expedition, FText::Format(NSLOCTEXT("SSJournal", "Dispatch", "{0}에 로봇을 파견했다. 소요 {1}일."), Expedition->RegionName, Expedition->DurationDays));
-	for (const FSSItemStack& CostStack : Expedition->Cost)
-		RecordEvent(ESSJournalEvent::Expedition, FText::Format(NSLOCTEXT("SSJournal", "DispatchCost", "파견 비용: {0} ×{1}"), CostStack.Item->DisplayName, CostStack.Quantity));
-	OnRobotStateChanged.Broadcast();
-
-	UE_LOG(LogTemp, Log, TEXT("[Expedition] 파견 시작 — %s, %d일 소요"),
-		*Expedition->RegionName.ToString(), Expedition->DurationDays);
-
-	return ESSExpeditionStartResult::Success;
-}
-
-void USSRunSubsystem::TickExpedition()
-{
-	if (RobotState != ESSRobotState::Exploring || !IsValid(ActiveExpedition)) return;
-
-	--RemainingExpeditionDays;
-
-	UE_LOG(LogTemp, Log, TEXT("[Expedition] 남은 일수: %d"), RemainingExpeditionDays);
-
-	if (RemainingExpeditionDays <= 0)
-		FulfillExpedition();
-}
-
-void USSRunSubsystem::FulfillExpedition()
-{
-	if (!IsValid(ActiveExpedition)) return;
-
-	FSSExpeditionResult Result;
-	Result.ReturnDay = CurrentDay;
-	Result.RegionName = ActiveExpedition->RegionName;
-
-	// 성공 확률 판정
-	if (ActiveExpedition->SuccessRate <= 0.f || (ActiveExpedition->SuccessRate < 1.f && FMath::FRand() >= ActiveExpedition->SuccessRate))
-	{
-		UE_LOG(LogTemp, Log, TEXT("[Expedition] 탐사 실패 — 보상 없음"));
-		const float BreakChance = ActiveExpedition->BreakdownChance;
-		ActiveExpedition = nullptr;
-		RemainingExpeditionDays = 0;
-		RobotState = (FMath::FRand() < BreakChance) ? ESSRobotState::Broken : ESSRobotState::Idle;
-		if (RobotState == ESSRobotState::Broken)
-			UE_LOG(LogTemp, Log, TEXT("[Robot] 귀환 후 고장 발생"));
-		LastExpeditionResult = Result;
-		RecordExpeditionReturn(Result, false);
-		OnRobotReturned.Broadcast(Result);
-		OnRobotStateChanged.Broadcast();
-		return;
-	}
-
-	for (const FSSItemStackRange& Reward : ActiveExpedition->Rewards)
-	{
-		if (!IsValid(Reward.Item)) continue;
-
-		const int32 Qty = FMath::RandRange(Reward.MinQuantity, Reward.MaxQuantity);
-		if (Qty <= 0) continue;
-
-		FSSItemStack* Existing = StoredItems.FindByPredicate([&Reward](const FSSItemStack& S)
-		{
-			return S.Item == Reward.Item;
-		});
-
-		if (Existing)
-			Existing->Quantity += Qty;
-		else
-		{
-			FSSItemStack NewStack;
-			NewStack.Item = Reward.Item;
-			NewStack.Quantity = Qty;
-			StoredItems.Add(NewStack);
-		}
-
-		FSSItemStack ResultStack;
-		ResultStack.Item = Reward.Item;
-		ResultStack.Quantity = Qty;
-		Result.ReceivedItems.Add(ResultStack);
-
-		UE_LOG(LogTemp, Log, TEXT("[Expedition] 보상 지급 — %s x%d"),
-			*Reward.Item->ItemId.ToString(), Qty);
-	}
-
-	const float BreakChance = ActiveExpedition->BreakdownChance;
-	LastExpeditionResult = Result;
-	ActiveExpedition = nullptr;
-	RemainingExpeditionDays = 0;
-	RobotState = (FMath::FRand() < BreakChance) ? ESSRobotState::Broken : ESSRobotState::Idle;
-
-	UE_LOG(LogTemp, Log, TEXT("[Expedition] 귀환 완료 — Day %d"), CurrentDay);
-	if (RobotState == ESSRobotState::Broken)
-		UE_LOG(LogTemp, Log, TEXT("[Robot] 귀환 후 고장 발생"));
-
-	OnRobotReturned.Broadcast(LastExpeditionResult);
-	RecordExpeditionReturn(LastExpeditionResult, true);
-	OnRobotStateChanged.Broadcast();
-	OnStoredItemsChanged.Broadcast();
 }
 
 void USSRunSubsystem::GetRequiredRations(bool bGiveFood, bool bGiveWater, int32& OutFood, int32& OutWater) const
@@ -812,8 +656,7 @@ bool USSRunSubsystem::AdvanceDayCore(bool bGiveFood, bool bGiveWater)
 	ActionPoints = MaxActionPoints;
 	OnActionPointsChanged.Broadcast();
 
-	TickExpedition();
-	TickRepair();
+	GetExpedition()->TickDay();
 
 	// 하룻밤 지나면 적의 기억이 흐려짐 (외부 통신)
 	GetComms()->OnNewDay();
@@ -821,46 +664,6 @@ bool USSRunSubsystem::AdvanceDayCore(bool bGiveFood, bool bGiveWater)
 	BuildAraBriefing(); // 로봇 귀환까지 반영된 아침 상태로 보고를 고정
 
 	return true;
-}
-
-bool USSRunSubsystem::RepairRobot()
-{
-	if (RobotState != ESSRobotState::Broken) return false;
-
-	if (ActionPoints < RepairActionCost)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[Robot] 행동력 부족 — 수리 불가"));
-		return false;
-	}
-
-	if (!ConsumeItem(SSItemIds::RepairKit))
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[Robot] 수리키트 부족 — 수리 불가"));
-		return false;
-	}
-
-	ConsumeActionPoints(RepairActionCost);
-
-	RobotState = ESSRobotState::Repairing;
-	RepairDaysRemaining = 1;
-	RecordEvent(ESSJournalEvent::Robot, NSLOCTEXT("SSJournal", "RepairStart", "수리키트 1개를 소모해 로봇 수리를 시작했다. 소요 1일."));
-	OnRobotStateChanged.Broadcast();
-	UE_LOG(LogTemp, Log, TEXT("[Robot] 수리 시작 — 1일 후 복구"));
-	return true;
-}
-
-void USSRunSubsystem::TickRepair()
-{
-	if (RobotState != ESSRobotState::Repairing) return;
-
-	--RepairDaysRemaining;
-	if (RepairDaysRemaining <= 0)
-	{
-		RobotState = ESSRobotState::Idle;
-		RecordEvent(ESSJournalEvent::Robot, NSLOCTEXT("SSJournal", "RepairDone", "탐사로봇 수리가 완료되었다."));
-		OnRobotStateChanged.Broadcast();
-		UE_LOG(LogTemp, Log, TEXT("[Robot] 수리 완료 — 대기 상태 복귀"));
-	}
 }
 
 int32 USSRunSubsystem::GetStoredQuantityById(FName ItemId) const
