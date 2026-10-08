@@ -2,6 +2,7 @@
 #include "Engine/DataTable.h"
 #include "Event/SSEventCatalog.h"
 #include "Item/SSRunSubsystem.h"
+#include "Ending/SSEndingState.h"
 #include "Item/SSItemDefinition.h"
 #include "Character/SSSurvivorDefinition.h"
 #include "Ara/SSAraDirector.h"
@@ -75,7 +76,7 @@ bool USSEventDirector::CheckCondition(ESSEventCondition Condition, FName Target,
 		return Ara && Ara->CanSwapTarget();
 	}
 	case ESSEventCondition::HiddenTruthCount:
-		return Run.CountHiddenTruths() >= FMath::Max(1, Amount);
+		return Run.FindEnding() && Run.FindEnding()->CountHiddenTruths() >= FMath::Max(1, Amount);
 	}
 	return false;
 }
@@ -109,7 +110,7 @@ FName USSEventDirector::PickEventForToday(const USSRunSubsystem& Run)
 
 	// 0. 마지막 밤: 서버실 사건은 확률·예약과 상관없이 한 번
 	const FName FinalEvent = GetFinalEventId();
-	if (Day >= USSRunSubsystem::FinalDay && !FiredOnce.Contains(FinalEvent) && FindEvent(FinalEvent) && HasAvailableChoice(FinalEvent, Run))
+	if (Day >= USSEndingState::FinalDay && !FiredOnce.Contains(FinalEvent) && FindEvent(FinalEvent) && HasAvailableChoice(FinalEvent, Run))
 	{
 		FiredOnce.Add(FinalEvent);
 		LastFiredDay.Add(FinalEvent, Day);
@@ -349,7 +350,7 @@ void USSEventDirector::ApplyEffect(const FSSEventEffectRow& Effect, USSRunSubsys
 	{
 		// 비밀: 결과(Changes)에 넣지 않음. 밤이 끝나면 HUD가 엔딩 카드를 띄움
 		const int64 Value = StaticEnum<ESSEnding>()->GetValueByNameString(Effect.Target.ToString());
-		if (Value != INDEX_NONE) Run.ReachEnding(static_cast<ESSEnding>(Value));
+		if (Value != INDEX_NONE) Run.GetEnding()->ReachEnding(static_cast<ESSEnding>(Value));
 		break;
 	}
 	default:

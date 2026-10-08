@@ -2,6 +2,8 @@
 #include "Companion/SSCompanionState.h"
 #include "Character/SSSurvivorDefinition.h"
 #include "Item/SSRunSubsystem.h"
+#include "Ending/SSEndingState.h"
+#include "Rescue/SSRescueSession.h"
 #include "Blueprint/WidgetTree.h"
 #include "Components/Border.h"
 #include "Components/Button.h"
@@ -216,7 +218,7 @@ void USSCompanionTalkWidget::OnReportClicked()
 	{
 		Say(Testimony);
 		ShowTruthCard();
-		RunSubsystem->AddHiddenTruth(SSRescueIds::TestimonyTruth(), NSLOCTEXT("SSTalk", "TestimonyJournal",
+		RunSubsystem->GetEnding()->AddHiddenTruth(SSRescueIds::TestimonyTruth(), NSLOCTEXT("SSTalk", "TestimonyJournal",
 			"서하린의 증언: 운영진은 스스로 배우는 아라를 두려워해 폐기를 정했다. 방법은 연구소 전체 정화. 안에 있던 사람은 대피 명단에 없었다."));
 		RefreshChoices();
 		return;

@@ -125,11 +125,13 @@ void USSAraDirector::UpdateTarget()
 
 	const FName Before = TargetId;
 
-	// 지금 표적이 살아 있고 위협도가 풀릴 만큼 내려가지 않았으면 유지
-	const bool bKeep = HasTarget() && IsAliveSurvivor(TargetId) && GetThreat(TargetId) >= ReleaseThreat;
+	// 지금 표적이 살아 있고 위협도가 풀릴 만큼 내려가지 않았으면 유지 (진행 보장 표적은 살아 있으면 유지)
+	const bool bAlive = HasTarget() && IsAliveSurvivor(TargetId);
+	const bool bKeep = bAlive && (bForcedTarget || GetThreat(TargetId) >= ReleaseThreat);
 	if (!bKeep)
 	{
 		TargetId = NAME_None;
+		bForcedTarget = false;
 
 		// 기준을 넘은 동료 중 위협도가 가장 높은 사람
 		float BestThreat = TargetThreat;
@@ -144,6 +146,26 @@ void USSAraDirector::UpdateTarget()
 				TargetId = Each.SurvivorId;
 			}
 		}
+	}
+
+	// 진행 보장: 정해진 날까지 기준을 넘은 사람이 없으면, 살아 있는 사람 중 위협도가 가장 높은 동료
+	if (!HasTarget() && GetRun().GetCurrentDay() >= ForceTargetDay)
+	{
+		float BestThreat = -1.f;
+		for (const FSSSurvivorState& Survivor : GetRun().GetRescuedSurvivors())
+		{
+			if (!IsValid(Survivor.Definition)) continue;
+			const FName Id = Survivor.Definition->SurvivorId;
+			if (!IsAliveSurvivor(Id) || IsAndroid(Id)) continue;
+
+			const float Threat = GetThreat(Id);
+			if (Threat > BestThreat)
+			{
+				BestThreat = Threat;
+				TargetId = Id;
+			}
+		}
+		bForcedTarget = HasTarget();
 	}
 
 	// 표적이 바뀌면 제안을 처음부터: 예약된 아라 사건을 지우고, 새 표적이면 이틀 뒤 밤에 제안
@@ -182,6 +204,7 @@ bool USSAraDirector::SwapTarget()
 
 	bSwapDone = true;
 	TargetId = NAME_None;
+	bForcedTarget = false;
 	CancelAraEvents();
 	return true;
 }
@@ -429,4 +452,5 @@ void USSAraDirector::ResetRun()
 	bSwapDone = false;
 	CapturedRealId = NAME_None;
 	RefusalCount = 0;
+	bForcedTarget = false;
 }

@@ -8,6 +8,8 @@
 #include "Engine/Engine.h"
 #include "Ara/SSAraDirector.h"
 #include "Item/SSRunSubsystem.h"
+#include "Ending/SSEndingState.h"
+#include "Rescue/SSRescueState.h"
 #include "Companion/SSCompanionState.h"
 
 namespace SSDebugCommands
@@ -87,7 +89,7 @@ namespace SSDebugCommands
 				return;
 			}
 			Run->DebugSetDay(FCString::Atoi(*Args[0]));
-			Print(FString::Printf(TEXT("[SS.Day] day = %d (final night comes when the day reaches %d)"), Run->GetCurrentDay(), USSRunSubsystem::FinalDay));
+			Print(FString::Printf(TEXT("[SS.Day] day = %d (final night comes when the day reaches %d)"), Run->GetCurrentDay(), USSEndingState::FinalDay));
 		}));
 
 	// SS.Rescue.Setup [동료ID] : 동료를 B2에 붙잡고 덕트 단서를 들은 것으로 (패널 버튼 확인용)

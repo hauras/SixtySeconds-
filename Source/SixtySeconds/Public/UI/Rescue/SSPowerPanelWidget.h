@@ -92,7 +92,7 @@ public:
 	// 비트 모양 → 그림 종류와 시계 방향 90° 회전 수 (0~3). 모양이 없으면 false
 	static bool ResolveTileShape(uint8 Mask, ESSPowerTileShape& OutShape, int32& OutQuarterTurns);
 
-	// 확정된 결과를 카드로 보여줌 (HUD가 FinishRescue 뒤에 부름). 배선판·중단 버튼은 잠김
+	// 확정된 결과를 카드로 보여줌 (HUD가 결과를 확정한 뒤에 부름). 배선판·중단 버튼은 잠김
 	void ShowResult(const FSSRescueReport& Report);
 
 	// 퍼즐 끝 + 연출 끝

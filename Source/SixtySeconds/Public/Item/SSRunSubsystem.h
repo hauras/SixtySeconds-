@@ -5,13 +5,13 @@
 #include "Item/SSInventoryTypes.h"
 #include "Item/SSJournalTypes.h"
 #include "Character/SSSurvivorTypes.h"
-#include "Rescue/SSRescueSession.h"
-#include "Ending/SSEndingTypes.h"
 #include "SSRunSubsystem.generated.h"
 
 class USSCommsState;
 class USSCompanionState;
 class USSAraDirector;
+class USSRescueState;
+class USSEndingState;
 
 class USSExpeditionDefinition;
 class USSEventDirector;
@@ -200,50 +200,18 @@ public:
 	// bOutReplacedAndroid: 안드로이드를 밀어냈는지 (결과 카드 문장용)
 	bool ReleaseCapturedSurvivor(FName SurvivorId, bool& bOutReplacedAndroid);
 
-	// ── B2 정비 패널 (구출 퍼즐) ──
+	// B2 정비 패널 구출 (패널 작업·결과 반영). 처음 부를 때 생성
+	USSRescueState* GetRescue();
 
-	// 패널을 열 수 있는 최소 행동력 (패널 작업은 남은 행동력을 전부 씀)
-	static constexpr int32 RescueMinActionPoints = 2;
+	// 숨은 진실과 엔딩. 처음 부를 때 생성
+	USSEndingState* GetEnding();
 
-	// 패널을 못 여는 이유 (None이면 열 수 있음)
-	ESSRescueBlock GetRescueBlock() const;
-
-	// 패널 작업 시작: 남은 행동력을 전부 쓰고 세션을 만듦. 못 하면 nullptr
-	// 회전 수 = 행동력 × 8 (태오가 은신처에 있으면) / × 4 (없으면). 태오가 안드로이드면 시작부터 경보 1회
-	// Seed 0이면 무작위 퍼즐
-	USSRescueSession* StartRescue(FName TargetId, int32 Seed = 0);
-
-	// 진행 중인 패널 작업 (없으면 nullptr)
-	USSRescueSession* GetActiveRescue() const { return ActiveRescue; }
-
-	// 끝난 패널 작업을 반영: 성공이면 동료 귀환, 경보만큼 도운 동료 의심 상승, 기록. 반영했으면 true
-	// 한 번만 반영됨 (반영 후 진행 중 작업을 비우므로 다시 부르면 false)
-	bool FinishRescue(FSSRescueReport& OutReport);
-
-	// 패널을 한 번이라도 열었나 (패널 기록 = 숨은 진실 단서 1)
-	bool HasSeenPanelLog() const { return HasHiddenTruth(SSRescueIds::PanelLogTruth()); }
-
-	// ── 숨은 진실 (운영진의 폐기 결정과 정화 프로토콜. 반전 엔딩 조건) ──
-
-	// 알게 된 숨은 진실 추가. 처음 알았으면 true (기록창에 남김)
-	bool AddHiddenTruth(FName TruthId, const FText& JournalLine);
-
-	bool HasHiddenTruth(FName TruthId) const { return HiddenTruths.Contains(TruthId); }
-	int32 CountHiddenTruths() const { return HiddenTruths.Num(); }
-
-	// ── 엔딩 (마지막 밤 서버실) ──
-
-	// 이 날 밤에 서버실 사건이 확률과 상관없이 옴
-	static constexpr int32 FinalDay = 12;
-
-	// 서버실 선택의 결과를 엔딩으로 확정 (한 번만). 하린을 데려가 종료하려 했는데 하린이 안드로이드면 지배로 바뀜
-	void ReachEnding(ESSEnding Requested);
-
-	bool HasEnded() const { return EndingReport.Ending != ESSEnding::None; }
+	// 읽기만 할 때 (아직 없으면 nullptr. 사건 조건처럼 const에서 씀)
+	const USSEndingState* FindEnding() const { return Ending; }
+	const USSCompanionState* FindCompanions() const { return Companions; }
 
 	// 날짜를 바로 바꿈 (디버그 명령 SS.Day용. 다음 "하루 보내기"부터 그 날짜 기준)
 	void DebugSetDay(int32 Day) { CurrentDay = FMath::Max(1, Day); }
-	const FSSEndingReport& GetEndingReport() const { return EndingReport; }
 
 	// 아라 판단을 읽기만 할 때 (아직 없으면 nullptr. 사건 조건처럼 const에서 씀)
 	const USSAraDirector* FindAra() const { return Ara; }
@@ -378,33 +346,11 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<USSAraDirector> Ara;
 
-	// 진행 중인 B2 패널 작업
+	// B2 구출 상태
 	UPROPERTY(Transient)
-	TObjectPtr<USSRescueSession> ActiveRescue;
+	TObjectPtr<USSRescueState> Rescue;
 
-	// 패널 작업을 도운 동료 (태오, 혼자면 None). 경보 의심을 받을 사람
+	// 숨은 진실과 엔딩
 	UPROPERTY(Transient)
-	FName RescueHelperId = NAME_None;
-
-	// 마지막으로 패널을 연 날 (하루 한 번)
-	UPROPERTY(Transient)
-	int32 LastRescueDay = 0;
-
-	// 이번 패널 작업에 쓴 행동력 (결과 카드용)
-	UPROPERTY(Transient)
-	int32 RescueActionPoints = 0;
-
-	// 알게 된 숨은 진실 (알게 된 순서)
-	UPROPERTY(Transient)
-	TArray<FName> HiddenTruths;
-
-	// 엔딩 기록용: 구출 성공 수, 패널 경보 합계
-	UPROPERTY(Transient)
-	int32 RescueSuccessCount = 0;
-
-	UPROPERTY(Transient)
-	int32 RescueAlarmTotal = 0;
-
-	// 정해진 엔딩 (None이면 진행 중)
-	FSSEndingReport EndingReport;
+	TObjectPtr<USSEndingState> Ending;
 };

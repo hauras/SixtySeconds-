@@ -103,6 +103,10 @@ protected:
 	UPROPERTY(meta=(BindWidgetOptional))
 	TObjectPtr<UTextBlock> ActionPointsText;
 
+	// "마지막 밤까지 N일" (없으면 날짜 글자 뒤에 붙임)
+	UPROPERTY(meta=(BindWidgetOptional))
+	TObjectPtr<UTextBlock> DaysLeftText;
+
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UButton> ComputerButton;
 

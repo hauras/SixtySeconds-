@@ -208,6 +208,10 @@ public:
 	static constexpr float TargetThreat = 0.7f;
 	static constexpr float ReleaseThreat = 0.4f;
 
+	// 진행 보장: 이 날 밤(날짜가 넘어가는 밤)까지 의심이 안 쌓였어도 아라가 위협도 가장 높은 사람을 표적으로 정함
+	// (제안 2일 → 재제안 3일 → 강제 교체 1일이라, 마지막 밤 전에 바꿔치기가 끝날 수 있게)
+	static constexpr int32 ForceTargetDay = 5;
+
 private:
 	USSRunSubsystem& GetRun() const;
 
@@ -244,6 +248,10 @@ private:
 	// 붙잡힌 진짜 동료
 	UPROPERTY(Transient)
 	FName CapturedRealId = NAME_None;
+
+	// 진행 보장으로 정한 표적인지 (위협도가 낮아도 풀지 않음)
+	UPROPERTY(Transient)
+	bool bForcedTarget = false;
 
 	// 지금 표적에게 받은 거절 횟수
 	UPROPERTY(Transient)

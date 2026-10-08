@@ -13,6 +13,8 @@
 #include "Components/Image.h"
 #include "Components/Button.h"
 #include "Item/SSRunSubsystem.h"
+#include "Rescue/SSRescueState.h"
+#include "Ending/SSEndingState.h"
 #include "Item/SSItemDefinition.h"
 #include "Engine/GameInstance.h"
 #include "GameMode/SSGameMode.h"
@@ -313,11 +315,17 @@ void USSShelterHUD::RefreshStats(
 
 void USSShelterHUD::RefreshDisplay()
 {
+    // 마지막 밤까지 남은 날 (서버실 사건은 FinalDay가 되는 밤에 옴)
+    const int32 NightsLeft = USSEndingState::FinalDay - CurrentDay;
+    const FText DaysLeft = NightsLeft <= 1
+        ? NSLOCTEXT("SS", "FinalNightTonight", "오늘 밤이 마지막 밤")
+        : FText::Format(NSLOCTEXT("SS", "DaysLeft", "마지막 밤까지 {0}일"), NightsLeft);
+    if (DaysLeftText) DaysLeftText->SetText(DaysLeft);
+
     if (DayText)
     {
-        DayText->SetText(FText::Format(
-            NSLOCTEXT("SS", "ShelterDay", "Day {0}"),
-            CurrentDay));
+        const FText Day = FText::Format(NSLOCTEXT("SS", "ShelterDay", "Day {0}"), CurrentDay);
+        DayText->SetText(DaysLeftText ? Day : FText::Format(NSLOCTEXT("SS", "ShelterDayWithLeft", "{0} · {1}"), Day, DaysLeft));
     }
 
     if (HealthText)
@@ -774,7 +782,7 @@ void USSShelterHUD::RefreshRescueButton()
     if (!RescueButton || !IsValid(RunSubsystem)) return;
 
     // 붙잡힌 사람이 없거나 B2 덕트를 모르면 버튼 자체를 숨김 (아직 모르는 곳)
-    const ESSRescueBlock Block = RunSubsystem->GetRescueBlock();
+    const ESSRescueBlock Block = RunSubsystem->GetRescue()->GetBlock();
     const bool bHidden = Block == ESSRescueBlock::NobodyCaptured || Block == ESSRescueBlock::NoRoute;
     RescueButton->SetVisibility(bHidden ? ESlateVisibility::Collapsed : ESlateVisibility::Visible);
     RescueButton->SetIsEnabled(Block == ESSRescueBlock::None && bDayControlsEnabled && !bNight);
@@ -789,7 +797,7 @@ void USSShelterHUD::RefreshRescueButton()
         Tooltip = NSLOCTEXT("SS", "RescueToday", "오늘은 이미 패널을 열었다.");
         break;
     case ESSRescueBlock::NotEnoughActionPoints:
-        Tooltip = FText::Format(NSLOCTEXT("SS", "RescueAP", "행동력이 {0} 이상 있어야 한다."), USSRunSubsystem::RescueMinActionPoints);
+        Tooltip = FText::Format(NSLOCTEXT("SS", "RescueAP", "행동력이 {0} 이상 있어야 한다."), USSRescueState::MinActionPoints);
         break;
     default:
         break;
@@ -816,7 +824,7 @@ void USSShelterHUD::OnRescueClicked()
     USSPowerPanelWidget* Panel = CreateWidget<USSPowerPanelWidget>(GetOwningPlayer(), PowerPanelWidgetClass);
     if (!IsValid(Panel)) return;
 
-    USSRescueSession* Session = RunSubsystem->StartRescue(Target->SurvivorId);
+    USSRescueSession* Session = RunSubsystem->GetRescue()->Start(Target->SurvivorId);
     if (!Session)
     {
         Panel->RemoveFromParent();
@@ -832,9 +840,9 @@ void USSShelterHUD::OnRescueClicked()
 
 void USSShelterHUD::OnPowerPanelFinished()
 {
-    // 결과 확정은 여기서 한 번만 (귀환·의심·기록). FinishRescue는 두 번째 호출부터 false
+    // 결과 확정은 여기서 한 번만 (귀환·의심·기록). Finish는 두 번째 호출부터 false
     FSSRescueReport Report;
-    if (!IsValid(RunSubsystem) || !RunSubsystem->FinishRescue(Report)) return;
+    if (!IsValid(RunSubsystem) || !RunSubsystem->GetRescue()->Finish(Report)) return;
 
     if (IsValid(PowerPanel)) PowerPanel->ShowResult(Report);
     RefreshDisplay();
@@ -843,10 +851,10 @@ void USSShelterHUD::OnPowerPanelFinished()
 void USSShelterHUD::OnPowerPanelClosed()
 {
     // 결과는 OnPowerPanelFinished에서 이미 확정됨. 혹시 확정 전에 닫히면(창이 사라지는 경우 등) 그때 한 번 확정
-    if (IsValid(RunSubsystem) && IsValid(RunSubsystem->GetActiveRescue()) && RunSubsystem->GetActiveRescue()->IsFinished())
+    if (IsValid(RunSubsystem) && IsValid(RunSubsystem->GetRescue()->GetActive()) && RunSubsystem->GetRescue()->GetActive()->IsFinished())
     {
         FSSRescueReport Report;
-        RunSubsystem->FinishRescue(Report);
+        RunSubsystem->GetRescue()->Finish(Report);
     }
 
     if (IsValid(PowerPanel))
@@ -861,7 +869,7 @@ void USSShelterHUD::OnPowerPanelClosed()
 
 bool USSShelterHUD::TryShowEnding()
 {
-    if (!IsValid(RunSubsystem) || !RunSubsystem->HasEnded()) return false;
+    if (!IsValid(RunSubsystem) || !RunSubsystem->GetEnding()->HasEnded()) return false;
     if (IsValid(EndingWidget)) return true;
     if (!EndingWidgetClass)
     {
@@ -871,7 +879,7 @@ bool USSShelterHUD::TryShowEnding()
 
     EndingWidget = CreateWidget<USSEndingWidget>(GetOwningPlayer(), EndingWidgetClass);
     if (!IsValid(EndingWidget)) return false;
-    EndingWidget->ShowEnding(RunSubsystem->GetEndingReport());
+    EndingWidget->ShowEnding(RunSubsystem->GetEnding()->GetReport());
     EndingWidget->AddToViewport(60);   // 사건 창(50)보다 위
     return true;
 }
