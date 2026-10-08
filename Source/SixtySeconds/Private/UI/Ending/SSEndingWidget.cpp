@@ -93,7 +93,7 @@ void USSEndingWidget::ShowEnding(const FSSEndingReport& Report)
 
 void USSEndingWidget::OnRestartClicked()
 {
-	// 새 판: 진행 상태를 지우고 스크램블 맵부터
+	// 메인 화면으로 (시작을 누르면 새 판)
 	if (UGameInstance* GameInstance = GetGameInstance())
 	{
 		if (USSRunSubsystem* Run = GameInstance->GetSubsystem<USSRunSubsystem>()) Run->ResetRun();

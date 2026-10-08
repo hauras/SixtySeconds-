@@ -49,9 +49,9 @@ protected:
 	UPROPERTY(meta=(BindWidgetOptional))
 	TObjectPtr<UButton> RestartButton;
 
-	// 처음부터 할 때 열 맵 (스크램블 맵)
+	// [처음부터]로 돌아갈 맵 (메인 화면)
 	UPROPERTY(EditAnywhere, Category="SS|Ending")
-	FName RestartLevel = TEXT("L_SSResearchLab");
+	FName RestartLevel = TEXT("L_MainMenu");
 
 private:
 	UFUNCTION()
