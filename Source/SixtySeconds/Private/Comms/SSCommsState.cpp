@@ -70,9 +70,7 @@ void USSCommsState::EnqueueMessage(const USSTraceConfig* Config)
 bool USSCommsState::CanStartTrace() const
 {
 	const USSRunSubsystem& Run = GetRun();
-	return Run.GetHealth() > 0.f
-		&& LastTraceDay < Run.GetCurrentDay()
-		&& Run.GetActionPoints() >= TraceActionCost;
+	return Run.GetHealth() > 0.f && LastTraceDay < Run.GetCurrentDay() && Run.GetActionPoints() >= TraceActionCost;
 }
 
 bool USSCommsState::BeginTrace()
@@ -90,7 +88,7 @@ TArray<int32> USSCommsState::GetBlockedTraceRelays() const
 	TArray<int32> Blocked;
 	for (const TPair<int32, int32>& Pair : TraceRelayBlockedUntil)
 	{
-		if (Pair.Value > Today) Blocked.Add(Pair.Key);   // 풀리는 날이 아직 안 옴
+		if (Pair.Value > Today) Blocked.Add(Pair.Key); // 풀리는 날이 아직 안 옴
 	}
 	return Blocked;
 }
@@ -128,8 +126,7 @@ void USSCommsState::FinishTrace(const USSTraceSession& Session)
 		// 도중에 멈춤 → 받은 만큼은 내일 이어서
 		TraceSpots = Session.GetSpots();
 		TraceReceived = Session.GetReceived();
-		Run.AddJournal(ESSJournalEvent::Signal, FText::Format(
-			NSLOCTEXT("SSTrace", "Stopped", "외부 통신: 신호를 {0}번 주고받고 접속을 끊었다."), Session.GetTurn()));
+		Run.AddJournal(ESSJournalEvent::Signal, FText::Format(NSLOCTEXT("SSTrace", "Stopped", "외부 통신: 신호를 {0}번 주고받고 접속을 끊었다."), Session.GetTurn()));
 		break;
 	}
 }
@@ -142,7 +139,7 @@ bool USSCommsState::DecodeMessage(int32 PendingIndex)
 	USSRunSubsystem& Run = GetRun();
 	LastMessage = FSSEventResult();
 
-	// 대기함에서 꺼냄 
+	// 대기함에서 꺼냄
 	const FSSPendingMessage Pending = PendingMessages[PendingIndex];
 	const FSSTraceMessageRow& Row = Pending.Row;
 
@@ -153,7 +150,7 @@ bool USSCommsState::DecodeMessage(int32 PendingIndex)
 	LastMessage.Title = Row.Title;
 	LastMessage.Lines.Add(Row.Text);
 
-	// 효과는 사건 효과를 그대로 적용 
+	// 효과는 사건 효과를 그대로 적용
 	USSEventDirector* Director = Run.GetEventDirector();
 	if (Row.EffectType != ESSEventEffect::None)
 	{
@@ -200,9 +197,7 @@ void USSCommsState::DiscardMessage(int32 PendingIndex)
 	if (!PendingMessages.IsValidIndex(PendingIndex)) return;
 
 	// 기록 먼저 (지우고 나면 제목을 못 읽음)
-	GetRun().AddJournal(ESSJournalEvent::Signal, FText::Format(
-		NSLOCTEXT("SSTrace", "MessageLost", "외부 통신: 해독 중 신호가 끊겨 메시지({0})가 사라졌다."),
-		PendingMessages[PendingIndex].Row.Title));
+	GetRun().AddJournal(ESSJournalEvent::Signal, FText::Format(NSLOCTEXT("SSTrace", "MessageLost", "외부 통신: 해독 중 신호가 끊겨 메시지({0})가 사라졌다."), PendingMessages[PendingIndex].Row.Title));
 
 	PendingMessages.RemoveAt(PendingIndex);
 }
@@ -224,9 +219,7 @@ void USSCommsState::OnNewDay()
 		if (Pending.ExpireDay == 0 || Today <= Pending.ExpireDay) continue;
 
 		// 기록 먼저 (지우고 나면 Pending이 가리키던 칸이 사라짐)
-		GetRun().AddJournal(ESSJournalEvent::Signal, FText::Format(
-			NSLOCTEXT("SSTrace", "MessageExpired", "외부 통신: 해독하지 못한 메시지({0})가 쓸모없어졌다."),
-			Pending.Row.Title));
+		GetRun().AddJournal(ESSJournalEvent::Signal, FText::Format(NSLOCTEXT("SSTrace", "MessageExpired", "외부 통신: 해독하지 못한 메시지({0})가 쓸모없어졌다."), Pending.Row.Title));
 
 		PendingMessages.RemoveAt(i);
 	}

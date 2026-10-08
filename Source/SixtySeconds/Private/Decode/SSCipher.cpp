@@ -6,7 +6,7 @@ namespace
 	const float EnglishFreq[26] = {
 		0.082f, 0.015f, 0.028f, 0.043f, 0.127f, 0.022f, 0.020f, 0.061f, 0.070f,
 		0.0015f, 0.0077f, 0.040f, 0.024f, 0.067f, 0.075f, 0.019f, 0.00095f,
-		0.060f, 0.063f, 0.091f, 0.028f, 0.0098f, 0.024f, 0.0015f, 0.020f, 0.00074f };
+		0.060f, 0.063f, 0.091f, 0.028f, 0.0098f, 0.024f, 0.0015f, 0.020f, 0.00074f};
 
 	// 영어에서 흔한 글자 순서 (첫 추측용)
 	const TCHAR* const CommonLetters = TEXT("ETAOINSRHLDCUMFPGWYBVKXJQZ");
@@ -282,7 +282,10 @@ TArray<int32> FSSCipher::FrequencyGuess(const FString& Cipher)
 	// 많이 나온 순서로 정렬 (같으면 알파벳 순)
 	TArray<int32> Order;
 	for (int32 i = 0; i < 26; ++i) Order.Add(i);
-	Order.StableSort([&Counts](int32 A, int32 B) { return Counts[A] > Counts[B]; });
+	Order.StableSort([&Counts](int32 A, int32 B)
+	{
+		return Counts[A] > Counts[B];
+	});
 
 	// 1등 암호 글자 → E, 2등 → T … (26개 모두 짝지어서 빠짐없는 추측표)
 	TArray<int32> Guess;

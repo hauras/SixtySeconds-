@@ -121,8 +121,7 @@ bool FSSInvestigationPickTest::RunTest(const FString& Parameters)
 	USSSurvivorDefinition* TimidFan = MakeSurvivor(Outer, TEXT("TimidFan"), 0.5f, 0.f);
 	TimidFan->SpotPreference.Add(ESSInvestigationSpot::TerminalLog, 1.f);
 	TestTrue(TEXT("Boldness keeps the risky spot heavy"),
-		FSSInvestigation::GetSpotWeight(*Bold, ESSInvestigationSpot::TerminalLog)
-		> FSSInvestigation::GetSpotWeight(*TimidFan, ESSInvestigationSpot::TerminalLog));
+		FSSInvestigation::GetSpotWeight(*Bold, ESSInvestigationSpot::TerminalLog) > FSSInvestigation::GetSpotWeight(*TimidFan, ESSInvestigationSpot::TerminalLog));
 
 	// ── 추첨 (1000밤) ──
 	//   Fan 무게: 환풍구 약 4.26 / 나머지 0.28~0.48 → 환풍구 약 73%, 나머지 각 5~8%
@@ -270,11 +269,11 @@ bool FSSCluePickTest::RunTest(const FString& Parameters)
 	const ESSInvestigationSpot Terminal = ESSInvestigationSpot::TerminalLog;
 
 	TestEqual(TEXT("First stage first"), Next(Terminal, {}), FName(TEXT("T1")));
-	TestEqual(TEXT("Then the next stage"), Next(Terminal, { TEXT("T1") }), FName(TEXT("T2")));
-	TestEqual(TEXT("Lowest unknown stage"), Next(Terminal, { TEXT("T2") }), FName(TEXT("T1")));
-	TestEqual(TEXT("Last stage"), Next(Terminal, { TEXT("T1"), TEXT("T2") }), FName(TEXT("T3")));
-	TestTrue(TEXT("Nothing left"), Next(Terminal, { TEXT("T1"), TEXT("T2"), TEXT("T3") }).IsNone());
-	TestEqual(TEXT("Other spots ignore terminal clues"), Next(ESSInvestigationSpot::Vent, { TEXT("T1") }), FName(TEXT("V1")));
+	TestEqual(TEXT("Then the next stage"), Next(Terminal, {TEXT("T1")}), FName(TEXT("T2")));
+	TestEqual(TEXT("Lowest unknown stage"), Next(Terminal, {TEXT("T2")}), FName(TEXT("T1")));
+	TestEqual(TEXT("Last stage"), Next(Terminal, {TEXT("T1"), TEXT("T2")}), FName(TEXT("T3")));
+	TestTrue(TEXT("Nothing left"), Next(Terminal, {TEXT("T1"), TEXT("T2"), TEXT("T3")}).IsNone());
+	TestEqual(TEXT("Other spots ignore terminal clues"), Next(ESSInvestigationSpot::Vent, {TEXT("T1")}), FName(TEXT("V1")));
 	TestTrue(TEXT("Spot without clues"), Next(ESSInvestigationSpot::Door, {}).IsNone());
 
 	TestEqual(TEXT("Terminal clue count"), FSSInvestigation::CountClues(*Table, Terminal), 3);
@@ -284,7 +283,7 @@ bool FSSCluePickTest::RunTest(const FString& Parameters)
 	//   환풍구 무게 4.26 → 0.64: 약 73% → 약 29%
 	USSSurvivorDefinition* Fan = MakeSurvivor(GetTransientPackage(), TEXT("Fan"), 0.5f, 0.5f);
 	Fan->SpotPreference.Add(ESSInvestigationSpot::Vent, 5.f);
-	const TSet<ESSInvestigationSpot> Exhausted = { ESSInvestigationSpot::Vent };
+	const TSet<ESSInvestigationSpot> Exhausted = {ESSInvestigationSpot::Vent};
 	FRandomStream Random(11);
 	int32 VentNormal = 0;
 	int32 VentExhausted = 0;
@@ -326,7 +325,7 @@ bool FSSClueProgressionTest::RunTest(const FString& Parameters)
 	}
 	Companions->SetTables(Clues, nullptr);
 
-	const TArray<FName> Ids = { TEXT("First"), TEXT("Second") };
+	const TArray<FName> Ids = {TEXT("First"), TEXT("Second")};
 
 	// 들은 단서 + 기다리는 단서를 모두 모아서 규칙 확인. 아는 단서 개수를 돌려줌
 	const auto CheckClues = [this, Companions, &Ids](const TCHAR* When)
@@ -383,7 +382,9 @@ bool FSSClueProgressionTest::RunTest(const FString& Parameters)
 	{
 		for (const FName& Id : Ids)
 		{
-			while (Companions->HearInvestigationReport(Id, Report)) {}
+			while (Companions->HearInvestigationReport(Id, Report))
+			{
+			}
 		}
 		Companions->RunNight();
 	}

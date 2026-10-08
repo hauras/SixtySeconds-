@@ -26,6 +26,7 @@ public:
 	const FSSEventResult& GetResult() const { return Result; }
 	UPROPERTY(BlueprintAssignable, Category="SS|Event")
 	FSSOnEventFinished OnEventFinished;
+
 protected:
 	virtual TSharedRef<SWidget> RebuildWidget() override;
 	virtual void NativeConstruct() override;
@@ -69,7 +70,7 @@ private:
 	UPROPERTY(Transient) TObjectPtr<USSRunSubsystem> Run;
 
 	FName EventId = NAME_None;
-	TArray<FName> ChoiceIds;   // 버튼 칸 번호 → 선택지 ID
+	TArray<FName> ChoiceIds; // 버튼 칸 번호 → 선택지 ID
 
 	FSSEventResult Result;
 };

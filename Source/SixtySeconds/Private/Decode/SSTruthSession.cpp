@@ -42,7 +42,10 @@ bool USSTruthSession::Initialize(USSRunSubsystem* InRun, int32 InPendingIndex)
 	{
 		if (LetterCounts[Letter] > 0) CipherLetters.Add(Letter);
 	}
-	CipherLetters.StableSort([this](int32 A, int32 B) { return LetterCounts[A] > LetterCounts[B]; });
+	CipherLetters.StableSort([this](int32 A, int32 B)
+	{
+		return LetterCounts[A] > LetterCounts[B];
+	});
 
 	return TotalLetters > 0;
 }
@@ -162,8 +165,16 @@ float USSTruthSession::GetFitness() const
 	int32 All = 0;
 	for (const TCHAR Ch : Shown)
 	{
-		if (Ch == TEXT('_')) { ++All; continue; }
-		if (FSSCipher::IsLetter(Ch)) { ++Known; ++All; }
+		if (Ch == TEXT('_'))
+		{
+			++All;
+			continue;
+		}
+		if (FSSCipher::IsLetter(Ch))
+		{
+			++Known;
+			++All;
+		}
 	}
 	const float Filled = All > 0 ? float(Known) / All : 0.f;
 

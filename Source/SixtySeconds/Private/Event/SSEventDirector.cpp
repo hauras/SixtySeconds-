@@ -31,7 +31,10 @@ bool USSEventDirector::SetCatalog(USSEventCatalog* InCatalog)
 	}
 	for (TPair<FName, TArray<TPair<int32, FName>>>& Pair : Ordered)
 	{
-		Pair.Value.StableSort([](const TPair<int32, FName>& A, const TPair<int32, FName>& B) { return A.Key < B.Key; });
+		Pair.Value.StableSort([](const TPair<int32, FName>& A, const TPair<int32, FName>& B)
+		{
+			return A.Key < B.Key;
+		});
 		TArray<FName>& Choices = ChoicesByEvent.FindOrAdd(Pair.Key);
 		for (const TPair<int32, FName>& Entry : Pair.Value) Choices.Add(Entry.Value);
 	}
@@ -59,7 +62,10 @@ bool USSEventDirector::CheckCondition(ESSEventCondition Condition, FName Target,
 	case ESSEventCondition::HasItem:
 		return Run.GetStoredQuantityById(Target) >= FMath::Max(1, Amount);
 	case ESSEventCondition::AnySurvivorAlive:
-		return Run.GetRescuedSurvivors().ContainsByPredicate([](const FSSSurvivorState& S) { return S.bAlive; });
+		return Run.GetRescuedSurvivors().ContainsByPredicate([](const FSSSurvivorState& S)
+		{
+			return S.bAlive;
+		});
 	case ESSEventCondition::SurvivorAlive:
 	{
 		const FSSSurvivorState* Survivor = Run.FindRescuedSurvivor(Target);
@@ -98,7 +104,7 @@ bool USSEventDirector::IsEligible(FName EventId, const FSSEventRow& Row, const U
 	if (Row.bOnceOnly && FiredOnce.Contains(EventId)) return false;
 	if (const int32* Last = LastFiredDay.Find(EventId); Last && Row.Cooldown > 0 && Day - *Last <= Row.Cooldown) return false;
 	if (!CheckCondition(Row.Condition, Row.ConditionTarget, Row.ConditionAmount, Run)) return false;
-	return HasAvailableChoice(EventId, Run);   // 고를 수 있는 선택지가 하나도 없는 사건은 띄우지 않음
+	return HasAvailableChoice(EventId, Run); // 고를 수 있는 선택지가 하나도 없는 사건은 띄우지 않음
 }
 
 FName USSEventDirector::PickEventForToday(const USSRunSubsystem& Run)
@@ -146,7 +152,11 @@ FName USSEventDirector::PickEventForToday(const USSRunSubsystem& Run)
 			for (const TPair<FName, int32>& Entry : Pool)
 			{
 				Roll -= Entry.Value;
-				if (Roll <= 0) { Picked = Entry.Key; break; }
+				if (Roll <= 0)
+				{
+					Picked = Entry.Key;
+					break;
+				}
 			}
 		}
 	}
@@ -184,7 +194,7 @@ bool USSEventDirector::ApplyChoice(FName EventId, FName ChoiceId, USSRunSubsyste
 	const TArray<FSSEventChoiceView> Choices = GetChoices(EventId, Run);
 	const FSSEventChoiceView* Chosen = Choices.FindByPredicate([ChoiceId](const FSSEventChoiceView& View)
 	{
-		return View.ChoiceId == ChoiceId;                  
+		return View.ChoiceId == ChoiceId;
 	});
 
 	if (!Chosen || !Chosen->bAvailable) return false;
@@ -212,71 +222,76 @@ bool USSEventDirector::ApplyChoice(FName EventId, FName ChoiceId, USSRunSubsyste
 	{
 		Line = FText::Format(Line, TextArgs);
 	}
-	
+
 	// 저널에 사건 한 줄: "지난 밤 · 제목 — 선택. 결과 문장 (변화)"
 	FText Line = FText::Format(NSLOCTEXT("SSEvent", "JournalHead", "지난 밤 · {0} — {1}."), OutResult.Title, OutResult.ChoiceText);
-	if (OutResult.Lines.Num() > 0)   // 결과 문장이 있으면 이어 붙임
+	if (OutResult.Lines.Num() > 0) // 결과 문장이 있으면 이어 붙임
 		Line = FText::Format(NSLOCTEXT("SSEvent", "JournalLines", "{0} {1}"), Line, FText::Join(FText::FromString(TEXT(" ")), OutResult.Lines));
 	const FText Changes = DescribeChanges(OutResult);
-	if (!Changes.IsEmpty())          // 실제로 바뀐 게 있으면 괄호로
+	if (!Changes.IsEmpty()) // 실제로 바뀐 게 있으면 괄호로
 		Line = FText::Format(NSLOCTEXT("SSEvent", "JournalChanges", "{0} ({1})"), Line, Changes);
 	const FSSEventRow* RecordedEvent = FindEvent(EventId);
 	Run.AddDetailedEventJournal(Line, OutResult.Title, RecordedEvent ? FText::Format(RecordedEvent->Body, TextArgs) : FText::GetEmpty(),
 		OutResult.ChoiceText, FText::Join(FText::FromString(TEXT(" ")), OutResult.Lines), Changes);
-	
+
 	return true;
 }
 
 FText USSEventDirector::DescribeChange(const FSSEventChange& Change) const
 {
-    FText Label;
-    switch (Change.Type)
-    {
-    case ESSEventEffect::Item:
-    {
-        const USSItemDefinition* Item = IsValid(Catalog) ? Catalog->FindItem(Change.Target) : nullptr;
-        // 카탈로그에 이름이 없으면 아이템 식별자를 쓴다.
-        Label = Item ? Item->DisplayName : FText::FromName(Change.Target);
-        break;
-    }
-    case ESSEventEffect::PlayerHealth:
-        Label = NSLOCTEXT("SSEvent", "ChangeHealth", "체력"); break;
-    case ESSEventEffect::PlayerSatiety:
-        Label = NSLOCTEXT("SSEvent", "ChangeSatiety", "포만감"); break;
-    case ESSEventEffect::PlayerHydration:
-        Label = NSLOCTEXT("SSEvent", "ChangeHydration", "수분"); break;
-    case ESSEventEffect::SurvivorsHealth:
-        Label = NSLOCTEXT("SSEvent", "ChangeSurvivors", "동료 체력"); break;
-    case ESSEventEffect::ActionPoints:
-        Label = NSLOCTEXT("SSEvent", "ChangeAP", "행동력"); break;
-    default:
-        return FText::GetEmpty();
-    }
+	FText Label;
+	switch (Change.Type)
+	{
+	case ESSEventEffect::Item:
+	{
+		const USSItemDefinition* Item = IsValid(Catalog) ? Catalog->FindItem(Change.Target) : nullptr;
+		// 카탈로그에 이름이 없으면 아이템 식별자를 쓴다.
+		Label = Item ? Item->DisplayName : FText::FromName(Change.Target);
+		break;
+	}
+	case ESSEventEffect::PlayerHealth:
+		Label = NSLOCTEXT("SSEvent", "ChangeHealth", "체력");
+		break;
+	case ESSEventEffect::PlayerSatiety:
+		Label = NSLOCTEXT("SSEvent", "ChangeSatiety", "포만감");
+		break;
+	case ESSEventEffect::PlayerHydration:
+		Label = NSLOCTEXT("SSEvent", "ChangeHydration", "수분");
+		break;
+	case ESSEventEffect::SurvivorsHealth:
+		Label = NSLOCTEXT("SSEvent", "ChangeSurvivors", "동료 체력");
+		break;
+	case ESSEventEffect::ActionPoints:
+		Label = NSLOCTEXT("SSEvent", "ChangeAP", "행동력");
+		break;
+	default:
+		return FText::GetEmpty();
+	}
 
-    // 수량은 기존 기록과 같이 항상 부호를 붙인다.
-    const FText Amount = FText::FromString(FString::Printf(TEXT("%+d"), Change.Amount));
-    return FText::Format(
-        NSLOCTEXT("SSEvent", "ChangeEntry", "{0} {1}"),
-        Label,
-        Amount);
+	// 수량은 기존 기록과 같이 항상 부호를 붙인다.
+	const FText Amount = FText::FromString(FString::Printf(TEXT("%+d"), Change.Amount));
+	return FText::Format(
+		NSLOCTEXT("SSEvent", "ChangeEntry", "{0} {1}"),
+		Label,
+		Amount);
 }
 
 FText USSEventDirector::DescribeChanges(const FSSEventResult& Result) const
 {
-    TArray<FText> Parts;
-    for (const FSSEventChange& Change : Result.Changes)
-    {
-        const FText Part = DescribeChange(Change);
-        if (!Part.IsEmpty()) Parts.Add(Part);
-    }
-    return FText::Join(NSLOCTEXT("SSEvent", "ChangeSeparator", ", "), Parts);
+	TArray<FText> Parts;
+	for (const FSSEventChange& Change : Result.Changes)
+	{
+		const FText Part = DescribeChange(Change);
+		if (!Part.IsEmpty()) Parts.Add(Part);
+	}
+	return FText::Join(NSLOCTEXT("SSEvent", "ChangeSeparator", ", "), Parts);
 }
 void USSEventDirector::ApplyEffect(const FSSEventEffectRow& Effect, USSRunSubsystem& Run, FSSEventResult& OutResult)
 {
 	// 실제로 바뀐 양이 있을 때만 결과에 한 줄 추가 (0이면 "아무 일 없음"이라 안 남김)
 	const auto AddChange = [&OutResult, &Effect](int32 Amount)
 	{
-		if (Amount != 0) OutResult.Changes.Add({ Effect.Type, Effect.Target, Amount });
+		if (Amount != 0) OutResult.Changes.Add({Effect.Type, Effect.Target, Amount});
 	};
 
 	switch (Effect.Type)
@@ -289,8 +304,8 @@ void USSEventDirector::ApplyEffect(const FSSEventEffectRow& Effect, USSRunSubsys
 				FSSItemStack Stack;
 				Stack.Item = Item;
 				Stack.Quantity = Effect.Amount;
-				Run.DepositItems({ Stack });
-				AddChange(Effect.Amount);                        // 얻은 만큼
+				Run.DepositItems({Stack});
+				AddChange(Effect.Amount); // 얻은 만큼
 			}
 		}
 		else if (Effect.Amount < 0)
@@ -298,14 +313,14 @@ void USSEventDirector::ApplyEffect(const FSSEventEffectRow& Effect, USSRunSubsys
 			// 가진 것보다 많이 잃으라고 하면 가진 만큼만
 			const int32 Lose = FMath::Min(-Effect.Amount, Run.GetStoredQuantityById(Effect.Target));
 			if (Lose > 0 && Run.RemoveStoredItemsById(Effect.Target, Lose))
-				AddChange(-Lose);                               // CSV 값이 아니라 실제로 잃은 양
+				AddChange(-Lose); // CSV 값이 아니라 실제로 잃은 양
 		}
 		break;
 	case ESSEventEffect::PlayerHealth:
 	{
 		const float Before = Run.GetHealth();
 		Run.ModifyPlayerStats(Effect.Amount, 0.f, 0.f);
-		AddChange(FMath::RoundToInt(Run.GetHealth() - Before));   // 0~100에서 잘린 뒤의 실제 변화
+		AddChange(FMath::RoundToInt(Run.GetHealth() - Before)); // 0~100에서 잘린 뒤의 실제 변화
 		break;
 	}
 	case ESSEventEffect::PlayerSatiety:
@@ -324,21 +339,21 @@ void USSEventDirector::ApplyEffect(const FSSEventEffectRow& Effect, USSRunSubsys
 	}
 	case ESSEventEffect::SurvivorsHealth:
 		Run.ModifySurvivorsHealth(Effect.Amount);
-		AddChange(Effect.Amount);                                // 동료마다 다를 수 있어서 적힌 값으로 표시
+		AddChange(Effect.Amount); // 동료마다 다를 수 있어서 적힌 값으로 표시
 		break;
 	case ESSEventEffect::ActionPoints:
 	{
 		const int32 Before = Run.GetActionPoints();
 		Run.AdjustActionPoints(Effect.Amount);
-		AddChange(Run.GetActionPoints() - Before);               // 행동력이 0이었으면 -2라도 실제 변화는 0
+		AddChange(Run.GetActionPoints() - Before); // 행동력이 0이었으면 -2라도 실제 변화는 0
 		break;
 	}
 	case ESSEventEffect::Journal:
-		OutResult.Lines.Add(Effect.Text);                        // 저널에 바로 쓰지 않음. 결과로 모아서 한 번에 기록 (4단계)
+		OutResult.Lines.Add(Effect.Text); // 저널에 바로 쓰지 않음. 결과로 모아서 한 번에 기록 (4단계)
 		break;
 	case ESSEventEffect::ScheduleEvent:
-		Scheduled.Add({ Effect.Target, Run.GetCurrentDay() + FMath::Max(1, Effect.Amount) });
-		break;                                                   // 다음 날 일어날 일은 결과에 안 넣음 (복선)
+		Scheduled.Add({Effect.Target, Run.GetCurrentDay() + FMath::Max(1, Effect.Amount)});
+		break; // 다음 날 일어날 일은 결과에 안 넣음 (복선)
 	case ESSEventEffect::AraSwapTarget:
 		// 비밀: 결과(Changes)에 넣지 않음 → 화면 칩·기록에 안 나옴
 		Run.GetAra()->SwapTarget();
@@ -368,7 +383,7 @@ void USSEventDirector::ApplyStandaloneEffect(const FSSEventEffectRow& Effect, US
 void USSEventDirector::ScheduleEvent(FName InEventId, int32 Day)
 {
 	if (InEventId.IsNone()) return;
-	Scheduled.Add({ InEventId, Day });
+	Scheduled.Add({InEventId, Day});
 }
 
 void USSEventDirector::CancelScheduled(FName InEventId)

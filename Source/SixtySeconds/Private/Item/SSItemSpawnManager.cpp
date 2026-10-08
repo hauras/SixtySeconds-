@@ -70,7 +70,10 @@ TArray<ASSItemSpawnPoint*> ASSItemSpawnManager::GatherPoints(ESSSpawnPointKind K
 	}
 
 	// 이름순으로 정렬해서 같은 시드면 같은 결과
-	Points.Sort([](const ASSItemSpawnPoint& A, const ASSItemSpawnPoint& B) { return A.GetName() < B.GetName(); });
+	Points.Sort([](const ASSItemSpawnPoint& A, const ASSItemSpawnPoint& B)
+	{
+		return A.GetName() < B.GetName();
+	});
 	return Points;
 }
 
@@ -82,10 +85,13 @@ int32 ASSItemSpawnManager::PlaceSurvivors(int32 Seed)
 	// 맵의 동료들 (이름순)
 	TArray<ASSSurvivorPickup*> Survivors;
 	for (TActorIterator<ASSSurvivorPickup> It(World); It; ++It) Survivors.Add(*It);
-	Survivors.Sort([](const ASSSurvivorPickup& A, const ASSSurvivorPickup& B) { return A.GetName() < B.GetName(); });
+	Survivors.Sort([](const ASSSurvivorPickup& A, const ASSSurvivorPickup& B)
+	{
+		return A.GetName() < B.GetName();
+	});
 
 	const TArray<ASSItemSpawnPoint*> Points = GatherPoints(ESSSpawnPointKind::Survivor);
-	if (Survivors.IsEmpty() || Points.IsEmpty()) return 0;   // 동료 자리가 없으면 맵에 놓인 그대로
+	if (Survivors.IsEmpty() || Points.IsEmpty()) return 0; // 동료 자리가 없으면 맵에 놓인 그대로
 
 	TArray<FName> Rooms;
 	for (const ASSItemSpawnPoint* Point : Points) Rooms.Add(Point->RoomId);
@@ -118,7 +124,7 @@ void ASSItemSpawnManager::PlaceOnSurface(ASSPickupActor* Pickup, const FTransfor
 	const FVector End = Start - FVector(0.f, 0.f, SurfaceSearchDistance);
 	FCollisionQueryParams Params(SCENE_QUERY_STAT(SSItemSpawnSurface), false, Pickup);
 	FHitResult Hit;
-	if (!GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Visibility, Params)) return;   // 표면이 없으면 자리 그대로
+	if (!GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Visibility, Params)) return; // 표면이 없으면 자리 그대로
 
 	// 메시의 맨 아래가 표면에 닿도록: 지금 바닥 높이와 표면 높이 차이만큼 내림
 	FBox MeshBox(ForceInit);

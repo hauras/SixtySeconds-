@@ -1,7 +1,6 @@
 #include "Exploration/SSExplorationSession.h"
 #include "Exploration/SSExplorationMapDefinition.h"
 
-
 bool USSExplorationSession::Initialize(USSExplorationMapDefinition* InMap, int32 TurnBudget)
 {
 	// 실패해도 이전 지도의 상태가 남지 않도록 먼저 비운다
@@ -23,7 +22,7 @@ bool USSExplorationSession::Initialize(USSExplorationMapDefinition* InMap, int32
 	Map = InMap;
 	Adjacency = Map->BuildAdjacency();
 	State.CurrentRoom = Map->FindRoomIndex(Map->EntranceRoomId);
-	State.TurnBudget = TurnBudget > 0 ? TurnBudget : Map->MaxTurns;   // 0 이하면 지도 기본값 (테스트·디버그용)
+	State.TurnBudget = TurnBudget > 0 ? TurnBudget : Map->MaxTurns; // 0 이하면 지도 기본값 (테스트·디버그용)
 	State.RemainingTurns = State.TurnBudget;
 	State.PatrolStep = 0;
 	State.GuardRoom = Map->FindRoomIndex(Map->PatrolRoute[State.PatrolStep]);
@@ -35,7 +34,7 @@ bool USSExplorationSession::Initialize(USSExplorationMapDefinition* InMap, int32
 	return true;
 }
 
-// 조회 
+// 조회
 bool USSExplorationSession::CanMoveTo(int32 RoomIndex) const
 {
 	if (!CanAct()) return false;
@@ -75,7 +74,7 @@ int32 USSExplorationSession::GetGuardNextRoom() const
 	return Map->FindRoomIndex(Map->PatrolRoute[NextStep]);
 }
 
-// 플레이어 행동 (한 턴 진행) 
+// 플레이어 행동 (한 턴 진행)
 bool USSExplorationSession::MoveTo(int32 RoomIndex)
 {
 	if (!CanMoveTo(RoomIndex)) return false;
@@ -92,7 +91,7 @@ bool USSExplorationSession::MoveTo(int32 RoomIndex)
 	}
 
 	EndTurn(PlayerBefore, GuardBefore);
-	
+
 	return true;
 }
 
@@ -144,7 +143,7 @@ bool USSExplorationSession::Search()
 		}
 	}
 
-	EndTurn(PlayerBefore, GuardBefore);   // 방송은 여기서 한 번
+	EndTurn(PlayerBefore, GuardBefore); // 방송은 여기서 한 번
 	return true;
 }
 
@@ -153,15 +152,15 @@ bool USSExplorationSession::CanTake(int32 LootIndex) const
 	if (State.Outcome != ESSExplorationOutcome::InProgress) return false;
 	if (!State.SearchedRooms.Contains(State.CurrentRoom)) return false;
 	if (!State.RoomLoot.IsValidIndex(State.CurrentRoom)) return false;
-	if (!State.RoomLoot[State.CurrentRoom].IsValidIndex(LootIndex)) return false;   // 그 방 목록에 이 번호가 있나
-	
-	const FSSItemStack& Stack = State.RoomLoot[State.CurrentRoom][LootIndex];
-	if (!IsValid(Stack.Item) || Stack.Quantity <= 0 ) return false;
+	if (!State.RoomLoot[State.CurrentRoom].IsValidIndex(LootIndex)) return false; // 그 방 목록에 이 번호가 있나
 
-	if (GetCarriedLoad() + Stack.Item->CarryCost > Map->CarryCapacity ) return false;
+	const FSSItemStack& Stack = State.RoomLoot[State.CurrentRoom][LootIndex];
+	if (!IsValid(Stack.Item) || Stack.Quantity <= 0) return false;
+
+	if (GetCarriedLoad() + Stack.Item->CarryCost > Map->CarryCapacity) return false;
 
 	return true;
-}	
+}
 
 bool USSExplorationSession::TakeItem(int32 LootIndex)
 {
@@ -193,7 +192,7 @@ bool USSExplorationSession::TakeItem(int32 LootIndex)
 		State.RoomLoot[State.CurrentRoom].RemoveAt(LootIndex);
 	}
 
-	return true;   // 방송은 부른 쪽(Search)의 EndTurn이 한 번에 함
+	return true; // 방송은 부른 쪽(Search)의 EndTurn이 한 번에 함
 }
 
 bool USSExplorationSession::CanReturn() const
@@ -215,7 +214,7 @@ FSSExplorationResult USSExplorationSession::MakeResult() const
 {
 	FSSExplorationResult Result;
 	Result.Outcome = State.Outcome;
-	Result.Items = State.Carried;   // 실패해도 채움: 결과창이 잃은 물품을 흐리게 보여줌. 입고 여부는 Outcome으로 판단
+	Result.Items = State.Carried; // 실패해도 채움: 결과창이 잃은 물품을 흐리게 보여줌. 입고 여부는 Outcome으로 판단
 	const bool bFailed = State.Outcome == ESSExplorationOutcome::Caught || State.Outcome == ESSExplorationOutcome::TimeOut;
 	Result.Injury = bFailed && IsValid(Map) ? Map->EmergencyInjury : 0.f;
 	Result.TurnsUsed = State.TurnBudget - State.RemainingTurns;
@@ -243,7 +242,7 @@ void USSExplorationSession::EndTurn(int32 PlayerBefore, int32 GuardBefore)
 	OnExplorationChanged.Broadcast();
 }
 
-// 내부 도우미 
+// 내부 도우미
 void USSExplorationSession::AdvanceGuard()
 {
 	if (!IsValid(Map) || Map->PatrolRoute.IsEmpty()) return;

@@ -3,45 +3,60 @@
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
 #include "Rescue/SSPowerGrid.h"
-#include "SSRescueSession.generated.h"   // 반드시 맨 마지막 include
+#include "SSRescueSession.generated.h" // 반드시 맨 마지막 include
 
 // 패널 작업이 어떻게 끝났는지
 UENUM()
 enum class ESSRescueOutcome : uint8
 {
-	InProgress,   // 작업 중
-	Unlocked,     // 잠금 해제 성공
-	OutOfMoves,   // 회전을 다 씀
-	Aborted,      // 작업 중단
+	InProgress, // 작업 중
+	Unlocked,   // 잠금 해제 성공
+	OutOfMoves, // 회전을 다 씀
+	Aborted,    // 작업 중단
 };
 
 // 구출에 쓰는 고정 ID
 namespace SSRescueIds
 {
 	// B2로 내려가는 덕트 단서 (이걸 들어야 패널을 열 수 있음)
-	inline FName RouteClue() { return FName(TEXT("Clue_Vent_2")); }
+	inline FName RouteClue()
+	{
+		return FName(TEXT("Clue_Vent_2"));
+	}
 
 	// 패널을 돕는 정비사 강태오
-	inline FName Technician() { return FName(TEXT("Technician")); }
+	inline FName Technician()
+	{
+		return FName(TEXT("Technician"));
+	}
 
 	// 증언하는 연구원 서하린 (아라 학습 모델 설계자, 폐기 회의 참석자)
-	inline FName Researcher() { return FName(TEXT("TestResearcher")); }
+	inline FName Researcher()
+	{
+		return FName(TEXT("TestResearcher"));
+	}
 
 	// 숨은 진실 단서 (반전 엔딩 조건)
-	inline FName PanelLogTruth() { return FName(TEXT("Truth_PanelLog")); }
-	inline FName TestimonyTruth() { return FName(TEXT("Truth_HarinTestimony")); }
+	inline FName PanelLogTruth()
+	{
+		return FName(TEXT("Truth_PanelLog"));
+	}
+	inline FName TestimonyTruth()
+	{
+		return FName(TEXT("Truth_HarinTestimony"));
+	}
 }
 
 // 패널을 못 여는 이유 (은신처 버튼 툴팁)
 UENUM()
 enum class ESSRescueBlock : uint8
 {
-	None,                    // 열 수 있음
-	NobodyCaptured,          // 붙잡힌 사람이 없음
-	NoRoute,                 // B2로 가는 덕트를 모름 (단서 Clue_Vent_2)
-	NotEnoughActionPoints,   // 행동력 부족
-	AlreadyToday,            // 오늘 이미 염
-	InProgress,              // 작업 중
+	None,                  // 열 수 있음
+	NobodyCaptured,        // 붙잡힌 사람이 없음
+	NoRoute,               // B2로 가는 덕트를 모름 (단서 Clue_Vent_2)
+	NotEnoughActionPoints, // 행동력 부족
+	AlreadyToday,          // 오늘 이미 염
+	InProgress,            // 작업 중
 };
 
 // 끝난 패널 작업 결과 (결과 카드·기록용)

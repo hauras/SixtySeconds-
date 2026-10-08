@@ -51,11 +51,11 @@ private:
 	// 퍼지는 원 하나
 	struct FRing
 	{
-		FVector2D Center = FVector2D::ZeroVector;   // 지도 좌표
-		float Target = 0.f;     // 멈출 반지름 (지도 단위)
-		float Radius = 0.f;     // 지금 반지름
-		float Delay = 0.f;      // 퍼지기 시작할 때까지 남은 시간
-		float Life = 1.f;       // 1 → 0 으로 흐려짐
+		FVector2D Center = FVector2D::ZeroVector; // 지도 좌표
+		float Target = 0.f;                       // 멈출 반지름 (지도 단위)
+		float Radius = 0.f;                       // 지금 반지름
+		float Delay = 0.f;                        // 퍼지기 시작할 때까지 남은 시간
+		float Life = 1.f;                         // 1 → 0 으로 흐려짐
 		FLinearColor Color = FLinearColor::White;
 	};
 
@@ -75,9 +75,9 @@ private:
 
 	// 연출 상태
 	TArray<FRing> Rings;
-	TArray<float> IdlePingTimers;   // 센서마다 다음 "듣는 중" 퍼짐까지 남은 시간
+	TArray<float> IdlePingTimers; // 센서마다 다음 "듣는 중" 퍼짐까지 남은 시간
 	FVector2D FlashPosition = FVector2D::ZeroVector;
-	float FlashAlpha = 0.f;         // 송신 위치 번쩍임
-	float ExposedAlpha = 0.f;       // 들킴 화면 번쩍임
+	float FlashAlpha = 0.f;   // 송신 위치 번쩍임
+	float ExposedAlpha = 0.f; // 들킴 화면 번쩍임
 	float Time = 0.f;
 };

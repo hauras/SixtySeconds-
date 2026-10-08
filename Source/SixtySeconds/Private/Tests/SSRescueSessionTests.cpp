@@ -45,7 +45,10 @@ bool FSSRescueSessionTest::RunTest(const FString& Parameters)
 	// 시작 상태
 	USSRescueSession* Session = NewObject<USSRescueSession>();
 	int32 Broadcasts = 0;
-	Session->OnChanged.AddLambda([&Broadcasts]() { ++Broadcasts; });
+	Session->OnChanged.AddLambda([&Broadcasts]()
+	{
+		++Broadcasts;
+	});
 	Session->Start(TEXT("TestResearcher"), 40, false, 11);
 	TestTrue(TEXT("Target stored"), Session->GetTargetId() == FName(TEXT("TestResearcher")));
 	TestEqual(TEXT("Moves start full"), Session->GetRemainingMoves(), 40);
@@ -97,7 +100,7 @@ bool FSSRescueSessionTest::RunTest(const FString& Parameters)
 		if (Spare % 4 != 0 || Idle == INDEX_NONE) continue;
 
 		for (int32 Turn = 0; Turn < Spare; ++Turn) Exact->Rotate(Idle);
-		if (Exact->IsFinished()) continue;   // 드물게 경로 밖 칸이 다른 길을 만들면 건너뜀
+		if (Exact->IsFinished()) continue; // 드물게 경로 밖 칸이 다른 길을 만들면 건너뜀
 		SolveBySession(Exact);
 		bLastMoveChecked = true;
 		TestTrue(TEXT("Unlock on the last move is a success"), Exact->GetOutcome() == ESSRescueOutcome::Unlocked);

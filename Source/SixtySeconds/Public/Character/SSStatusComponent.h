@@ -8,12 +8,12 @@
 UENUM(BlueprintType)
 enum class ESSStatusType : uint8
 {
-	Poisoned,     // 독: 매 턴 HP 감소
-	Irradiated,   // 방사능 오염: 매 턴 Radiation 증가
-	Starving,     // 굶주림: 매 턴 HP 감소 (Hunger 0일 때)
-	Dehydrated,   // 탈수: 매 턴 HP 감소 (Thirst 0일 때)
-	Insane,       // 정신이상: 매 턴 Sanity 감소
-	Injured       // 부상: HP 회복 불가
+	Poisoned,   // 독: 매 턴 HP 감소
+	Irradiated, // 방사능 오염: 매 턴 Radiation 증가
+	Starving,   // 굶주림: 매 턴 HP 감소 (Hunger 0일 때)
+	Dehydrated, // 탈수: 매 턴 HP 감소 (Thirst 0일 때)
+	Insane,     // 정신이상: 매 턴 Sanity 감소
+	Injured     // 부상: HP 회복 불가
 };
 
 USTRUCT(BlueprintType)

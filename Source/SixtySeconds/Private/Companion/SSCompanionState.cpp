@@ -144,9 +144,7 @@ bool USSCompanionState::CanInspect(FName SurvivorId) const
 {
 	const USSRunSubsystem& Run = GetRun();
 	const FSSSurvivorState* Survivor = Run.FindRescuedSurvivor(SurvivorId);
-	return Survivor && Survivor->bAlive
-		&& Run.GetActionPoints() >= InspectActionCost
-		&& Run.GetStoredQuantityById(SSItemIds::Battery) >= InspectBatteryCost;
+	return Survivor && Survivor->bAlive && Run.GetActionPoints() >= InspectActionCost && Run.GetStoredQuantityById(SSItemIds::Battery) >= InspectBatteryCost;
 }
 
 bool USSCompanionState::InspectCompanion(FName SurvivorId)
@@ -167,10 +165,7 @@ bool USSCompanionState::InspectCompanion(FName SurvivorId)
 	// 기록창에도 남김
 	const FSSSurvivorState* Survivor = Run.FindRescuedSurvivor(SurvivorId);
 	const FText Name = IsValid(Survivor->Definition) ? Survivor->Definition->DisplayName : FText::FromName(SurvivorId);
-	Run.AddJournal(ESSJournalEvent::Investigation, FText::Format(
-		NSLOCTEXT("SSJournal", "Inspection", "{0} 검사 — {1}"),
-		Name,
-		GetInspectionText(Record.bInspectedAndroid)));
+	Run.AddJournal(ESSJournalEvent::Investigation, FText::Format(NSLOCTEXT("SSJournal", "Inspection", "{0} 검사 — {1}"), Name, GetInspectionText(Record.bInspectedAndroid)));
 
 	Run.OnSurvivorsChanged.Broadcast();
 	return true;
@@ -201,17 +196,13 @@ bool USSCompanionState::IsolateCompanion(FName SurvivorId, bool& bOutWasAndroid)
 	{
 		// 안드로이드: 은신처에서 제거 (진짜는 여전히 B2에 있음)
 		Run.RemoveRescuedSurvivor(SurvivorId);
-		Run.AddJournal(ESSJournalEvent::Investigation, FText::Format(
-			NSLOCTEXT("SSJournal", "IsolateAndroid", "{0}의 모습을 한 그것을 문밖으로 내보냈다. 끌려 나가는 동안 한 번도 소리를 내지 않았다."),
-			Name));
+		Run.AddJournal(ESSJournalEvent::Investigation, FText::Format(NSLOCTEXT("SSJournal", "IsolateAndroid", "{0}의 모습을 한 그것을 문밖으로 내보냈다. 끌려 나가는 동안 한 번도 소리를 내지 않았다."), Name));
 	}
 	else
 	{
 		// 사람: 아라가 데려감 (B2). 아라가 바라던 일
 		Run.MoveSurvivorToCaptured(SurvivorId);
-		Run.AddJournal(ESSJournalEvent::Investigation, FText::Format(
-			NSLOCTEXT("SSJournal", "IsolateHuman", "{0}을(를) 문밖으로 내보냈다. 잠시 뒤 단말이 켜졌다. '보호 대상을 인수했습니다. 협조에 감사드립니다.'"),
-			Name));
+		Run.AddJournal(ESSJournalEvent::Investigation, FText::Format(NSLOCTEXT("SSJournal", "IsolateHuman", "{0}을(를) 문밖으로 내보냈다. 잠시 뒤 단말이 켜졌다. '보호 대상을 인수했습니다. 협조에 감사드립니다.'"), Name));
 	}
 
 	// 갱신 알림은 목록을 옮기거나 지울 때 이미 보냄 (여기서 또 보내면 HUD가 두 번 갱신됨)
@@ -331,9 +322,7 @@ bool USSCompanionState::HearInvestigationReport(FName SurvivorId, FSSInvestigati
 			? FText::Format(NSLOCTEXT("SSJournal", "InvestigationClueText", "[{0}] {1}"), Clue->Title, Clue->Text)
 			: NSLOCTEXT("SSJournal", "InvestigationClue", "수상한 흔적을 찾았다.");
 	}
-	Run.AddJournal(ESSJournalEvent::Investigation, FText::Format(
-		NSLOCTEXT("SSJournal", "InvestigationReport", "{0}의 보고 ({1}일째 밤) — {2}: {3}"),
-		Survivor->Definition->DisplayName, OutReport.Day, FSSInvestigation::GetSpotName(OutReport.Spot), Outcome));
+	Run.AddJournal(ESSJournalEvent::Investigation, FText::Format(NSLOCTEXT("SSJournal", "InvestigationReport", "{0}의 보고 ({1}일째 밤) — {2}: {3}"), Survivor->Definition->DisplayName, OutReport.Day, FSSInvestigation::GetSpotName(OutReport.Spot), Outcome));
 
 	Run.OnSurvivorsChanged.Broadcast();
 	return true;

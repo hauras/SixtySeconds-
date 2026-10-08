@@ -12,7 +12,7 @@ void USSTraceSession::Initialize(USSTraceConfig* InConfig, const TArray<FSSSuspe
 	Received = FMath::Max(0, InReceived);
 	Turn = 0;
 	AlertLevel = 0;
-	Random.GenerateNewSeed();   // 판마다 다른 잡음 (테스트는 이 뒤에 SetSeed)
+	Random.GenerateNewSeed(); // 판마다 다른 잡음 (테스트는 이 뒤에 SetSeed)
 
 	// 규칙이 없거나 센서가 3개 미만이면 위치를 잴 수 없어서 판을 열지 않음
 	if (!IsValid(Config) || Config->SensorPositions.Num() < 3)
@@ -135,7 +135,7 @@ void USSTraceSession::AfterSend(int32 SpotCountBefore)
 	for (int32 i = Spots.Num() - 1; i >= 0; --i)
 	{
 		const FSSSuspectSpot& Spot = Spots[i];
-		if (Spot.Radius > Config->ConfirmRadius) continue;   // 아직 확신 못 함
+		if (Spot.Radius > Config->ConfirmRadius) continue; // 아직 확신 못 함
 
 		// 적은 의심 범위(타원) 전체를 수색함. 은신처가 타원 안이면 → 들킴
 		if (FSSSuspectMemory::IsInsideOval(Spot, Config->ShelterPosition))

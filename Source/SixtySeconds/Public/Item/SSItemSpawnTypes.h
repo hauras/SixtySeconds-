@@ -11,8 +11,8 @@ class USSItemDefinition;
 UENUM(BlueprintType)
 enum class ESSSpawnPointKind : uint8
 {
-	Item,       // 아이템이 놓이는 자리 (선반·책상 위)
-	Survivor,   // 동료가 서 있는 자리 (바닥)
+	Item,     // 아이템이 놓이는 자리 (선반·책상 위)
+	Survivor, // 동료가 서 있는 자리 (바닥)
 };
 
 // 무작위로 나올 수 있는 아이템 하나

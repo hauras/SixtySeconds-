@@ -57,5 +57,4 @@ struct SIXTYSECONDS_API FSSPowerGrid
 
 	// 정답 경로 칸을 모두 맞추는 데 드는 회전 수 (경로 밖 칸은 안 맞춰도 풀림)
 	int32 CountTurnsToSolve() const;
-	
 };

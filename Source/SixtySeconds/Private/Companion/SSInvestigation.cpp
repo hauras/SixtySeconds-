@@ -8,12 +8,12 @@ FSSInvestigationSpotData FSSInvestigation::GetSpotData(ESSInvestigationSpot Spot
 	// 임시값: 중요한 단서가 나오는 곳일수록 위험함
 	switch (Spot)
 	{
-	case ESSInvestigationSpot::TerminalLog: return { 0.40f, 0.30f };
-	case ESSInvestigationSpot::Vent:        return { 0.35f, 0.15f };
-	case ESSInvestigationSpot::Door:        return { 0.30f, 0.15f };
-	case ESSInvestigationSpot::PatrolNoise: return { 0.45f, 0.05f };
-	case ESSInvestigationSpot::Storage:     return { 0.50f, 0.03f };
-	default:                                return {};
+	case ESSInvestigationSpot::TerminalLog: return {0.40f, 0.30f};
+	case ESSInvestigationSpot::Vent: return {0.35f, 0.15f};
+	case ESSInvestigationSpot::Door: return {0.30f, 0.15f};
+	case ESSInvestigationSpot::PatrolNoise: return {0.45f, 0.05f};
+	case ESSInvestigationSpot::Storage: return {0.50f, 0.03f};
+	default: return {};
 	}
 }
 
@@ -22,11 +22,11 @@ FText FSSInvestigation::GetSpotName(ESSInvestigationSpot Spot)
 	switch (Spot)
 	{
 	case ESSInvestigationSpot::TerminalLog: return NSLOCTEXT("SSInvestigation", "TerminalLog", "단말 로그");
-	case ESSInvestigationSpot::Vent:        return NSLOCTEXT("SSInvestigation", "Vent", "환풍구");
-	case ESSInvestigationSpot::Door:        return NSLOCTEXT("SSInvestigation", "Door", "출입문");
+	case ESSInvestigationSpot::Vent: return NSLOCTEXT("SSInvestigation", "Vent", "환풍구");
+	case ESSInvestigationSpot::Door: return NSLOCTEXT("SSInvestigation", "Door", "출입문");
 	case ESSInvestigationSpot::PatrolNoise: return NSLOCTEXT("SSInvestigation", "PatrolNoise", "순찰 소리");
-	case ESSInvestigationSpot::Storage:     return NSLOCTEXT("SSInvestigation", "Storage", "저장고");
-	default:                                return FText::GetEmpty();
+	case ESSInvestigationSpot::Storage: return NSLOCTEXT("SSInvestigation", "Storage", "저장고");
+	default: return FText::GetEmpty();
 	}
 }
 

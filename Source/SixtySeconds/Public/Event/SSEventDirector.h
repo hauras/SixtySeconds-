@@ -39,8 +39,8 @@ public:
 	FText DescribeChanges(const FSSEventResult& Result) const;
 	// 실제 변화 하나를 화면과 기록에서 같은 이름으로 보여준다.
 	FText DescribeChange(const FSSEventChange& Change) const;
-	void ResetRunState();            // 새 게임 시작 시
-	void SetSeed(int32 Seed) { Random.Initialize(Seed); }   // 테스트용
+	void ResetRunState();                                 // 새 게임 시작 시
+	void SetSeed(int32 Seed) { Random.Initialize(Seed); } // 테스트용
 
 	static bool CheckCondition(ESSEventCondition Condition, FName Target, int32 Amount, const USSRunSubsystem& Run);
 

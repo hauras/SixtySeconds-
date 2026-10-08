@@ -16,13 +16,13 @@ class SIXTYSECONDS_API USSEventCatalog : public UDataAsset
 public:
 	// 행 구조가 맞는지는 Validate가 확인
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="SS|Event")
-	TObjectPtr<UDataTable> EventTable;    // 행: FSSEventRow
+	TObjectPtr<UDataTable> EventTable; // 행: FSSEventRow
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="SS|Event")
-	TObjectPtr<UDataTable> ChoiceTable;   // 행: FSSEventChoiceRow
+	TObjectPtr<UDataTable> ChoiceTable; // 행: FSSEventChoiceRow
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="SS|Event")
-	TObjectPtr<UDataTable> EffectTable;   // 행: FSSEventEffectRow
+	TObjectPtr<UDataTable> EffectTable; // 행: FSSEventEffectRow
 
 	// 표에서 ItemId로 적은 아이템의 실제 에셋. 획득 효과가 이 목록에서 에셋을 찾는다.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="SS|Event")

@@ -5,7 +5,6 @@
 #include "Blueprint/UserWidget.h"
 #include "SSSurvivorInfoContentWidget.generated.h"
 
-
 class UTextBlock;
 class UProgressBar;
 class UCheckBox;
@@ -23,13 +22,13 @@ class SIXTYSECONDS_API USSSurvivorInfoContentWidget : public UUserWidget
 public:
 	// 어떤 동료의 정보인지
 	void InitSurvivor(FName InSurvivorId);
-    UWidget* GetObservationWidget() const;
+	UWidget* GetObservationWidget() const;
 
 protected:
 	virtual void NativeConstruct() override;
 	virtual void NativeDestruct() override;
-    UPROPERTY(meta=(BindWidgetOptional))
-    TObjectPtr<UBorder> ObservationBorder;
+	UPROPERTY(meta=(BindWidgetOptional))
+	TObjectPtr<UBorder> ObservationBorder;
 
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> HealthText;
@@ -93,9 +92,9 @@ private:
 
 	// 격리 버튼을 한 번 눌러 확인을 기다리는 중인지
 	bool bIsolateArmed = false;
-	
+
 	UPROPERTY(Transient)
 	TObjectPtr<USSRunSubsystem> RunSubsystem;
 
-	FName SurvivorId = NAME_None;	
+	FName SurvivorId = NAME_None;
 };

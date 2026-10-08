@@ -31,8 +31,7 @@ void ASSPickupActor::BeginPlay()
 
 bool ASSPickupActor::CanPickupWith(const USSCarryComponent* CarryComponent) const
 {
-	return IsValid(CarryComponent) && IsValid(ItemStack.Item) && ItemStack.Quantity > 0
-		&& CarryComponent->CanAddItem(ItemStack.Item.Get(), ItemStack.Quantity);
+	return IsValid(CarryComponent) && IsValid(ItemStack.Item) && ItemStack.Quantity > 0 && CarryComponent->CanAddItem(ItemStack.Item.Get(), ItemStack.Quantity);
 }
 
 FText ASSPickupActor::GetPickupPrompt(const USSCarryComponent* CarryComponent) const

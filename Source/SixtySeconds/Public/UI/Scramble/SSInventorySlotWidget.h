@@ -13,6 +13,7 @@ class SIXTYSECONDS_API USSInventorySlotWidget : public UUserWidget
 	GENERATED_BODY()
 public:
 	void SetItemStack(const FSSItemStack& InStack);
+
 protected:
 	virtual void NativeConstruct() override;
 	UPROPERTY(meta=(BindWidget))
@@ -21,6 +22,7 @@ protected:
 	TObjectPtr<UTextBlock> QuantityText;
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UTextBlock> ItemNameText;
+
 private:
 	void RefreshDisplay();
 	UPROPERTY(Transient)

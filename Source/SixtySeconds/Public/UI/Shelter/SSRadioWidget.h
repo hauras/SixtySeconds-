@@ -63,7 +63,7 @@ private:
 	TObjectPtr<USSTraceWidget> TraceWidget;
 
 	UPROPERTY(Transient)
-	TObjectPtr<UUserWidget> DecodeWidget;   // 다이얼 창 또는 진실 해독 창
+	TObjectPtr<UUserWidget> DecodeWidget; // 다이얼 창 또는 진실 해독 창
 
 	UPROPERTY(Transient)
 	TObjectPtr<UButton> TraceButton;

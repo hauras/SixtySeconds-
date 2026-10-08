@@ -12,19 +12,19 @@
 
 namespace
 {
-	constexpr float DailySatietyLoss   = 20.f;
+	constexpr float DailySatietyLoss = 20.f;
 	constexpr float DailyHydrationLoss = 25.f;
-	constexpr float StarvationDamage   = 10.f;
-	constexpr float DehydrationDamage  = 20.f;
+	constexpr float StarvationDamage = 10.f;
+	constexpr float DehydrationDamage = 20.f;
 
 	// 하루치 포만감·수분 감소와 굶주림·탈수 피해. 플레이어와 동료 공용.
 	void ApplyDailyDecay(FSSSurvivorStats& Stats)
 	{
-		Stats.Satiety   = FMath::Clamp(Stats.Satiety   - DailySatietyLoss,   0.f, 100.f);
+		Stats.Satiety = FMath::Clamp(Stats.Satiety - DailySatietyLoss, 0.f, 100.f);
 		Stats.Hydration = FMath::Clamp(Stats.Hydration - DailyHydrationLoss, 0.f, 100.f);
 
 		float Damage = 0.f;
-		if (Stats.Satiety   <= 0.f) Damage += StarvationDamage;
+		if (Stats.Satiety <= 0.f) Damage += StarvationDamage;
 		if (Stats.Hydration <= 0.f) Damage += DehydrationDamage;
 		Stats.Health = FMath::Clamp(Stats.Health - Damage, 0.f, 100.f);
 	}
@@ -74,10 +74,7 @@ bool USSRunSubsystem::HealSurvivor(FName SurvivorId)
 	const FName MedkitItemId = SSItemIds::Medkit;
 	USSItemDefinition* Medkit = FindStoredItem(MedkitItemId);
 
-	if (!IsValid(Medkit)
-		|| Medkit->UseEffect != ESSItemUseEffect::RestoreHealth
-		|| !FMath::IsFinite(Medkit->EffectAmount)
-		|| Medkit->EffectAmount <= 0.f)
+	if (!IsValid(Medkit) || Medkit->UseEffect != ESSItemUseEffect::RestoreHealth || !FMath::IsFinite(Medkit->EffectAmount) || Medkit->EffectAmount <= 0.f)
 	{
 		return false;
 	}
@@ -104,36 +101,35 @@ bool USSRunSubsystem::HealSurvivor(FName SurvivorId)
 
 bool USSRunSubsystem::RecruitSurvivor(USSSurvivorDefinition* Definition)
 {
-    if (!IsValid(Definition) || Definition->SurvivorId.IsNone() || GetHealth() <= 0.f) return false;
-    for (const auto& Following : FollowingSurvivors)
-        if (IsValid(Following) && Following->SurvivorId == Definition->SurvivorId) return false;
-    if (FindRescuedSurvivor(Definition->SurvivorId)) return false;
-    FollowingSurvivors.Add(Definition);
-    OnSurvivorsChanged.Broadcast();
-    UE_LOG(LogTemp, Log, TEXT("[Survivor] Following: %s"), *Definition->SurvivorId.ToString());
-    return true;
+	if (!IsValid(Definition) || Definition->SurvivorId.IsNone() || GetHealth() <= 0.f) return false;
+	for (const auto& Following : FollowingSurvivors)
+		if (IsValid(Following) && Following->SurvivorId == Definition->SurvivorId) return false;
+	if (FindRescuedSurvivor(Definition->SurvivorId)) return false;
+	FollowingSurvivors.Add(Definition);
+	OnSurvivorsChanged.Broadcast();
+	UE_LOG(LogTemp, Log, TEXT("[Survivor] Following: %s"), *Definition->SurvivorId.ToString());
+	return true;
 }
 
 int32 USSRunSubsystem::RescueFollowingSurvivors()
 {
-    int32 Count = 0;
-    for (USSSurvivorDefinition* Definition : FollowingSurvivors)
-    {
-        if (!IsValid(Definition)) continue;
-        FSSSurvivorState& State = RescuedSurvivors.AddDefaulted_GetRef();
-        State.Definition = Definition;
-        State.Stats = Definition->InitialStats;
-        ++Count;
-        UE_LOG(LogTemp, Log, TEXT("[Survivor] Rescued: %s"), *Definition->SurvivorId.ToString());
-    }
-    FollowingSurvivors.Reset();
-    if (Count > 0)
-    {
-        RecordEvent(ESSJournalEvent::Deposit, FText::Format(
-            NSLOCTEXT("SSJournal", "SurvivorRescue", "동료 {0}명을 은신처로 데려왔다."), Count));
-        OnSurvivorsChanged.Broadcast();
-    }
-    return Count;
+	int32 Count = 0;
+	for (USSSurvivorDefinition* Definition : FollowingSurvivors)
+	{
+		if (!IsValid(Definition)) continue;
+		FSSSurvivorState& State = RescuedSurvivors.AddDefaulted_GetRef();
+		State.Definition = Definition;
+		State.Stats = Definition->InitialStats;
+		++Count;
+		UE_LOG(LogTemp, Log, TEXT("[Survivor] Rescued: %s"), *Definition->SurvivorId.ToString());
+	}
+	FollowingSurvivors.Reset();
+	if (Count > 0)
+	{
+		RecordEvent(ESSJournalEvent::Deposit, FText::Format(NSLOCTEXT("SSJournal", "SurvivorRescue", "동료 {0}명을 은신처로 데려왔다."), Count));
+		OnSurvivorsChanged.Broadcast();
+	}
+	return Count;
 }
 
 void USSRunSubsystem::RecordEvent(ESSJournalEvent Event, const FText& Message)
@@ -146,25 +142,23 @@ void USSRunSubsystem::RecordEvent(ESSJournalEvent Event, const FText& Message)
 }
 
 void USSRunSubsystem::AddDetailedEventJournal(const FText& Message, const FText& Title,
-    const FText& Body, const FText& Choice, const FText& Outcome, const FText& Changes)
+	const FText& Body, const FText& Choice, const FText& Outcome, const FText& Changes)
 {
-    FSSJournalEntry& Entry = JournalEntries.AddDefaulted_GetRef();
-    Entry.Day = CurrentDay;
-    Entry.Event = ESSJournalEvent::Event;
-    Entry.Message = Message;
-    Entry.Title = Title;
-    Entry.Body = Body;
-    Entry.Choice = Choice;
-    Entry.Outcome = Outcome;
-    Entry.Changes = Changes;
-    OnJournalChanged.Broadcast();
+	FSSJournalEntry& Entry = JournalEntries.AddDefaulted_GetRef();
+	Entry.Day = CurrentDay;
+	Entry.Event = ESSJournalEvent::Event;
+	Entry.Message = Message;
+	Entry.Title = Title;
+	Entry.Body = Body;
+	Entry.Choice = Choice;
+	Entry.Outcome = Outcome;
+	Entry.Changes = Changes;
+	OnJournalChanged.Broadcast();
 }
 
 void USSRunSubsystem::RecordExpeditionReturn(const FSSExpeditionResult& Result, bool bSuccess)
 {
-	RecordEvent(ESSJournalEvent::Expedition, FText::Format(
-		bSuccess ? NSLOCTEXT("SSJournal", "ReturnSuccess", "{0} 탐사에서 귀환했다.")
-		: NSLOCTEXT("SSJournal", "ReturnFailure", "{0} 탐사에 실패하여 물자 없이 귀환했다."), Result.RegionName));
+	RecordEvent(ESSJournalEvent::Expedition, FText::Format(bSuccess ? NSLOCTEXT("SSJournal", "ReturnSuccess", "{0} 탐사에서 귀환했다.") : NSLOCTEXT("SSJournal", "ReturnFailure", "{0} 탐사에 실패하여 물자 없이 귀환했다."), Result.RegionName));
 	for (const FSSItemStack& Stack : Result.ReceivedItems)
 		if (IsValid(Stack.Item) && Stack.Quantity > 0)
 			RecordEvent(ESSJournalEvent::Expedition, FText::Format(NSLOCTEXT("SSJournal", "Reward", "획득: {0} ×{1}"), Stack.Item->DisplayName, Stack.Quantity));
@@ -208,9 +202,9 @@ int32 USSRunSubsystem::GetStoredQuantity(USSItemDefinition* Item) const
 
 void USSRunSubsystem::ResetRun()
 {
-    FollowingSurvivors.Reset();
-    RescuedSurvivors.Reset();
-    CapturedSurvivors.Reset();
+	FollowingSurvivors.Reset();
+	RescuedSurvivors.Reset();
+	CapturedSurvivors.Reset();
 	StoredItems.Reset();
 	JournalEntries.Reset();
 
@@ -232,12 +226,12 @@ void USSRunSubsystem::ResetRun()
 	ActionPoints = MaxActionPoints;
 	GetRescue()->ResetRun();
 	GetEnding()->ResetRun();
-	if (IsValid(EventDirector)) EventDirector->ResetRunState();   // 카탈로그는 유지, 1회성·예약만 초기화
+	if (IsValid(EventDirector)) EventDirector->ResetRunState(); // 카탈로그는 유지, 1회성·예약만 초기화
 	OnJournalChanged.Broadcast();
 	OnRobotStateChanged.Broadcast();
 	OnStoredItemsChanged.Broadcast();
 	OnActionPointsChanged.Broadcast();
-    OnSurvivorsChanged.Broadcast();
+	OnSurvivorsChanged.Broadcast();
 }
 
 void USSRunSubsystem::BuildAraBriefing()
@@ -248,8 +242,7 @@ void USSRunSubsystem::BuildAraBriefing()
 
 bool USSRunSubsystem::HasAskedAraQuestionToday(int32 QuestionIndex) const
 {
-	return QuestionIndex >= 0 && QuestionIndex < 3
-		&& (AskedAraQuestionsMask & (1u << QuestionIndex)) != 0;
+	return QuestionIndex >= 0 && QuestionIndex < 3 && (AskedAraQuestionsMask & (1u << QuestionIndex)) != 0;
 }
 
 bool USSRunSubsystem::AskAraQuestion(int32 QuestionIndex, FText& OutAnswer)
@@ -260,8 +253,7 @@ bool USSRunSubsystem::AskAraQuestion(int32 QuestionIndex, FText& OutAnswer)
 	static const FText Answers[] = {
 		NSLOCTEXT("SSAra", "OutsideAnswer", "현재 외부 통로에는 경비 로봇이 순찰 중입니다. 대피실에 머무르는 것이 가장 안전합니다."),
 		NSLOCTEXT("SSAra", "PatrolAnswer", "경비 로봇은 인원 보호 명령을 수행 중입니다. 허가되지 않은 이동을 제한하고 있습니다."),
-		NSLOCTEXT("SSAra", "SurvivorAnswer", "다른 구역의 인원 정보는 확인 중입니다. 검증되지 않은 위치는 안내할 수 없습니다.")
-	};
+		NSLOCTEXT("SSAra", "SurvivorAnswer", "다른 구역의 인원 정보는 확인 중입니다. 검증되지 않은 위치는 안내할 수 없습니다.")};
 	OutAnswer = Answers[QuestionIndex];
 	if (HasAskedAraQuestionToday(QuestionIndex)) return true;
 	if (!ConsumeActionPoints(1)) return false;
@@ -386,10 +378,10 @@ USSEventDirector* USSRunSubsystem::GetEventDirector()
 
 void USSRunSubsystem::ModifyPlayerStats(float DeltaHealth, float DeltaSatiety, float DeltaHydration)
 {
-	if (PlayerStats.Health <= 0.f) return;   // 이미 사망
+	if (PlayerStats.Health <= 0.f) return; // 이미 사망
 
-	PlayerStats.Health    = FMath::Clamp(PlayerStats.Health    + DeltaHealth,    0.f, 100.f);
-	PlayerStats.Satiety   = FMath::Clamp(PlayerStats.Satiety   + DeltaSatiety,   0.f, 100.f);
+	PlayerStats.Health = FMath::Clamp(PlayerStats.Health + DeltaHealth, 0.f, 100.f);
+	PlayerStats.Satiety = FMath::Clamp(PlayerStats.Satiety + DeltaSatiety, 0.f, 100.f);
 	PlayerStats.Hydration = FMath::Clamp(PlayerStats.Hydration + DeltaHydration, 0.f, 100.f);
 	if (PlayerStats.Health <= 0.f)
 		RecordEvent(ESSJournalEvent::Death, NSLOCTEXT("SSJournal", "Death", "생존자가 사망했다."));
@@ -407,8 +399,7 @@ void USSRunSubsystem::ModifySurvivorsHealth(float Delta)
 		if (Survivor.Stats.Health <= 0.f)
 		{
 			Survivor.bAlive = false;
-			RecordEvent(ESSJournalEvent::Death, FText::Format(
-				NSLOCTEXT("SSJournal", "SurvivorDeath", "{0}이(가) 사망했다."), Survivor.Definition->DisplayName));
+			RecordEvent(ESSJournalEvent::Death, FText::Format(NSLOCTEXT("SSJournal", "SurvivorDeath", "{0}이(가) 사망했다."), Survivor.Definition->DisplayName));
 		}
 	}
 	if (bChanged) OnSurvivorsChanged.Broadcast();
@@ -426,7 +417,7 @@ void USSRunSubsystem::InitializeShelterStats(float InHealth, float InSatiety, fl
 	PlayerStats.Health = FMath::Clamp(InHealth, 0.f, 100.f);
 	PlayerStats.Satiety = FMath::Clamp(InSatiety, 0.f, 100.f);
 	PlayerStats.Hydration = FMath::Clamp(InHydration, 0.f, 100.f);
-	BuildAraBriefing();   // 은신처 첫날 보고 (ResetRun을 거치지 않고 들어와도 비어 있지 않게)
+	BuildAraBriefing(); // 은신처 첫날 보고 (ResetRun을 거치지 않고 들어와도 비어 있지 않게)
 }
 
 bool USSRunSubsystem::ConsumeItem(FName ItemId)
@@ -478,14 +469,13 @@ bool USSRunSubsystem::UseItem(FName ItemId)
 
 bool USSRunSubsystem::ApplyItemEffect(USSItemDefinition* Item, bool bAllowFullStat)
 {
-	if (PlayerStats.Health <= 0.f || !IsValid(Item) || GetStoredQuantity(Item) <= 0
-		|| !FMath::IsFinite(Item->EffectAmount) || Item->EffectAmount <= 0.f) return false;
+	if (PlayerStats.Health <= 0.f || !IsValid(Item) || GetStoredQuantity(Item) <= 0 || !FMath::IsFinite(Item->EffectAmount) || Item->EffectAmount <= 0.f) return false;
 
 	float* TargetStat = nullptr;
 	switch (Item->UseEffect)
 	{
-	case ESSItemUseEffect::RestoreHealth:    TargetStat = &PlayerStats.Health;    break;
-	case ESSItemUseEffect::RestoreSatiety:   TargetStat = &PlayerStats.Satiety;   break;
+	case ESSItemUseEffect::RestoreHealth: TargetStat = &PlayerStats.Health; break;
+	case ESSItemUseEffect::RestoreSatiety: TargetStat = &PlayerStats.Satiety; break;
 	case ESSItemUseEffect::RestoreHydration: TargetStat = &PlayerStats.Hydration; break;
 	default: return false;
 	}
@@ -651,12 +641,12 @@ void USSRunSubsystem::FulfillExpedition()
 
 void USSRunSubsystem::GetRequiredRations(bool bGiveFood, bool bGiveWater, int32& OutFood, int32& OutWater) const
 {
-	OutFood  = bGiveFood  ? 1 : 0;
+	OutFood = bGiveFood ? 1 : 0;
 	OutWater = bGiveWater ? 1 : 0;
 	for (const FSSSurvivorState& Survivor : RescuedSurvivors)
 	{
 		if (!Survivor.bAlive || !IsValid(Survivor.Definition)) continue;
-		OutFood  += Survivor.bGiveFood  ? 1 : 0;
+		OutFood += Survivor.bGiveFood ? 1 : 0;
 		OutWater += Survivor.bGiveWater ? 1 : 0;
 	}
 }
@@ -666,21 +656,20 @@ bool USSRunSubsystem::HasRationsFor(bool bGiveFood, bool bGiveWater) const
 	int32 RequiredFood = 0;
 	int32 RequiredWater = 0;
 	GetRequiredRations(bGiveFood, bGiveWater, RequiredFood, RequiredWater);
-	return GetStoredQuantityById(SSItemIds::Food) >= RequiredFood
-		&& GetStoredQuantityById(SSItemIds::Water) >= RequiredWater;
+	return GetStoredQuantityById(SSItemIds::Food) >= RequiredFood && GetStoredQuantityById(SSItemIds::Water) >= RequiredWater;
 }
 
 bool USSRunSubsystem::AdvanceDay(bool bGiveFood, bool bGiveWater)
 {
 	if (!AdvanceDayCore(bGiveFood, bGiveWater)) return false;
-	OnDayAdvanced.Broadcast();   // 은신처 HUD가 날짜·스탯 갱신과 사망 확인
+	OnDayAdvanced.Broadcast(); // 은신처 HUD가 날짜·스탯 갱신과 사망 확인
 	return true;
 }
 
 bool USSRunSubsystem::ApplyExplorationResult(const FSSExplorationResult& Result, bool bGiveFood, bool bGiveWater)
 {
 	if (PlayerStats.Health <= 0.f || Result.Outcome == ESSExplorationOutcome::InProgress) return false;
-	if (!HasRationsFor(bGiveFood, bGiveWater)) return false;   // 출발 때 확인했지만, 그사이 바뀌었으면 아무것도 바꾸지 않음
+	if (!HasRationsFor(bGiveFood, bGiveWater)) return false; // 출발 때 확인했지만, 그사이 바뀌었으면 아무것도 바꾸지 않음
 
 	// 탐사는 출발한 날의 일이라 하루가 넘어가기 전에 기록
 	FText Summary;
@@ -708,8 +697,7 @@ bool USSRunSubsystem::ApplyExplorationResult(const FSSExplorationResult& Result,
 	else if (Result.Injury > 0.f && PlayerStats.Health > 0.f)
 	{
 		PlayerStats.Health = FMath::Clamp(PlayerStats.Health - Result.Injury, 0.f, 100.f);
-		RecordEvent(ESSJournalEvent::DayEnd, FText::Format(
-			NSLOCTEXT("SSJournal", "ExploreInjury", "도망치다 다쳐 체력이 {0} 감소했다."), FMath::RoundToInt(Result.Injury)));
+		RecordEvent(ESSJournalEvent::DayEnd, FText::Format(NSLOCTEXT("SSJournal", "ExploreInjury", "도망치다 다쳐 체력이 {0} 감소했다."), FMath::RoundToInt(Result.Injury)));
 		if (PlayerStats.Health <= 0.f)
 			RecordEvent(ESSJournalEvent::Death, NSLOCTEXT("SSJournal", "Death", "생존자가 사망했다."));
 	}
@@ -722,16 +710,15 @@ bool USSRunSubsystem::AdvanceDayCore(bool bGiveFood, bool bGiveWater)
 {
 	if (PlayerStats.Health <= 0.f) return false;
 
-	const FName FoodItemId  = SSItemIds::Food;
+	const FName FoodItemId = SSItemIds::Food;
 	const FName WaterItemId = SSItemIds::Water;
 
-	USSItemDefinition* Food  = FindStoredItem(FoodItemId);
+	USSItemDefinition* Food = FindStoredItem(FoodItemId);
 	USSItemDefinition* Water = FindStoredItem(WaterItemId);
 
 	const auto IsRationValid = [](const USSItemDefinition* Item, ESSItemUseEffect Effect)
 	{
-		return IsValid(Item) && Item->UseEffect == Effect
-			&& FMath::IsFinite(Item->EffectAmount) && Item->EffectAmount > 0.f;
+		return IsValid(Item) && Item->UseEffect == Effect && FMath::IsFinite(Item->EffectAmount) && Item->EffectAmount > 0.f;
 	};
 
 	// 플레이어와 동료의 전체 배급 필요량
@@ -740,21 +727,18 @@ bool USSRunSubsystem::AdvanceDayCore(bool bGiveFood, bool bGiveWater)
 	GetRequiredRations(bGiveFood, bGiveWater, RequiredFood, RequiredWater);
 
 	// 배급 아이템 데이터 검사
-	if (RequiredFood > 0
-		&& !IsRationValid(Food, ESSItemUseEffect::RestoreSatiety))
+	if (RequiredFood > 0 && !IsRationValid(Food, ESSItemUseEffect::RestoreSatiety))
 	{
 		return false;
 	}
 
-	if (RequiredWater > 0
-		&& !IsRationValid(Water, ESSItemUseEffect::RestoreHydration))
+	if (RequiredWater > 0 && !IsRationValid(Water, ESSItemUseEffect::RestoreHydration))
 	{
 		return false;
 	}
 
 	// 전체 배급량이 부족하면 아무것도 변경하지 않고 중단
-	if (GetStoredQuantityById(FoodItemId) < RequiredFood
-		|| GetStoredQuantityById(WaterItemId) < RequiredWater)
+	if (GetStoredQuantityById(FoodItemId) < RequiredFood || GetStoredQuantityById(WaterItemId) < RequiredWater)
 	{
 		UE_LOG(LogTemp, Warning,
 			TEXT("[Ration] Insufficient supplies. Required: Food %d, Water %d"),
@@ -764,17 +748,15 @@ bool USSRunSubsystem::AdvanceDayCore(bool bGiveFood, bool bGiveWater)
 	}
 
 	const float HealthBeforeDay = PlayerStats.Health;
-	if (bGiveFood)  ApplyItemEffect(Food,  true);
+	if (bGiveFood) ApplyItemEffect(Food, true);
 	if (bGiveWater) ApplyItemEffect(Water, true);
 
 	ApplyDailyDecay(PlayerStats);
 
-	RecordEvent(ESSJournalEvent::Rations, FText::Format(NSLOCTEXT("SSJournal", "Rations", "오늘 배급 — 식량: {0} / 물: {1}"),
-		RationText(bGiveFood), RationText(bGiveWater)));
+	RecordEvent(ESSJournalEvent::Rations, FText::Format(NSLOCTEXT("SSJournal", "Rations", "오늘 배급 — 식량: {0} / 물: {1}"), RationText(bGiveFood), RationText(bGiveWater)));
 
-	RecordEvent(ESSJournalEvent::DayEnd, FText::Format(NSLOCTEXT("SSJournal", "DayEnd", "하루 종료 — 체력 {0} / 포만감 {1} / 수분 {2}"),
-		FMath::RoundToInt(PlayerStats.Health), FMath::RoundToInt(PlayerStats.Satiety), FMath::RoundToInt(PlayerStats.Hydration)));
-	
+	RecordEvent(ESSJournalEvent::DayEnd, FText::Format(NSLOCTEXT("SSJournal", "DayEnd", "하루 종료 — 체력 {0} / 포만감 {1} / 수분 {2}"), FMath::RoundToInt(PlayerStats.Health), FMath::RoundToInt(PlayerStats.Satiety), FMath::RoundToInt(PlayerStats.Hydration)));
+
 	if (PlayerStats.Health < HealthBeforeDay)
 		RecordEvent(ESSJournalEvent::DayEnd, FText::Format(NSLOCTEXT("SSJournal", "Damage", "굶주림·탈수로 체력이 {0} 감소했다."), FMath::RoundToInt(HealthBeforeDay - PlayerStats.Health)));
 
@@ -786,29 +768,23 @@ bool USSRunSubsystem::AdvanceDayCore(bool bGiveFood, bool bGiveWater)
 	{
 		if (!Survivor.bAlive || !IsValid(Survivor.Definition)) continue;
 
-		if (Survivor.bGiveFood && IsRationValid(Food, ESSItemUseEffect::RestoreSatiety)
-			&& ConsumeStoredItems(FoodItemId, 1))
+		if (Survivor.bGiveFood && IsRationValid(Food, ESSItemUseEffect::RestoreSatiety) && ConsumeStoredItems(FoodItemId, 1))
 		{
 			Survivor.Stats.Satiety = FMath::Clamp(Survivor.Stats.Satiety + Food->EffectAmount, 0.f, 100.f);
 		}
-		if (Survivor.bGiveWater && IsRationValid(Water, ESSItemUseEffect::RestoreHydration)
-			&& ConsumeStoredItems(WaterItemId, 1))
+		if (Survivor.bGiveWater && IsRationValid(Water, ESSItemUseEffect::RestoreHydration) && ConsumeStoredItems(WaterItemId, 1))
 		{
 			Survivor.Stats.Hydration = FMath::Clamp(Survivor.Stats.Hydration + Water->EffectAmount, 0.f, 100.f);
 		}
 
-		RecordEvent(ESSJournalEvent::Rations, FText::Format(
-			NSLOCTEXT("SSJournal", "SurvivorRations", "{0} 배급 — 식량: {1} / 물: {2}"),
-			Survivor.Definition->DisplayName, RationText(Survivor.bGiveFood), RationText(Survivor.bGiveWater)));
+		RecordEvent(ESSJournalEvent::Rations, FText::Format(NSLOCTEXT("SSJournal", "SurvivorRations", "{0} 배급 — 식량: {1} / 물: {2}"), Survivor.Definition->DisplayName, RationText(Survivor.bGiveFood), RationText(Survivor.bGiveWater)));
 
 		ApplyDailyDecay(Survivor.Stats);
 
 		if (Survivor.Stats.Health <= 0.f)
 		{
 			Survivor.bAlive = false;
-			RecordEvent(ESSJournalEvent::Death, FText::Format(
-				NSLOCTEXT("SSJournal", "SurvivorDeath", "{0}이(가) 사망했다."),
-				Survivor.Definition->DisplayName));
+			RecordEvent(ESSJournalEvent::Death, FText::Format(NSLOCTEXT("SSJournal", "SurvivorDeath", "{0}이(가) 사망했다."), Survivor.Definition->DisplayName));
 		}
 	}
 
@@ -842,7 +818,7 @@ bool USSRunSubsystem::AdvanceDayCore(bool bGiveFood, bool bGiveWater)
 	// 하룻밤 지나면 적의 기억이 흐려짐 (외부 통신)
 	GetComms()->OnNewDay();
 
-	BuildAraBriefing();   // 로봇 귀환까지 반영된 아침 상태로 보고를 고정
+	BuildAraBriefing(); // 로봇 귀환까지 반영된 아침 상태로 보고를 고정
 
 	return true;
 }

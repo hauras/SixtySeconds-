@@ -16,7 +16,7 @@ namespace SSIdentityTest
 		UGameInstance* GameInstance = NewObject<UGameInstance>();
 		USSRunSubsystem* Run = NewObject<USSRunSubsystem>(GameInstance);
 		Run->InitializeShelterStats(100.f, 100.f, 100.f);
-		for (const TCHAR* Id : { TEXT("Researcher"), TEXT("Technician") })
+		for (const TCHAR* Id : {TEXT("Researcher"), TEXT("Technician")})
 		{
 			USSSurvivorDefinition* Survivor = NewObject<USSSurvivorDefinition>(Run);
 			Survivor->SurvivorId = Id;
@@ -37,7 +37,7 @@ namespace SSIdentityTest
 		FSSItemStack Stack;
 		Stack.Item = Battery;
 		Stack.Quantity = Count;
-		Run->DepositItems({ Stack });
+		Run->DepositItems({Stack});
 	}
 
 	bool IsCaptured(const USSRunSubsystem* Run, FName Id)

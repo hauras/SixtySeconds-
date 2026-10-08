@@ -39,13 +39,13 @@ struct SIXTYSECONDS_API FSSClueRow : public FTableRowBase
 UENUM(BlueprintType)
 enum class ESSCompanionLine : uint8
 {
-	Greet,           // 할 얘기가 없을 때 첫마디
-	ReportReady,     // 들을 보고가 하나 있을 때
-	Backlog,         // 보고가 여러 개 밀렸을 때
-	OrderReminder,   // 오늘 밤 조사 장소가 정해져 있을 때 ({Spot})
-	OrderAccept,     // 조사 장소를 정해 줬을 때 ({Spot})
-	Exhausted,       // 단서를 다 찾은 장소를 또 조사했을 때 ({Spot})
-	Testimony,       // B2에서 구출된 뒤 처음 하는 증언 (숨은 진실)
+	Greet,         // 할 얘기가 없을 때 첫마디
+	ReportReady,   // 들을 보고가 하나 있을 때
+	Backlog,       // 보고가 여러 개 밀렸을 때
+	OrderReminder, // 오늘 밤 조사 장소가 정해져 있을 때 ({Spot})
+	OrderAccept,   // 조사 장소를 정해 줬을 때 ({Spot})
+	Exhausted,     // 단서를 다 찾은 장소를 또 조사했을 때 ({Spot})
+	Testimony,     // B2에서 구출된 뒤 처음 하는 증언 (숨은 진실)
 };
 
 // ─────────────────────────────────────────────

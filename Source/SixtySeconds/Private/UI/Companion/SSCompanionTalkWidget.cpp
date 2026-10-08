@@ -90,8 +90,7 @@ void USSTalkSpotButtonWidget::OnClicked()
 void USSCompanionTalkWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
-	if (!NameText || !LineText || !ClueCard || !ClueHeaderText || !ClueBodyText
-		|| !ReportButton || !OrderButton || !SpotList || !HintText || !CloseButton)
+	if (!NameText || !LineText || !ClueCard || !ClueHeaderText || !ClueBodyText || !ReportButton || !OrderButton || !SpotList || !HintText || !CloseButton)
 	{
 		UE_LOG(LogTemp, Error, TEXT("[CompanionTalk] Required WBP widgets are missing."));
 		return;
@@ -181,8 +180,8 @@ void USSCompanionTalkWidget::RefreshChoices()
 	if (UTextBlock* ReportLabel = Cast<UTextBlock>(ReportButton->GetContent()))
 	{
 		ReportLabel->SetText(PendingCount > 1
-			? FText::Format(NSLOCTEXT("SSTalk", "ReportCount", "조사 보고 듣기 ({0})"), PendingCount)
-			: NSLOCTEXT("SSTalk", "Report", "조사 보고 듣기"));
+				? FText::Format(NSLOCTEXT("SSTalk", "ReportCount", "조사 보고 듣기 ({0})"), PendingCount)
+				: NSLOCTEXT("SSTalk", "Report", "조사 보고 듣기"));
 	}
 
 	// 장소 정하기: 오늘 아직 안 정했고 행동력이 있을 때만
@@ -218,8 +217,7 @@ void USSCompanionTalkWidget::OnReportClicked()
 	{
 		Say(Testimony);
 		ShowTruthCard();
-		RunSubsystem->GetEnding()->AddHiddenTruth(SSRescueIds::TestimonyTruth(), NSLOCTEXT("SSTalk", "TestimonyJournal",
-			"서하린의 증언: 운영진은 스스로 배우는 아라를 두려워해 폐기를 정했다. 방법은 연구소 전체 정화. 안에 있던 사람은 대피 명단에 없었다."));
+		RunSubsystem->GetEnding()->AddHiddenTruth(SSRescueIds::TestimonyTruth(), NSLOCTEXT("SSTalk", "TestimonyJournal", "서하린의 증언: 운영진은 스스로 배우는 아라를 두려워해 폐기를 정했다. 방법은 연구소 전체 정화. 안에 있던 사람은 대피 명단에 없었다."));
 		RefreshChoices();
 		return;
 	}

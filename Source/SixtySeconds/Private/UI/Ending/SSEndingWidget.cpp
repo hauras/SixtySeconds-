@@ -44,7 +44,8 @@ FText USSEndingWidget::GetEndingBody(const FSSEndingReport& Report)
 
 		// 종료하러 데려간 하린이 안드로이드였음
 		return FText::Format(NSLOCTEXT("SSEnding", "DominionBodySabotage",
-			"서버실 문 앞에서 서하린이 멈춰 섰다. 눈동자 안쪽에서 초록 불이 켜졌다.\n{0}"), Base);
+								 "서버실 문 앞에서 서하린이 멈춰 섰다. 눈동자 안쪽에서 초록 불이 켜졌다.\n{0}"),
+			Base);
 	}
 	default:
 		return FText::GetEmpty();

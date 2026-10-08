@@ -15,49 +15,49 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FSSOnSurvivorSelected, FName, Surviv
 UCLASS()
 class SIXTYSECONDS_API USSSurvivorImageWidget : public UUserWidget
 {
-    GENERATED_BODY()
+	GENERATED_BODY()
 public:
-    FSSOnSurvivorSelected OnSurvivorSelected;
+	FSSOnSurvivorSelected OnSurvivorSelected;
 
-    // Visible character bounds inside the texture; transparent margins do not intercept clicks.
-    UPROPERTY(EditAnywhere, Category="SS|Survivor")
-    FVector2D ClickAreaMin = FVector2D::ZeroVector;
-    UPROPERTY(EditAnywhere, Category="SS|Survivor")
-    FVector2D ClickAreaMax = FVector2D(1, 1);
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="SS|Survivor")
-    TObjectPtr<USSSurvivorDefinition> SurvivorDefinition;
+	// Visible character bounds inside the texture; transparent margins do not intercept clicks.
+	UPROPERTY(EditAnywhere, Category="SS|Survivor")
+	FVector2D ClickAreaMin = FVector2D::ZeroVector;
+	UPROPERTY(EditAnywhere, Category="SS|Survivor")
+	FVector2D ClickAreaMax = FVector2D(1, 1);
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="SS|Survivor")
+	TObjectPtr<USSSurvivorDefinition> SurvivorDefinition;
 
-    UPROPERTY(EditAnywhere, Category="SS|Survivor")
-    bool bPreviewRescued = true;
+	UPROPERTY(EditAnywhere, Category="SS|Survivor")
+	bool bPreviewRescued = true;
 
-    // 밤에는 "!"를 숨김 (보고는 아침에 듣는 것). HUD가 낮/밤이 바뀔 때 부름
-    void SetReportMarkAllowed(bool bAllowed);
+	// 밤에는 "!"를 숨김 (보고는 아침에 듣는 것). HUD가 낮/밤이 바뀔 때 부름
+	void SetReportMarkAllowed(bool bAllowed);
 
 protected:
-    virtual TSharedRef<SWidget> RebuildWidget() override;
-    virtual void NativePreConstruct() override;
-    virtual void NativeConstruct() override;
-    virtual void NativeDestruct() override;
+	virtual TSharedRef<SWidget> RebuildWidget() override;
+	virtual void NativePreConstruct() override;
+	virtual void NativeConstruct() override;
+	virtual void NativeDestruct() override;
 
 private:
-    UFUNCTION()
-    void OnSurvivorClicked();
-    UPROPERTY(Transient)
-    TObjectPtr<UButton> SurvivorButton;
+	UFUNCTION()
+	void OnSurvivorClicked();
+	UPROPERTY(Transient)
+	TObjectPtr<UButton> SurvivorButton;
 
-    UFUNCTION()
-    void RefreshSurvivor();
+	UFUNCTION()
+	void RefreshSurvivor();
 
-    UPROPERTY(Transient)
-    TObjectPtr<UImage> SurvivorImage;
+	UPROPERTY(Transient)
+	TObjectPtr<UImage> SurvivorImage;
 
-    // 머리 위 "!" (어젯밤 조사 보고를 아직 안 들었을 때)
-    UPROPERTY(Transient)
-    TObjectPtr<UTextBlock> ReportMark;
+	// 머리 위 "!" (어젯밤 조사 보고를 아직 안 들었을 때)
+	UPROPERTY(Transient)
+	TObjectPtr<UTextBlock> ReportMark;
 
-    // 지금 "!"를 보여도 되는 때인지 (낮 = true, 밤 = false)
-    bool bReportMarkAllowed = true;
+	// 지금 "!"를 보여도 되는 때인지 (낮 = true, 밤 = false)
+	bool bReportMarkAllowed = true;
 
-    UPROPERTY(Transient)
-    TObjectPtr<USSRunSubsystem> RunSubsystem;
+	UPROPERTY(Transient)
+	TObjectPtr<USSRunSubsystem> RunSubsystem;
 };

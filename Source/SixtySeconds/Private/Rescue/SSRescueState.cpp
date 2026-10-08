@@ -49,8 +49,7 @@ USSRescueSession* USSRescueState::Start(FName TargetId, int32 Seed)
 	LastDay = Run.GetCurrentDay();
 
 	// 패널을 처음 열면 전력 예약 기록을 봄 (숨은 진실 1)
-	Run.GetEnding()->AddHiddenTruth(SSRescueIds::PanelLogTruth(), NSLOCTEXT("SSRescue", "PanelLogJournal",
-		"B2 정비 패널 기록: 정화 프로토콜 전력 예약 · 대상 구역: 제7연구소 전 층 · 상태: 대기. 정화가 무엇을 태우는지는 적혀 있지 않다."));
+	Run.GetEnding()->AddHiddenTruth(SSRescueIds::PanelLogTruth(), NSLOCTEXT("SSRescue", "PanelLogJournal", "B2 정비 패널 기록: 정화 프로토콜 전력 예약 · 대상 구역: 제7연구소 전 층 · 상태: 대기. 정화가 무엇을 태우는지는 적혀 있지 않다."));
 	return Active;
 }
 
@@ -100,7 +99,8 @@ bool USSRescueState::Finish(FSSRescueReport& OutReport)
 	if (OutReport.Outcome == ESSRescueOutcome::Unlocked && OutReport.bReplacedAndroid)
 	{
 		Message = FText::Format(NSLOCTEXT("SSRescue", "UnlockedReplaced",
-			"B2 정비 패널: 격리실 잠금 해제. {0} 귀환. 은신처에 있던 같은 얼굴의 {0}: 작동 정지."), Name);
+									"B2 정비 패널: 격리실 잠금 해제. {0} 귀환. 은신처에 있던 같은 얼굴의 {0}: 작동 정지."),
+			Name);
 	}
 	else if (OutReport.Outcome == ESSRescueOutcome::Unlocked)
 	{

@@ -3,7 +3,7 @@
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "Item/SSRunSubsystem.h"
-#include "Exploration/SSExplorationTypes.h"   // UFUNCTION 매개변수 FSSExplorationResult
+#include "Exploration/SSExplorationTypes.h" // UFUNCTION 매개변수 FSSExplorationResult
 #include "SSExpeditionWidget.generated.h"
 
 class UTextBlock;
@@ -37,8 +37,8 @@ protected:
 	UPROPERTY(meta=(BindWidget)) TObjectPtr<UTextBlock> RobotStatusText;
 	UPROPERTY(meta=(BindWidget)) TObjectPtr<UTextBlock> MessageText;
 	UPROPERTY(meta=(BindWidgetOptional)) TObjectPtr<UTextBlock> RiskText;
-	UPROPERTY(meta=(BindWidget)) TObjectPtr<UButton>    DispatchButton;
-	UPROPERTY(meta=(BindWidget)) TObjectPtr<UButton>    CloseButton;
+	UPROPERTY(meta=(BindWidget)) TObjectPtr<UButton> DispatchButton;
+	UPROPERTY(meta=(BindWidget)) TObjectPtr<UButton> CloseButton;
 
 	// 직접 탐사: 지역 DA에 StealthMap(DirectExplorationMap)이 있을 때만 보임
 	UPROPERTY(meta=(BindWidgetOptional)) TObjectPtr<UButton> DirectExploreButton;
@@ -56,10 +56,10 @@ private:
 	UFUNCTION() void OnCloseClicked();
 	UFUNCTION() void OnDirectExploreClicked();
 	UFUNCTION() void OnRobotReturnedHandler(const FSSExpeditionResult& Result);
-	UFUNCTION() void OnExplorationFinished(const FSSExplorationResult& Result);   // 결과 확인 → 은신처 정산
+	UFUNCTION() void OnExplorationFinished(const FSSExplorationResult& Result); // 결과 확인 → 은신처 정산
 
 	UPROPERTY(Transient) TObjectPtr<USSRunSubsystem> RunSubsystem;
-	UPROPERTY(Transient) TObjectPtr<USSExplorationWidget> ExplorationWidget;   // 중복으로 여는 것 방지
+	UPROPERTY(Transient) TObjectPtr<USSExplorationWidget> ExplorationWidget; // 중복으로 여는 것 방지
 
 	// 출발할 때 고른 오늘 배급. 정산 때 그대로 사용
 	bool bExploreGiveFood = false;

@@ -97,7 +97,6 @@ public:
 	UPROPERTY(EditAnywhere, Category="SS|Trace|Message", meta=(ClampMin="1"))
 	int32 InfoValidDays = 3;
 
-	
 	// 해독 다이얼 개수 (2 쉬움 ~ 4 어려움). 많을수록 다이얼 하나가 맡는 글자가 줄어 신호가 흔들림
 	UPROPERTY(EditAnywhere, Category="SS|Trace|Message", meta=(ClampMin="1", ClampMax="6"))
 	int32 DialCount = 3;

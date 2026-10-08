@@ -17,7 +17,7 @@ namespace SSPowerGridTest
 		FSSPowerGrid Grid;
 		Grid.Width = 3;
 		Grid.Height = 1;
-		Grid.Tiles = { Cell0, Cell1, Cell2 };
+		Grid.Tiles = {Cell0, Cell1, Cell2};
 		Grid.SourceCell = 0;
 		Grid.LockCell = 2;
 		return Grid;
@@ -104,7 +104,7 @@ bool FSSPowerGridPoweredTest::RunTest(const FString& Parameters)
 	Alarm.Cell = 1;
 	Alarm.Side = North;
 	Alarmed.Alarms.Add(Alarm);
-	TestTrue(TEXT("Alarm hot when a powered tile faces it"), Alarmed.GetHotAlarms() == TArray<int32>{ 0 });
+	TestTrue(TEXT("Alarm hot when a powered tile faces it"), Alarmed.GetHotAlarms() == TArray<int32>{0});
 	Alarmed.Tiles[1] = West | East;
 	TestEqual(TEXT("Alarm quiet when the tile faces away"), Alarmed.GetHotAlarms().Num(), 0);
 
@@ -165,23 +165,31 @@ bool FSSPowerGridGenerateTest::RunTest(const FString& Parameters)
 
 			if (Mask & East)
 			{
-				if (Col == Width - 1) bNoStrayBorder &= Cell == Grid.LockCell;
-				else bMatchedSides &= (Grid.Solution[Cell + 1] & West) != 0;
+				if (Col == Width - 1)
+					bNoStrayBorder &= Cell == Grid.LockCell;
+				else
+					bMatchedSides &= (Grid.Solution[Cell + 1] & West) != 0;
 			}
 			if (Mask & West)
 			{
-				if (Col == 0) bNoStrayBorder &= Cell == Grid.SourceCell;
-				else bMatchedSides &= (Grid.Solution[Cell - 1] & East) != 0;
+				if (Col == 0)
+					bNoStrayBorder &= Cell == Grid.SourceCell;
+				else
+					bMatchedSides &= (Grid.Solution[Cell - 1] & East) != 0;
 			}
 			if (Mask & South)
 			{
-				if (Row == Height - 1) bNoStrayBorder = false;
-				else bMatchedSides &= (Grid.Solution[Cell + Width] & North) != 0;
+				if (Row == Height - 1)
+					bNoStrayBorder = false;
+				else
+					bMatchedSides &= (Grid.Solution[Cell + Width] & North) != 0;
 			}
 			if (Mask & North)
 			{
-				if (Row == 0) bNoStrayBorder = false;
-				else bMatchedSides &= (Grid.Solution[Cell - Width] & South) != 0;
+				if (Row == 0)
+					bNoStrayBorder = false;
+				else
+					bMatchedSides &= (Grid.Solution[Cell - Width] & South) != 0;
 			}
 
 			// 섞은 타일은 정답 타일을 돌린 것 중 하나
@@ -235,8 +243,7 @@ bool FSSPowerGridGenerateTest::RunTest(const FString& Parameters)
 	FSSPowerGrid GridB;
 	GridA.Generate(Width, Height, 3, RandomA);
 	GridB.Generate(Width, Height, 3, RandomB);
-	TestTrue(TEXT("Same seed, same puzzle"), GridA.Tiles == GridB.Tiles && GridA.Solution == GridB.Solution
-		&& GridA.SourceCell == GridB.SourceCell && GridA.LockCell == GridB.LockCell);
+	TestTrue(TEXT("Same seed, same puzzle"), GridA.Tiles == GridB.Tiles && GridA.Solution == GridB.Solution && GridA.SourceCell == GridB.SourceCell && GridA.LockCell == GridB.LockCell);
 
 	// 경보를 후보보다 많이 달라고 해도 크래시 없이 있는 만큼 (5×4 판 위·아래 테두리 = 10곳)
 	FRandomStream RandomMany(7);
@@ -258,7 +265,7 @@ bool FSSPowerTileShapeTest::RunTest(const FString& Parameters)
 	using namespace SSPowerSide;
 
 	// 모양이 있는 15가지 전부: 그림을 고르고, 기본 방향을 그 횟수만큼 돌리면 원래 모양
-	const uint8 BaseMasks[] = { 0, North, North | South, North | East, North | East | South, North | East | South | West };
+	const uint8 BaseMasks[] = {0, North, North | South, North | East, North | East | South, North | East | South | West};
 	bool bAllResolved = true;
 	bool bRotationMatches = true;
 	for (uint8 Mask = 1; Mask < 16; ++Mask)

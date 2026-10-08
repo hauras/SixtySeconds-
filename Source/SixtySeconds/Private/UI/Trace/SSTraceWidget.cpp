@@ -84,7 +84,7 @@ TSharedRef<SWidget> USSTraceWidget::RebuildWidget()
 
 		UImage* Frame = WidgetTree->ConstructWidget<UImage>();
 		if (UTexture2D* Texture = LoadObject<UTexture2D>(nullptr,
-			TEXT("/Game/Assets/UI/Trace/SS_TraceTerminal_Frame_v1.SS_TraceTerminal_Frame_v1")))
+				TEXT("/Game/Assets/UI/Trace/SS_TraceTerminal_Frame_v1.SS_TraceTerminal_Frame_v1")))
 		{
 			Frame->SetBrushFromTexture(Texture);
 		}
@@ -136,15 +136,13 @@ TSharedRef<SWidget> USSTraceWidget::RebuildWidget()
 
 bool USSTraceWidget::StartTrace(USSTraceConfig* InConfig)
 {
-	if (!IsValid(InConfig) || InConfig->SensorPositions.Num() < 3
-		|| InConfig->MapSize.X <= 0.0 || InConfig->MapSize.Y <= 0.0
-		|| InConfig->ReceiveGoal < 1 || InConfig->MaxTurns < 1) return false;
+	if (!IsValid(InConfig) || InConfig->SensorPositions.Num() < 3 || InConfig->MapSize.X <= 0.0 || InConfig->MapSize.Y <= 0.0 || InConfig->ReceiveGoal < 1 || InConfig->MaxTurns < 1) return false;
 
 	if (UGameInstance* GameInstance = GetGameInstance())
 	{
 		Run = GameInstance->GetSubsystem<USSRunSubsystem>();
 	}
-	if (!IsValid(Run) || !Run->GetComms()->BeginTrace()) return false;   // 오늘 이미 했거나 행동력 부족
+	if (!IsValid(Run) || !Run->GetComms()->BeginTrace()) return false; // 오늘 이미 했거나 행동력 부족
 
 	Config = InConfig;
 	bFinished = false;
@@ -212,11 +210,11 @@ void USSTraceWidget::HandleSendDirect()
 void USSTraceWidget::HandleSendRelay()
 {
 	if (!IsValid(Session) || !IsValid(Config)) return;
-	const FVector2D RelayPosition = Session->GetRelayPosition();   // 송신 뒤 차단돼 선택이 풀릴 수 있어서 미리 기억
+	const FVector2D RelayPosition = Session->GetRelayPosition(); // 송신 뒤 차단돼 선택이 풀릴 수 있어서 미리 기억
 	if (Session->SendViaRelay() && MapView)
 	{
 		MapView->PlayBurst(RelayPosition);
-		MapView->PlayBurst(Config->ShelterPosition, true);   // 은신처에서 새어 나간 약한 신호
+		MapView->PlayBurst(Config->ShelterPosition, true); // 은신처에서 새어 나간 약한 신호
 	}
 }
 
@@ -246,7 +244,7 @@ void USSTraceWidget::HandleMapClicked(FVector2D MapPosition)
 			Nearest = i;
 		}
 	}
-	if (Nearest == INDEX_NONE) return;   // 단자가 아닌 곳을 누름
+	if (Nearest == INDEX_NONE) return; // 단자가 아닌 곳을 누름
 
 	if (Session->IsRelayBlocked(Nearest))
 	{
@@ -269,8 +267,8 @@ void USSTraceWidget::Refresh()
 	if (LogText)
 	{
 		LogText->SetText(Session->GetReceived() > 0
-			? FText::Format(NSLOCTEXT("SSTrace", "ReceivedFragments", "외부 신호 조각 {0} / {1} 수신\n전문은 수신 완료 후 해독됩니다."), Session->GetReceived(), Goal)
-			: NSLOCTEXT("SSTrace", "WaitingForFragments", "외부 기록 수신 대기 중"));
+				? FText::Format(NSLOCTEXT("SSTrace", "ReceivedFragments", "외부 신호 조각 {0} / {1} 수신\n전문은 수신 완료 후 해독됩니다."), Session->GetReceived(), Goal)
+				: NSLOCTEXT("SSTrace", "WaitingForFragments", "외부 기록 수신 대기 중"));
 	}
 	if (TurnText)
 	{
@@ -314,8 +312,7 @@ void USSTraceWidget::Refresh()
 		SetStatus(NSLOCTEXT("SSTrace", "ExposedStatus", "위치 노출. 적이 은신처를 확정했어. 오늘 밤 조심해."));
 		break;
 	case ESSTraceOutcome::Completed:
-		ShowReceivedMessage(IsValid(Run)
-			&& Run->GetComms()->GetPendingMessages().Num() > PendingBefore);
+		ShowReceivedMessage(IsValid(Run) && Run->GetComms()->GetPendingMessages().Num() > PendingBefore);
 		break;
 	default:
 		SetStatus(NSLOCTEXT("SSTrace", "StoppedStatus", "접속을 끊었어. 받은 만큼은 내일 이어서 받을 수 있어."));

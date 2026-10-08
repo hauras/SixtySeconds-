@@ -3,7 +3,6 @@
 #include "CoreMinimal.h"
 #include "SSSignalFinder.generated.h"
 
-
 // ─────────────────────────────────────────────
 // 센서가 신호를 한 번 읽은 값
 // "센서 몇 번이 신호까지 거리를 얼마로 쟀는지"
@@ -26,7 +25,6 @@ struct SIXTYSECONDS_API FSSSensorReading
 	UPROPERTY()
 	float Weight = 1.f;
 };
-
 
 // ─────────────────────────────────────────────
 // 적의 추측 결과
@@ -53,7 +51,6 @@ struct FSSEnemyGuess
 	// 통계 용어로는 "정규화 카이제곱"
 	float Mismatch = 0.f;
 };
-
 
 // ─────────────────────────────────────────────
 // 신호 위치 찾기

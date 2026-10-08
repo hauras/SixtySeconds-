@@ -38,8 +38,7 @@ void ASSGuardAndroid::PoseLeg(UStaticMeshComponent* Thigh, UStaticMeshComponent*
 	const float Forward = 20.f * FMath::Cos(Phase);
 	const float Down = 85.f - 9.f * FMath::Max(0.f, FMath::Sin(Phase));
 	const float Reach = FMath::Clamp(FMath::Sqrt(Forward * Forward + Down * Down), 5.f, 87.9f);
-	const float Hip = FMath::Atan2(Forward, Down) + FMath::Acos(FMath::Clamp(
-		(46.f * 46.f + Reach * Reach - 42.f * 42.f) / (2.f * 46.f * Reach), -1.f, 1.f));
+	const float Hip = FMath::Atan2(Forward, Down) + FMath::Acos(FMath::Clamp((46.f * 46.f + Reach * Reach - 42.f * 42.f) / (2.f * 46.f * Reach), -1.f, 1.f));
 	const float Knee = -FMath::Acos(FMath::Clamp(
 		(Reach * Reach - 46.f * 46.f - 42.f * 42.f) / (2.f * 46.f * 42.f), -1.f, 1.f));
 	Thigh->SetRelativeRotation(FRotator(0.f, 0.f, FMath::RadiansToDegrees(Hip)));

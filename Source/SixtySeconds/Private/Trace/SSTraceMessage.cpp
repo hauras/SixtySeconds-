@@ -44,7 +44,7 @@ FName FSSTraceMessagePicker::PickInfo(const UDataTable* Table, int32 Day, const 
 	Table->ForeachRow<FSSTraceMessageRow>(TEXT("PickInfo"), [&](const FName& Id, const FSSTraceMessageRow& Row)
 	{
 		if (Row.Kind != ESSTraceMessageKind::Info || Row.MinDay > Day || Received.Contains(Id) || Row.Weight <= 0) return;
-		Candidates.Add({ Id, Row.Weight });
+		Candidates.Add({Id, Row.Weight});
 		TotalWeight += Row.Weight;
 	});
 	if (TotalWeight <= 0) return NAME_None;

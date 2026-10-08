@@ -40,8 +40,8 @@ void USSCipherCellWidget::ShowState(int32 GuessLetter, bool bSelected, bool bLoc
 	if (GuessText)
 	{
 		GuessText->SetText(GuessLetter == INDEX_NONE
-			? FText::FromString(TEXT("_"))
-			: FText::FromString(FString::Chr(FSSCipher::ToLetter(GuessLetter))));
+				? FText::FromString(TEXT("_"))
+				: FText::FromString(FString::Chr(FSSCipher::ToLetter(GuessLetter))));
 		GuessText->SetColorAndOpacity(FSlateColor(Color(GuessLetter == INDEX_NONE ? TEXT("C9A3F0") : TEXT("74E3EE"))));
 	}
 

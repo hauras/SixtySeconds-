@@ -31,11 +31,11 @@ float USSAraDirector::DetectionRatio(ESSInvestigationSpot Spot)
 	float InnocentReason = 1.f;
 	switch (Spot)
 	{
-	case ESSInvestigationSpot::TerminalLog: InnocentReason = 0.1f;  break;
-	case ESSInvestigationSpot::Vent:        InnocentReason = 0.2f;  break;
-	case ESSInvestigationSpot::Door:        InnocentReason = 0.35f; break;
-	case ESSInvestigationSpot::PatrolNoise: InnocentReason = 0.5f;  break;
-	case ESSInvestigationSpot::Storage:     InnocentReason = 0.7f;  break;
+	case ESSInvestigationSpot::TerminalLog: InnocentReason = 0.1f; break;
+	case ESSInvestigationSpot::Vent: InnocentReason = 0.2f; break;
+	case ESSInvestigationSpot::Door: InnocentReason = 0.35f; break;
+	case ESSInvestigationSpot::PatrolNoise: InnocentReason = 0.5f; break;
+	case ESSInvestigationSpot::Storage: InnocentReason = 0.7f; break;
 	default: break;
 	}
 	return 1.f / InnocentReason;
@@ -301,7 +301,10 @@ FText USSAraDirector::PickLine(const TCHAR* Kind, int32 Seed, const FFormatNamed
 	{
 		const FString Prefix = FString(Kind) + TEXT("_");
 		TArray<FName> Names = LineTable->GetRowNames();
-		Names.Sort([](const FName& A, const FName& B) { return A.LexicalLess(B); });
+		Names.Sort([](const FName& A, const FName& B)
+		{
+			return A.LexicalLess(B);
+		});
 		for (const FName& RowName : Names)
 		{
 			if (!RowName.ToString().StartsWith(Prefix)) continue;
@@ -337,18 +340,15 @@ FText USSAraDirector::BuildBriefing() const
 	FText Head;
 	if (Day == 1)
 	{
-		Head = PickLine(TEXT("DayOne"), Day, Args, NSLOCTEXT("SSAra", "DayOne",
-			"Day 1. B1 비상 대피실의 인원을 확인했습니다. 현재 설비는 정상 범위에서 작동 중입니다. 안전한 하루를 권장합니다."));
+		Head = PickLine(TEXT("DayOne"), Day, Args, NSLOCTEXT("SSAra", "DayOne", "Day 1. B1 비상 대피실의 인원을 확인했습니다. 현재 설비는 정상 범위에서 작동 중입니다. 안전한 하루를 권장합니다."));
 	}
 	else if (Food < People || Water < People)
 	{
-		Head = PickLine(TEXT("LowSupply"), Day, Args, NSLOCTEXT("SSAra", "LowSupply",
-			"Day {Day}. 식량 {Food}개, 물 {Water}개. 현재 인원 기준으로 부족합니다. 배급 순서를 정하는 것을 권장합니다."));
+		Head = PickLine(TEXT("LowSupply"), Day, Args, NSLOCTEXT("SSAra", "LowSupply", "Day {Day}. 식량 {Food}개, 물 {Water}개. 현재 인원 기준으로 부족합니다. 배급 순서를 정하는 것을 권장합니다."));
 	}
 	else
 	{
-		Head = PickLine(TEXT("Daily"), Day, Args, NSLOCTEXT("SSAra", "DailyBriefing",
-			"Day {Day}. 현재 보유 물자는 식량 {Food}개, 물 {Water}개입니다. 대피실 상태를 계속 관찰하겠습니다."));
+		Head = PickLine(TEXT("Daily"), Day, Args, NSLOCTEXT("SSAra", "DailyBriefing", "Day {Day}. 현재 보유 물자는 식량 {Food}개, 물 {Water}개입니다. 대피실 상태를 계속 관찰하겠습니다."));
 	}
 
 	// 의심받는 동료·표적이 있으면 아래에 덧붙임
@@ -379,20 +379,17 @@ FText USSAraDirector::BuildBriefingNotes() const
 		// 표적: 파견을 권함 (이유는 '효율'로 포장. 아라는 거짓말하지 않고 말하지 않을 뿐)
 		if (Each.SurvivorId == TargetId)
 		{
-			Notes.Add(PickLine(TEXT("Target"), Seed, Args, NSLOCTEXT("SSAra", "TargetNote",
-				"권장 사항: {Name} — 외부 물자 탐색 배치. 대피실 내 야간 활동량이 기준치를 넘었습니다. 활동량이 많은 인원은 바깥에서 더 효율적입니다.")));
+			Notes.Add(PickLine(TEXT("Target"), Seed, Args, NSLOCTEXT("SSAra", "TargetNote", "권장 사항: {Name} — 외부 물자 탐색 배치. 대피실 내 야간 활동량이 기준치를 넘었습니다. 활동량이 많은 인원은 바깥에서 더 효율적입니다.")));
 		}
 		// 많이 의심: 이유를 말하지 않음 (엿들은 것도 섞여 있으니까)
 		else if (Suspicion >= ConcernSuspicion)
 		{
-			Notes.Add(PickLine(TEXT("Concern"), Seed, Args, NSLOCTEXT("SSAra", "ConcernNote",
-				"{Name}의 행동 패턴이 기준에서 벗어나고 있습니다. 관찰 빈도를 높이겠습니다.")));
+			Notes.Add(PickLine(TEXT("Concern"), Seed, Args, NSLOCTEXT("SSAra", "ConcernNote", "{Name}의 행동 패턴이 기준에서 벗어나고 있습니다. 관찰 빈도를 높이겠습니다.")));
 		}
 		// 조금 의심: 본 것만 말함 (엿들은 건 말하지 않음)
 		else if (Suspicion >= NoticeSuspicion && Each.DetectionsSeen > 0)
 		{
-			Notes.Add(PickLine(TEXT("Notice"), Seed, Args, NSLOCTEXT("SSAra", "NoticeNote",
-				"{Name}의 야간 활동이 {Count}회 기록되었습니다. 충분한 수면을 권장합니다.")));
+			Notes.Add(PickLine(TEXT("Notice"), Seed, Args, NSLOCTEXT("SSAra", "NoticeNote", "{Name}의 야간 활동이 {Count}회 기록되었습니다. 충분한 수면을 권장합니다.")));
 		}
 	}
 	return FText::Join(FText::FromString(TEXT("\n")), Notes);

@@ -16,7 +16,6 @@ class SIXTYSECONDS_API USSDialSession : public UObject
 {
 	GENERATED_BODY()
 public:
-
 	// 해독 시작. 대기함 번호가 잘못됐으면 false
 	bool Initialize(USSRunSubsystem* InRun, int32 InPendingIndex);
 
@@ -33,7 +32,6 @@ public:
 	float GetDialStrength(int32 DialIndex) const; // 이 다이얼의 신호 세기 0~1
 	bool IsUnlocked() const { return bUnlocked; }
 
-	
 	// ── 시간제한 (일반 통신만) ──
 
 	// 일반 통신 해독 제한 시간 (초)
@@ -48,17 +46,17 @@ public:
 	bool HasTimeLimit() const { return bTimed; }
 	float GetTimeLeft() const { return TimeLeft; }
 	bool IsFailed() const { return bFailed; }
-	
+
 	UPROPERTY(BlueprintAssignable, Category="SS|Decode")
 	FSSOnDialChanged OnDialChanged;
-private:
 
+private:
 	// 다이얼이 전부 정답이면 잠금 해제하고 해독 성공 처리
 	void CheckUnlock();
 
 	// 시간 초과·포기: 메시지를 버리고 실패 표시
 	void Fail();
-	
+
 	UPROPERTY()
 	TObjectPtr<USSRunSubsystem> Run;
 
@@ -81,5 +79,4 @@ private:
 	bool bTimed = false;
 	float TimeLeft = 0.f;
 	bool bFailed = false;
-	
 };

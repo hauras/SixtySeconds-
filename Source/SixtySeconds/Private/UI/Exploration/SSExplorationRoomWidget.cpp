@@ -7,7 +7,7 @@
 void USSExplorationRoomWidget::Setup(int32 InRoomIndex, const FText& InDisplayName)
 {
 	RoomIndex = InRoomIndex;
-	if (NameText) NameText->SetText(InDisplayName);   // 이름은 DataAsset의 DisplayName을 받아서 표시
+	if (NameText) NameText->SetText(InDisplayName); // 이름은 DataAsset의 DisplayName을 받아서 표시
 }
 
 void USSExplorationRoomWidget::SetState(bool bIsCurrent, bool bCanMove, bool bGuardHere, bool bGuardNext)
@@ -16,9 +16,9 @@ void USSExplorationRoomWidget::SetState(bool bIsCurrent, bool bCanMove, bool bGu
 	{
 		// 우선순위: 현재 방 > 경비 예고 > 이동 가능 > 기본
 		const FLinearColor& Color = bIsCurrent ? CurrentColor
-			: (bGuardHere || bGuardNext) ? DangerColor
-			: bCanMove ? MovableColor
-			: NormalColor;
+			: (bGuardHere || bGuardNext)       ? DangerColor
+			: bCanMove                         ? MovableColor
+											   : NormalColor;
 		HighlightBorder->SetBrushColor(Color);
 	}
 
@@ -39,8 +39,8 @@ void USSExplorationRoomWidget::SetState(bool bIsCurrent, bool bCanMove, bool bGu
 			? NSLOCTEXT("SSExploration", "GuardHere", "경비 위치")
 			: bGuardNext ? NSLOCTEXT("SSExploration", "GuardNext", "다음 순찰 · 위험")
 			: bIsCurrent ? NSLOCTEXT("SSExploration", "PlayerHere", "현재 위치")
-			: bCanMove ? NSLOCTEXT("SSExploration", "CanMove", "이동 가능")
-			: FText::GetEmpty();
+			: bCanMove   ? NSLOCTEXT("SSExploration", "CanMove", "이동 가능")
+						 : FText::GetEmpty();
 		RoomStateText->SetText(Status);
 		RoomStateText->SetColorAndOpacity(FSlateColor(
 			(bGuardHere || bGuardNext) ? DangerColor : (bIsCurrent ? CurrentColor : MovableColor)));
@@ -61,6 +61,6 @@ void USSExplorationRoomWidget::NativeDestruct()
 
 void USSExplorationRoomWidget::HandleClicked()
 {
-	if (RoomIndex == INDEX_NONE) return;   // Setup 전 클릭은 무시
+	if (RoomIndex == INDEX_NONE) return; // Setup 전 클릭은 무시
 	OnRoomClicked.Broadcast(RoomIndex);
 }

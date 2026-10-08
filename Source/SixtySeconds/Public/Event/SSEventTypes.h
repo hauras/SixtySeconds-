@@ -9,13 +9,13 @@ UENUM(BlueprintType)
 enum class ESSEventCondition : uint8
 {
 	None,
-	HasItem,           // Target = ItemId, Amount = 최소 개수 (0이면 1)
-	AnySurvivorAlive,  // 살아 있는 동료가 한 명 이상
-	SurvivorAlive,     // Target = SurvivorId
-	RobotIdle,         // 탐사 로봇이 은신처에서 대기 중
-	RobotAway,         // 탐사 로봇이 탐사 중
-	AraHasTarget,      // 아라에게 교체할 표적이 있음 (아직 아무도 교체 전)
-	HiddenTruthCount,  // 숨은 진실을 Amount개 이상 앎 (0이면 1)
+	HasItem,          // Target = ItemId, Amount = 최소 개수 (0이면 1)
+	AnySurvivorAlive, // 살아 있는 동료가 한 명 이상
+	SurvivorAlive,    // Target = SurvivorId
+	RobotIdle,        // 탐사 로봇이 은신처에서 대기 중
+	RobotAway,        // 탐사 로봇이 탐사 중
+	AraHasTarget,     // 아라에게 교체할 표적이 있음 (아직 아무도 교체 전)
+	HiddenTruthCount, // 숨은 진실을 Amount개 이상 앎 (0이면 1)
 };
 
 // 선택지를 고르면 일어나는 일
@@ -23,30 +23,30 @@ UENUM(BlueprintType)
 enum class ESSEventEffect : uint8
 {
 	None,
-	Item,              // Target = ItemId, Amount = +획득 / -손실
-	PlayerHealth,      // Amount = ± 체력
-	PlayerSatiety,     // Amount = ± 포만감
-	PlayerHydration,   // Amount = ± 수분
-	SurvivorsHealth,   // Amount = ± 살아 있는 모든 동료 체력
-	ActionPoints,      // Amount = ± 오늘 행동력
-	Journal,           // Text = 저널에 남길 문장
-	ScheduleEvent,     // Target = EventId, Amount = 며칠 뒤 (1 이상)
-	AraSwapTarget,     // 아라의 표적을 안드로이드로 교체 (비밀: 결과·기록에 안 나옴)
-	AraRefused,        // 아라의 제안을 거절하거나 막아냄 (아라가 다음 단계를 예약)
-	Ending,            // Target = Resolve / Dominion / Reversal. 엔딩 확정 (밤이 끝나면 엔딩 카드)
+	Item,            // Target = ItemId, Amount = +획득 / -손실
+	PlayerHealth,    // Amount = ± 체력
+	PlayerSatiety,   // Amount = ± 포만감
+	PlayerHydration, // Amount = ± 수분
+	SurvivorsHealth, // Amount = ± 살아 있는 모든 동료 체력
+	ActionPoints,    // Amount = ± 오늘 행동력
+	Journal,         // Text = 저널에 남길 문장
+	ScheduleEvent,   // Target = EventId, Amount = 며칠 뒤 (1 이상)
+	AraSwapTarget,   // 아라의 표적을 안드로이드로 교체 (비밀: 결과·기록에 안 나옴)
+	AraRefused,      // 아라의 제안을 거절하거나 막아냄 (아라가 다음 단계를 예약)
+	Ending,          // Target = Resolve / Dominion / Reversal. 엔딩 확정 (밤이 끝나면 엔딩 카드)
 };
 
 // 밤 사건이 은신처 어디에서 느껴지는지. HUD가 이 위치에 발견 표시(!)를 띄움
 UENUM(BlueprintType)
 enum class ESSEventSpot : uint8
 {
-	Monitor,     // 감시 화면 (위치를 정하지 않은 사건의 기본값)
-	Door,        // 방화문
-	Vent,        // 천장 환풍구
-	Shelf,       // 물자 선반
-	Equipment,   // 설비·사물함
-	Terminal,    // 관리 단말 (아라)
-	Bed,         // 침대
+	Monitor,   // 감시 화면 (위치를 정하지 않은 사건의 기본값)
+	Door,      // 방화문
+	Vent,      // 천장 환풍구
+	Shelf,     // 물자 선반
+	Equipment, // 설비·사물함
+	Terminal,  // 관리 단말 (아라)
+	Bed,       // 침대
 };
 
 // Events 시트 한 줄. 행 이름(Name 열)이 EventId.
@@ -59,17 +59,17 @@ struct SIXTYSECONDS_API FSSEventRow : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="SS|Event") FText Body;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="SS|Event") int32 MinDay = 1;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="SS|Event") int32 MaxDay = 0;      // 0 = 제한 없음
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="SS|Event") int32 Weight = 10;     // 뽑힐 확률 가중치
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="SS|Event") int32 MaxDay = 0;  // 0 = 제한 없음
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="SS|Event") int32 Weight = 10; // 뽑힐 확률 가중치
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="SS|Event") bool bOnceOnly = false;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="SS|Event") int32 Cooldown = 0;    // 나온 뒤 며칠 동안 다시 안 나옴
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="SS|Event") bool bScheduledOnly = false;   // 다른 선택의 결과로만 등장 (보답 사건 등)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="SS|Event") int32 Cooldown = 0;          // 나온 뒤 며칠 동안 다시 안 나옴
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="SS|Event") bool bScheduledOnly = false; // 다른 선택의 결과로만 등장 (보답 사건 등)
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="SS|Event") ESSEventCondition Condition = ESSEventCondition::None;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="SS|Event") FName ConditionTarget = NAME_None;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="SS|Event") int32 ConditionAmount = 0;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="SS|Event") ESSEventSpot Spot = ESSEventSpot::Monitor;   // 밤에 발견 표시가 뜨는 곳
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="SS|Event") ESSEventSpot Spot = ESSEventSpot::Monitor; // 밤에 발견 표시가 뜨는 곳
 };
 
 // Choices 시트 한 줄. 행 이름이 ChoiceId.
@@ -79,7 +79,7 @@ struct SIXTYSECONDS_API FSSEventChoiceRow : public FTableRowBase
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="SS|Event") FName EventId = NAME_None;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="SS|Event") int32 Order = 0;       // 화면에 나오는 순서
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="SS|Event") int32 Order = 0; // 화면에 나오는 순서
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="SS|Event") FText Text;
 
 	// 이 조건이 안 맞으면 선택지가 비활성
@@ -98,7 +98,7 @@ struct SIXTYSECONDS_API FSSEventEffectRow : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="SS|Event") ESSEventEffect Type = ESSEventEffect::None;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="SS|Event") FName Target = NAME_None;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="SS|Event") int32 Amount = 0;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="SS|Event") float Chance = 1.f;    // 0~1, 이 효과가 일어날 확률
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="SS|Event") float Chance = 1.f; // 0~1, 이 효과가 일어날 확률
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="SS|Event") FText Text;
 };
 
@@ -110,21 +110,20 @@ struct FSSEventChoiceView
 	bool bAvailable = false;
 };
 
-
 // 선택으로 실제로 바뀐 것 하나 (확률에 성공했고, 가진 만큼만 잃은 실제 양)
 struct FSSEventChange
 {
 	ESSEventEffect Type = ESSEventEffect::None;
-	FName Target = NAME_None;   // 아이템일 때 ItemId
-	int32 Amount = 0;           // 실제 적용된 양 (+얻음 / -잃음)
+	FName Target = NAME_None; // 아이템일 때 ItemId
+	int32 Amount = 0;         // 실제 적용된 양 (+얻음 / -잃음)
 };
 
 // 사건 하나의 결과. 선택 후 아침 알림과 저널 기록에 같이 씀
 struct FSSEventResult
 {
 	FName EventId = NAME_None;
-	FText Title;                     // 사건 이름
-	FText ChoiceText;                // 고른 선택지
-	TArray<FText> Lines;             // 결과 문장 (Journal 효과 문장들)
-	TArray<FSSEventChange> Changes;  // 실제로 바뀐 것들 (다음 날로 이어지는 결과는 넣지 않음)
+	FText Title;                    // 사건 이름
+	FText ChoiceText;               // 고른 선택지
+	TArray<FText> Lines;            // 결과 문장 (Journal 효과 문장들)
+	TArray<FSSEventChange> Changes; // 실제로 바뀐 것들 (다음 날로 이어지는 결과는 넣지 않음)
 };

@@ -31,7 +31,8 @@ void USSStockItemWidget::NativeDestruct()
 void USSStockItemWidget::RefreshFromStorage()
 {
 	const int32 Quantity = IsValid(RunSubsystem) && IsValid(ItemDefinition)
-		? RunSubsystem->GetStoredQuantityById(ItemDefinition->ItemId) : 0;
+		? RunSubsystem->GetStoredQuantityById(ItemDefinition->ItemId)
+		: 0;
 	SetItemAndQuantity(ItemDefinition, Quantity);
 }
 

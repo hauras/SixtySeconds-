@@ -7,10 +7,10 @@
 UENUM(BlueprintType)
 enum class ESSEnding : uint8
 {
-	None,       // 아직 안 끝남
-	Resolve,    // ① 해결: 아라를 종료하고 격벽이 열림
-	Dominion,   // ② 지배: 아무것도 못 바꾸고 계속 "보호"받음
-	Reversal,   // ③ 반전: 아라를 믿음 (아라는 정화에서 우리를 지킨 것)
+	None,     // 아직 안 끝남
+	Resolve,  // ① 해결: 아라를 종료하고 격벽이 열림
+	Dominion, // ② 지배: 아무것도 못 바꾸고 계속 "보호"받음
+	Reversal, // ③ 반전: 아라를 믿음 (아라는 정화에서 우리를 지킨 것)
 };
 
 // 엔딩 카드에 보여줄 결과 (엔딩이 정해진 순간 고정)

@@ -122,11 +122,10 @@ void USSRadioWidget::NativeConstruct()
 	DecodeButton->SetIsEnabled(PendingCount > 0);
 	if (UTextBlock* DecodeLabel = Cast<UTextBlock>(DecodeButton->GetContent()))
 	{
-		const bool bTruthPending = PendingCount > 0
-			&& Comms->GetPendingMessages()[0].Row.Kind == ESSTraceMessageKind::Truth;
+		const bool bTruthPending = PendingCount > 0 && Comms->GetPendingMessages()[0].Row.Kind == ESSTraceMessageKind::Truth;
 		DecodeLabel->SetText(bTruthPending
-			? FText::Format(NSLOCTEXT("SSRadio", "TruthDecodeCount", "감청 해독 ({0})"), PendingCount)
-			: FText::Format(NSLOCTEXT("SSRadio", "DialDecodeCount", "다이얼 해독 ({0})"), PendingCount));
+				? FText::Format(NSLOCTEXT("SSRadio", "TruthDecodeCount", "감청 해독 ({0})"), PendingCount)
+				: FText::Format(NSLOCTEXT("SSRadio", "DialDecodeCount", "다이얼 해독 ({0})"), PendingCount));
 	}
 
 	// 왜 못 쓰는지 안내
@@ -180,7 +179,8 @@ void USSRadioWidget::OpenDecode()
 	if (bTruth)
 	{
 		const TSubclassOf<USSTruthDecodeWidget> ActiveClass = TruthDecodeClass
-			? TruthDecodeClass : TSubclassOf<USSTruthDecodeWidget>(USSTruthDecodeWidget::StaticClass());
+			? TruthDecodeClass
+			: TSubclassOf<USSTruthDecodeWidget>(USSTruthDecodeWidget::StaticClass());
 		USSTruthDecodeWidget* Truth = CreateWidget<USSTruthDecodeWidget>(GetOwningPlayer(), ActiveClass);
 		if (!IsValid(Truth)) return;
 		Truth->AddToViewport(25);
@@ -207,8 +207,7 @@ void USSRadioWidget::OpenDecode()
 
 bool USSRadioWidget::HasOpenWindow() const
 {
-	return (IsValid(TraceWidget) && TraceWidget->IsInViewport())
-		|| (IsValid(DecodeWidget) && DecodeWidget->IsInViewport());
+	return (IsValid(TraceWidget) && TraceWidget->IsInViewport()) || (IsValid(DecodeWidget) && DecodeWidget->IsInViewport());
 }
 
 void USSRadioWidget::CloseWindows()

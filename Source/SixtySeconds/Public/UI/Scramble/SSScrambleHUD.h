@@ -44,5 +44,4 @@ private:
 
 	// 안내를 대상 머리 위 얼마나 높이 띄울지 (cm)
 	static constexpr float PromptHeightAboveTarget = 25.f;
-
 };

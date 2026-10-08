@@ -8,10 +8,10 @@
 UCLASS()
 class USSEventWidgetTestListener : public UObject
 {
-    GENERATED_BODY()
+	GENERATED_BODY()
 public:
-    UFUNCTION()
-    void HandleFinished() { ++FinishedCount; }
+	UFUNCTION()
+	void HandleFinished() { ++FinishedCount; }
 
-    int32 FinishedCount = 0;
+	int32 FinishedCount = 0;
 };

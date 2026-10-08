@@ -54,7 +54,7 @@ int32 FSSItemSpawnPlanner::PickEntry(const USSItemSpawnTable& Table, FRandomStre
 		if (Roll < Entry.Weight) return Index;
 		Roll -= Entry.Weight;
 	}
-	return Last;   // 소수점 오차로 끝까지 왔으면 마지막 칸
+	return Last; // 소수점 오차로 끝까지 왔으면 마지막 칸
 }
 
 TArray<FSSItemPlacement> FSSItemSpawnPlanner::Plan(const TArray<FName>& PointRooms, const USSItemSpawnTable& Table, FRandomStream& Random)

@@ -32,7 +32,7 @@ namespace SSDecodeStyle
 	}
 
 	// 다이얼마다 색 (6개까지)
-	const TCHAR* const DialHex[] = { TEXT("F0C27A"), TEXT("74E3EE"), TEXT("D9A0E8"), TEXT("8FE0A0"), TEXT("EB8076"), TEXT("C7C7C7") };
+	const TCHAR* const DialHex[] = {TEXT("F0C27A"), TEXT("74E3EE"), TEXT("D9A0E8"), TEXT("8FE0A0"), TEXT("EB8076"), TEXT("C7C7C7")};
 
 	UTextBlock* Label(UWidgetTree* Tree, const FText& Text, int32 Size, const TCHAR* Hex)
 	{
@@ -123,12 +123,13 @@ bool USSDialDecodeWidget::StartDecode(int32 PendingIndex)
 		if (UTextBlock* CloseLabel = Cast<UTextBlock>(CloseButton->GetContent()))
 		{
 			CloseLabel->SetText(Session->HasTimeLimit()
-				? NSLOCTEXT("SSDecode", "GiveUp", "포기 (메시지 소실)")
-				: NSLOCTEXT("SSDecode", "Close", "닫기 (진행 저장)"));
+					? NSLOCTEXT("SSDecode", "GiveUp", "포기 (메시지 소실)")
+					: NSLOCTEXT("SSDecode", "Close", "닫기 (진행 저장)"));
 		}
 	}
 	if (TimerPanel) TimerPanel->SetVisibility(Session->HasTimeLimit()
-		? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::Collapsed);
+			? ESlateVisibility::SelfHitTestInvisible
+			: ESlateVisibility::Collapsed);
 
 	Refresh();
 	UpdateTimerDisplay();
@@ -326,15 +327,15 @@ void USSDialDecodeWidget::UpdateTimerDisplay()
 	const bool bDanger = Remaining <= 10.f && !bUnlocked && !bFailed;
 	const bool bBlinkOn = FMath::Fmod(Remaining, 1.f) > .5f;
 	const TCHAR* TimerColor = bUnlocked ? TEXT("8FE0A0")
-		: bFailed ? TEXT("9AA39E")
-		: bDanger ? (bBlinkOn ? TEXT("EB8076") : TEXT("7A3A34"))
-		: TEXT("74E3EE");
+		: bFailed                       ? TEXT("9AA39E")
+		: bDanger                       ? (bBlinkOn ? TEXT("EB8076") : TEXT("7A3A34"))
+										: TEXT("74E3EE");
 	if (TimerText)
 	{
 		const int32 Seconds = FMath::CeilToInt(Remaining);
 		TimerText->SetText(bUnlocked ? NSLOCTEXT("SSDecode", "TimerSuccess", "해독 완료")
-			: bFailed ? NSLOCTEXT("SSDecode", "TimerFailed", "신호 소실")
-			: FText::FromString(FString::Printf(TEXT("%02d:%02d"), Seconds / 60, Seconds % 60)));
+				: bFailed            ? NSLOCTEXT("SSDecode", "TimerFailed", "신호 소실")
+									 : FText::FromString(FString::Printf(TEXT("%02d:%02d"), Seconds / 60, Seconds % 60)));
 		TimerText->SetColorAndOpacity(FSlateColor(SSDecodeStyle::Color(TimerColor)));
 	}
 	if (TimerBar)
@@ -408,8 +409,8 @@ void USSDialDecodeWidget::Refresh()
 	if (LockStateText)
 	{
 		LockStateText->SetText(bUnlocked
-			? NSLOCTEXT("SSDecode", "UnlockedBadge", "● 잠금 해제")
-			: NSLOCTEXT("SSDecode", "Locked", "● 잠금 상태"));
+				? NSLOCTEXT("SSDecode", "UnlockedBadge", "● 잠금 해제")
+				: NSLOCTEXT("SSDecode", "Locked", "● 잠금 상태"));
 		LockStateText->SetColorAndOpacity(FSlateColor(SSDecodeStyle::Color(bUnlocked ? TEXT("8FE0A0") : TEXT("EB8076"))));
 	}
 
@@ -455,8 +456,8 @@ void USSDialDecodeWidget::ShowResult()
 	{
 		if (ResultPanel) ResultPanel->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
 		ResultText->SetText(Changes.IsEmpty()
-			? FText::Format(NSLOCTEXT("SSDecode", "Result", "[{0}] {1}"), Message.Title, Korean)
-			: FText::Format(NSLOCTEXT("SSDecode", "ResultChanges", "[{0}] {1}\n→ {2}"), Message.Title, Korean, Changes));
+				? FText::Format(NSLOCTEXT("SSDecode", "Result", "[{0}] {1}"), Message.Title, Korean)
+				: FText::Format(NSLOCTEXT("SSDecode", "ResultChanges", "[{0}] {1}\n→ {2}"), Message.Title, Korean, Changes));
 	}
 	if (StatusText) StatusText->SetText(NSLOCTEXT("SSDecode", "Unlocked", "잠금 해제. 기록창에 남겼어."));
 	if (CloseButton && CloseButton->GetContent())

@@ -15,7 +15,7 @@ namespace
 }
 
 int32 FSSSuspectMemory::AddBurst(TArray<FSSSuspectSpot>& Spots, const TArray<FVector2D>& Sensors,
-                                 const TArray<FSSSensorReading>& Readings, float NoiseSigma)
+	const TArray<FSSSensorReading>& Readings, float NoiseSigma)
 {
 	FSSEnemyGuess Guess = FSSSignalFinder::Find(Sensors, Readings, NoiseSigma);
 	if (!Guess.bFound) return INDEX_NONE;
@@ -100,11 +100,11 @@ bool FSSSuspectMemory::IsInsideOval(const FSSSuspectSpot& Spot, const FVector2D&
 	// 타원 기울기만큼 되돌려서, 긴 반지름이 X축에 오게 돌림
 	const double Cos = FMath::Cos(double(Spot.OvalAngle));
 	const double Sin = FMath::Sin(double(Spot.OvalAngle));
-	const double AlongLong  =  Offset.X * Cos + Offset.Y * Sin;
+	const double AlongLong = Offset.X * Cos + Offset.Y * Sin;
 	const double AlongShort = -Offset.X * Sin + Offset.Y * Cos;
 
 	// 반지름이 0이면 나눌 수 없어서 아주 작은 값으로 막음
-	const double LongR  = FMath::Max(double(Spot.OvalSize.X), 1e-3);
+	const double LongR = FMath::Max(double(Spot.OvalSize.X), 1e-3);
 	const double ShortR = FMath::Max(double(Spot.OvalSize.Y), 1e-3);
 
 	// 타원 방정식: (x/a)² + (y/b)² ≤ 1 이면 안쪽

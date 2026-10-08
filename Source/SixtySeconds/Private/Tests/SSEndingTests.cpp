@@ -23,7 +23,7 @@ namespace SSEndingTest
 		UGameInstance* GameInstance = NewObject<UGameInstance>();
 		USSRunSubsystem* Run = NewObject<USSRunSubsystem>(GameInstance);
 		Run->InitializeShelterStats(100.f, 100.f, 100.f);
-		for (const TCHAR* Id : { TEXT("TestResearcher"), TEXT("Technician") })
+		for (const TCHAR* Id : {TEXT("TestResearcher"), TEXT("Technician")})
 		{
 			USSSurvivorDefinition* Survivor = NewObject<USSSurvivorDefinition>(Run);
 			Survivor->SurvivorId = Id;
@@ -46,7 +46,7 @@ namespace SSEndingTest
 	USSEventCatalog* MakeFinalCatalog()
 	{
 		USSEventCatalog* Catalog = NewObject<USSEventCatalog>();
-		Catalog->DailyEventChance = 0.f;   // 평소 사건은 안 나오게
+		Catalog->DailyEventChance = 0.f; // 평소 사건은 안 나오게
 
 		UDataTable* Events = NewObject<UDataTable>();
 		Events->RowStruct = FSSEventRow::StaticStruct();
@@ -107,7 +107,7 @@ namespace SSEndingTest
 		while (Run->GetCurrentDay() < Day)
 		{
 			Run->ModifyPlayerStats(100.f, 100.f, 100.f);
-			Run->ModifySurvivorsHealth(100.f);   // 배급 없이 넘겨도 동료가 죽지 않게
+			Run->ModifySurvivorsHealth(100.f); // 배급 없이 넘겨도 동료가 죽지 않게
 			Run->AdvanceDay(false, false);
 		}
 	}
@@ -195,7 +195,7 @@ bool FSSEndingServerRoomTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("Days survived recorded"), Run->GetEnding()->GetReport().DaysSurvived, USSEndingState::FinalDay);
 
 	// 엔딩마다 제목·문장이 있음
-	for (const ESSEnding Ending : { ESSEnding::Resolve, ESSEnding::Dominion, ESSEnding::Reversal })
+	for (const ESSEnding Ending : {ESSEnding::Resolve, ESSEnding::Dominion, ESSEnding::Reversal})
 	{
 		FSSEndingReport Report;
 		Report.Ending = Ending;
@@ -229,10 +229,7 @@ bool FSSAraForcedTargetTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("Forced target kept"), Ara->GetTarget() == Target);
 
 	// 거절 → 재제안 → 강제 교체까지 걸려도 마지막 밤 전에 끝날 수 있음 (예약은 표적을 정한 밤의 날짜 기준)
-	const int32 LatestSwapDay = USSAraDirector::ForceTargetDay
-		+ USSAraDirector::OfferDelay
-		+ USSAraDirector::RepeatOfferDelay
-		+ USSAraDirector::SeizeDelay;
+	const int32 LatestSwapDay = USSAraDirector::ForceTargetDay + USSAraDirector::OfferDelay + USSAraDirector::RepeatOfferDelay + USSAraDirector::SeizeDelay;
 	TestTrue(TEXT("Swap flow fits before the final night"), LatestSwapDay < USSEndingState::FinalDay);
 
 	// 이미 바꿨으면 진행 보장으로 새 표적을 잡지 않음

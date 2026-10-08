@@ -21,8 +21,8 @@ public:
 	void SetPanelInfo(const FText& InTitle, UTexture2D* InImage);
 	void SetPanelContent(UWidget* InContent);
 	void SetPanelAction(UWidget* InAction);
-    void SetPanelObservation(UWidget* InObservation);
-    void SetPortraitRegion(FVector2D UVMin, FVector2D UVMax);
+	void SetPanelObservation(UWidget* InObservation);
+	void SetPortraitRegion(FVector2D UVMin, FVector2D UVMax);
 
 protected:
 	virtual void NativeConstruct() override;
@@ -42,10 +42,10 @@ protected:
 
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UNamedSlot> ActionSlot;
-    UPROPERTY(meta=(BindWidgetOptional))
-    TObjectPtr<UNamedSlot> ObservationSlot;
+	UPROPERTY(meta=(BindWidgetOptional))
+	TObjectPtr<UNamedSlot> ObservationSlot;
 
 private:
 	UFUNCTION()
-	void OnCloseClicked();	
+	void OnCloseClicked();
 };

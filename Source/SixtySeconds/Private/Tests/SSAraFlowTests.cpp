@@ -23,9 +23,7 @@ namespace SSAraFlowTest
 		USSEventCatalog* Catalog = LoadObject<USSEventCatalog>(nullptr, CatalogPath);
 		USSSurvivorDefinition* Harin = LoadObject<USSSurvivorDefinition>(nullptr, ResearcherPath);
 		USSSurvivorDefinition* Taeo = LoadObject<USSSurvivorDefinition>(nullptr, TechnicianPath);
-		if (!Test.TestNotNull(TEXT("Event catalog asset"), Catalog)
-			|| !Test.TestNotNull(TEXT("Researcher asset"), Harin)
-			|| !Test.TestNotNull(TEXT("Technician asset"), Taeo))
+		if (!Test.TestNotNull(TEXT("Event catalog asset"), Catalog) || !Test.TestNotNull(TEXT("Researcher asset"), Harin) || !Test.TestNotNull(TEXT("Technician asset"), Taeo))
 		{
 			return nullptr;
 		}

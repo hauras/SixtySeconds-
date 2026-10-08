@@ -90,7 +90,7 @@ public:
 	static constexpr int32 ExpeditionActionCost = 2;
 	static constexpr int32 RepairActionCost = 4;
 	static constexpr int32 HealActionCost = 1;
-	
+
 	int32 GetActionPoints() const { return ActionPoints; }
 
 	// 보관함 및 아이템 사용
@@ -159,15 +159,15 @@ public:
 	// 사건 효과용 변경 함수
 	bool RemoveStoredItemsById(FName ItemId, int32 Quantity) { return ConsumeStoredItems(ItemId, Quantity); }
 	void ModifyPlayerStats(float DeltaHealth, float DeltaSatiety, float DeltaHydration);
-	void ModifySurvivorsHealth(float Delta);   // 살아 있는 모든 동료. 0이 되면 사망 처리
-	void AdjustActionPoints(int32 Delta);      // 0 ~ MaxActionPoints
+	void ModifySurvivorsHealth(float Delta); // 살아 있는 모든 동료. 0이 되면 사망 처리
+	void AdjustActionPoints(int32 Delta);    // 0 ~ MaxActionPoints
 	void AddEventJournal(const FText& Message) { RecordEvent(ESSJournalEvent::Event, Message); }
 	void AddDetailedEventJournal(const FText& Message, const FText& Title, const FText& Body,
 		const FText& Choice, const FText& Outcome, const FText& Changes);
 
-	void BuildAraBriefing();   // 현재 날짜·물자로 아침 보고 문장을 만들어 저장
+	void BuildAraBriefing(); // 현재 날짜·물자로 아침 보고 문장을 만들어 저장
 
-	const FText& GetAraBriefing() const { return AraBriefing; }   // 오늘 아침 ARA 보고 (하루 시작 때 고정)
+	const FText& GetAraBriefing() const { return AraBriefing; } // 오늘 아침 ARA 보고 (하루 시작 때 고정)
 	bool HasUnreadAraBriefing() const { return LastAraReadDay < CurrentDay; }
 	void MarkAraBriefingRead() { LastAraReadDay = CurrentDay; }
 	bool AskAraQuestion(int32 QuestionIndex, FText& OutAnswer);
@@ -258,7 +258,7 @@ public:
 
 private:
 	// 내부 처리 함수
-	bool AdvanceDayCore(bool bGiveFood, bool bGiveWater);   // 배급·감소·날짜·행동력·로봇 진행 (알림 없음)
+	bool AdvanceDayCore(bool bGiveFood, bool bGiveWater); // 배급·감소·날짜·행동력·로봇 진행 (알림 없음)
 	bool ConsumeActionPoints(int32 Cost);
 	FSSSurvivorState* FindRescuedSurvivorMutable(FName SurvivorId);
 
@@ -301,7 +301,7 @@ private:
 	int32 LastAraReadDay = 0;
 
 	UPROPERTY(Transient)
-	FText AraBriefing;   // 아침에 만든 문장을 저장. 열 때마다 다시 만들지 않음
+	FText AraBriefing; // 아침에 만든 문장을 저장. 열 때마다 다시 만들지 않음
 
 	UPROPERTY(Transient)
 	uint8 AskedAraQuestionsMask = 0;

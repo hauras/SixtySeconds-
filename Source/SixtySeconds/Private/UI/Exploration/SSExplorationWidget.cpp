@@ -6,7 +6,7 @@
 #include "UI/Exploration/SSExplorationRoomWidget.h"
 #include "Exploration/SSExplorationMapDefinition.h"
 #include "Item/SSItemDefinition.h"
-#include "Blueprint/WidgetTree.h"      // WidgetTree->GetAllWidgets
+#include "Blueprint/WidgetTree.h" // WidgetTree->GetAllWidgets
 #include "Components/Button.h"
 #include "Components/TextBlock.h"
 
@@ -26,12 +26,12 @@ bool USSExplorationWidget::StartExploration(USSExplorationMapDefinition* Map, in
 	{
 		USSExplorationRoomWidget* Room = Cast<USSExplorationRoomWidget>(Widget);
 		if (!Room) continue;
-		
-		const int32 Index = Map->FindRoomIndex(Room->GetRoomId());   // 번호를 먼저 받아둠
-		if (Index == INDEX_NONE)                                       // 못 찾았으면
+
+		const int32 Index = Map->FindRoomIndex(Room->GetRoomId()); // 번호를 먼저 받아둠
+		if (Index == INDEX_NONE)                                   // 못 찾았으면
 		{
 			UE_LOG(LogTemp, Warning, TEXT("[Exploration] 지도에 없는 방 위젯: %s"), *Room->GetRoomId().ToString());
-			continue;                                                  // 이 위젯은 건너뛰고 다음 위젯으로
+			continue; // 이 위젯은 건너뛰고 다음 위젯으로
 		}
 
 		Room->Setup(Index, Map->Rooms[Index].DisplayName);
@@ -39,15 +39,15 @@ bool USSExplorationWidget::StartExploration(USSExplorationMapDefinition* Map, in
 		RoomWidgets.Add(Room);
 	}
 
-	for (int32 i = 0; i < Map->Rooms.Num(); ++i)   // 지도의 방 0번부터 끝까지
+	for (int32 i = 0; i < Map->Rooms.Num(); ++i) // 지도의 방 0번부터 끝까지
 	{
 		const bool bHasWidget = RoomWidgets.ContainsByPredicate(
-			[i](const USSExplorationRoomWidget* Room)      // 방 위젯 하나씩 받아서
-			{
-				return Room->GetRoomIndex() == i;           // 번호가 i면 "있다"
-			});
+			[i](const USSExplorationRoomWidget* Room) // 방 위젯 하나씩 받아서
+		{
+			return Room->GetRoomIndex() == i; // 번호가 i면 "있다"
+		});
 
-		if (!bHasWidget)   // 끝까지 못 찾았으면
+		if (!bHasWidget) // 끝까지 못 찾았으면
 		{
 			UE_LOG(LogTemp, Warning, TEXT("[Exploration] 위젯이 없는 방: %s"), *Map->Rooms[i].RoomId.ToString());
 		}
@@ -62,12 +62,12 @@ void USSExplorationWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
 
-	if (CloseButton)   // 버튼이 WBP에 있을 때만
+	if (CloseButton) // 버튼이 WBP에 있을 때만
 	{
 		CloseButton->OnClicked.AddUniqueDynamic(this, &ThisClass::HandleCloseClicked);
 	}
 	if (SearchButton) SearchButton->OnClicked.AddUniqueDynamic(this, &ThisClass::HandleSearchClicked);
-	if (WaitButton)   WaitButton->OnClicked.AddUniqueDynamic(this, &ThisClass::HandleWaitClicked);
+	if (WaitButton) WaitButton->OnClicked.AddUniqueDynamic(this, &ThisClass::HandleWaitClicked);
 	if (ReturnButton) ReturnButton->OnClicked.AddUniqueDynamic(this, &ThisClass::HandleReturnClicked);
 }
 
@@ -91,20 +91,20 @@ void USSExplorationWidget::NativeDestruct()
 		CloseButton->OnClicked.RemoveDynamic(this, &ThisClass::HandleCloseClicked);
 	}
 	if (SearchButton) SearchButton->OnClicked.RemoveDynamic(this, &ThisClass::HandleSearchClicked);
-	if (WaitButton)   WaitButton->OnClicked.RemoveDynamic(this, &ThisClass::HandleWaitClicked);
+	if (WaitButton) WaitButton->OnClicked.RemoveDynamic(this, &ThisClass::HandleWaitClicked);
 	if (ReturnButton) ReturnButton->OnClicked.RemoveDynamic(this, &ThisClass::HandleReturnClicked);
 
 	if (IsValid(ResultWidget))
 	{
 		ResultWidget->OnConfirmed.RemoveDynamic(this, &ThisClass::HandleResultConfirmed);
-		ResultWidget->RemoveFromParent();   // 탐사 화면이 먼저 닫혀도 결과창이 혼자 남지 않게
+		ResultWidget->RemoveFromParent(); // 탐사 화면이 먼저 닫혀도 결과창이 혼자 남지 않게
 	}
 	Super::NativeDestruct();
 }
 
 void USSExplorationWidget::Refresh()
 {
-	if (!IsValid(Session)) return;   // 세션은 따로 만든 오브젝트라 IsValid
+	if (!IsValid(Session)) return; // 세션은 따로 만든 오브젝트라 IsValid
 
 	const ESSExplorationOutcome Outcome = Session->GetOutcome();
 	const bool bInProgress = Outcome == ESSExplorationOutcome::InProgress;
@@ -116,10 +116,10 @@ void USSExplorationWidget::Refresh()
 			Index == Session->GetCurrentRoom(),
 			Session->CanMoveTo(Index),
 			Index == Session->GetGuardRoom(),
-			bInProgress && Index == Session->GetGuardNextRoom());   // 끝난 뒤엔 예고 표시 안 함
-	}   // ← 방 반복은 여기서 끝
+			bInProgress && Index == Session->GetGuardNextRoom()); // 끝난 뒤엔 예고 표시 안 함
+	} // ← 방 반복은 여기서 끝
 
-	if (TurnsText)   // 반복문 밖, 한 번만
+	if (TurnsText) // 반복문 밖, 한 번만
 	{
 		TurnsText->SetText(FText::Format(
 			NSLOCTEXT("SS", "ExploreTurns", "남은 턴 {0} / {1}"),
@@ -135,8 +135,8 @@ void USSExplorationWidget::Refresh()
 		if (SearchStatusText)
 		{
 			SearchStatusText->SetText(Session->IsCurrentRoomSearched()
-				? NSLOCTEXT("SS", "RoomSearched", "수색 완료")
-				: Room.bSearchable
+					? NSLOCTEXT("SS", "RoomSearched", "수색 완료")
+					: Room.bSearchable
 					? NSLOCTEXT("SS", "RoomNotSearched", "미수색 · 수색 가능")
 					: NSLOCTEXT("SS", "RoomNotSearchable", "수색할 물품 없음"));
 		}
@@ -155,7 +155,8 @@ void USSExplorationWidget::Refresh()
 			}
 			if (LootSummary.IsEmpty()) LootSummary = TEXT("남은 물품 없음");
 		}
-		else LootSummary = TEXT("수색하면 발견 물품이 표시됩니다");
+		else
+			LootSummary = TEXT("수색하면 발견 물품이 표시됩니다");
 		RoomLootText->SetText(FText::FromString(LootSummary));
 	}
 
@@ -180,9 +181,9 @@ void USSExplorationWidget::Refresh()
 
 	// 누를 수 있는지는 세션이 판단, 위젯은 켜고 끄기만
 	if (SearchButton) SearchButton->SetIsEnabled(Session->CanSearch());
-	if (WaitButton)   WaitButton->SetIsEnabled(Session->CanAct());
+	if (WaitButton) WaitButton->SetIsEnabled(Session->CanAct());
 	if (ReturnButton) ReturnButton->SetIsEnabled(Session->CanReturn());
-	if (CloseButton)  CloseButton->SetIsEnabled(!bInProgress);   // 진행 중엔 못 닫음: 위험할 때 닫아서 피하는 꼼수 방지
+	if (CloseButton) CloseButton->SetIsEnabled(!bInProgress); // 진행 중엔 못 닫음: 위험할 때 닫아서 피하는 꼼수 방지
 
 	if (ResultText)
 	{
@@ -209,7 +210,7 @@ void USSExplorationWidget::Refresh()
 
 void USSExplorationWidget::ShowResultWindow()
 {
-	if (IsValid(ResultWidget) || !IsValid(Session)) return;   // 이미 띄웠으면 무시
+	if (IsValid(ResultWidget) || !IsValid(Session)) return; // 이미 띄웠으면 무시
 	if (!ResultWidgetClass)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[Exploration] ResultWidgetClass not assigned in exploration WBP Class Defaults"));
@@ -219,7 +220,7 @@ void USSExplorationWidget::ShowResultWindow()
 	ResultWidget = CreateWidget<USSExplorationResultWidget>(GetOwningPlayer(), ResultWidgetClass);
 	if (!IsValid(ResultWidget)) return;
 
-	ResultWidget->AddToViewport(40);   // 탐사 화면(30)보다 위
+	ResultWidget->AddToViewport(40); // 탐사 화면(30)보다 위
 	ResultWidget->ShowResult(Session->MakeResult(), Session->GetTurnBudget());
 	ResultWidget->OnConfirmed.AddUniqueDynamic(this, &ThisClass::HandleResultConfirmed);
 }

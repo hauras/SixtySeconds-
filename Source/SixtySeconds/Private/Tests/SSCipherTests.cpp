@@ -54,7 +54,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSSCipherVigenereTest, "SS.Decode.Vigenere",
 bool FSSCipherVigenereTest::RunTest(const FString& Parameters)
 {
 	using namespace SSCipherTest;
-	const TArray<int32> Key = { 7, 19, 2 };
+	const TArray<int32> Key = {7, 19, 2};
 
 	// 손으로 계산한 값: P+7=W, A+19=T, T+2=V, 띄어쓰기는 그대로·다이얼 순서 안 넘어감, A+7=H
 	TestEqual(TEXT("Hand-checked example"), FSSCipher::VigenereEncrypt(TEXT("PAT A"), Key), FString(TEXT("WTV H")));

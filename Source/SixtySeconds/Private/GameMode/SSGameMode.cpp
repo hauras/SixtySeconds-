@@ -37,8 +37,7 @@ void ASSGameMode::StartScramble()
 		this,
 		&ASSGameMode::OnScrambleTimeUp,
 		ScrambleDuration,
-		false
-	);
+		false);
 }
 
 void ASSGameMode::StartShelter()
@@ -59,9 +58,9 @@ void ASSGameMode::StartShelter()
 
 	USSCharacterStats* PlayerStats = PlayerPawn->FindComponentByClass<USSCharacterStats>();
 
-	USSRunSubsystem* RunSubsystem  = RunGameInstance->GetSubsystem<USSRunSubsystem>();
+	USSRunSubsystem* RunSubsystem = RunGameInstance->GetSubsystem<USSRunSubsystem>();
 
-	if (!IsValid(PlayerStats) || !IsValid(RunSubsystem ))
+	if (!IsValid(PlayerStats) || !IsValid(RunSubsystem))
 	{
 		UE_LOG(LogTemp, Error, TEXT("[Shelter] Stats or RunSubsystem is missing."));
 		return;
@@ -91,7 +90,7 @@ void ASSGameMode::OnScrambleTimeUp()
 
 	bSurvivedScramble = bInside;
 	if (ASSLabLockdownDirector* Director = Cast<ASSLabLockdownDirector>(
-		UGameplayStatics::GetActorOfClass(this, ASSLabLockdownDirector::StaticClass())))
+			UGameplayStatics::GetActorOfClass(this, ASSLabLockdownDirector::StaticClass())))
 	{
 		CurrentPhase = ESSGamePhase::Lockdown;
 		OnPhaseChanged.Broadcast(CurrentPhase);

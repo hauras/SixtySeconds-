@@ -13,24 +13,25 @@ class USSSurvivorDefinition;
 UCLASS()
 class SIXTYSECONDS_API ASSSurvivorPickup : public AActor, public ISSInteractable
 {
-    GENERATED_BODY()
+	GENERATED_BODY()
 public:
-    ASSSurvivorPickup();
-    bool TryRecruit(APawn* PlayerPawn);
+	ASSSurvivorPickup();
+	bool TryRecruit(APawn* PlayerPawn);
 
-    // ── ISSInteractable ── ("서하린 · [E] 데려가기")
-    virtual bool CanInteract(const APawn* Interactor) const override;
-    virtual FText GetInteractPrompt(const APawn* Interactor) const override;
-    virtual bool TryInteract(APawn* Interactor) override { return TryRecruit(Interactor); }
+	// ── ISSInteractable ── ("서하린 · [E] 데려가기")
+	virtual bool CanInteract(const APawn* Interactor) const override;
+	virtual FText GetInteractPrompt(const APawn* Interactor) const override;
+	virtual bool TryInteract(APawn* Interactor) override { return TryRecruit(Interactor); }
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="SS|Survivor")
-    TObjectPtr<USSSurvivorDefinition> Definition;
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="SS|Survivor")
-    TObjectPtr<USphereComponent> InteractionSphere;
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="SS|Survivor")
-    TObjectPtr<UStaticMeshComponent> BodyMesh;
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="SS|Survivor")
-    TObjectPtr<UTextRenderComponent> Prompt;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="SS|Survivor")
+	TObjectPtr<USSSurvivorDefinition> Definition;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="SS|Survivor")
+	TObjectPtr<USphereComponent> InteractionSphere;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="SS|Survivor")
+	TObjectPtr<UStaticMeshComponent> BodyMesh;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="SS|Survivor")
+	TObjectPtr<UTextRenderComponent> Prompt;
+
 private:
-    bool bRecruited = false;
+	bool bRecruited = false;
 };

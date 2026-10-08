@@ -24,11 +24,11 @@ struct SIXTYSECONDS_API FSSSurvivorStats
 USTRUCT(BlueprintType)
 struct SIXTYSECONDS_API FSSSurvivorState
 {
-    GENERATED_BODY()
+	GENERATED_BODY()
 
-    UPROPERTY(BlueprintReadOnly) TObjectPtr<USSSurvivorDefinition> Definition = nullptr;
-    UPROPERTY(BlueprintReadOnly) FSSSurvivorStats Stats;
-    UPROPERTY(BlueprintReadOnly) bool bAlive = true;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite) bool bGiveFood = false;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite) bool bGiveWater = false;
+	UPROPERTY(BlueprintReadOnly) TObjectPtr<USSSurvivorDefinition> Definition = nullptr;
+	UPROPERTY(BlueprintReadOnly) FSSSurvivorStats Stats;
+	UPROPERTY(BlueprintReadOnly) bool bAlive = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) bool bGiveFood = false;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) bool bGiveWater = false;
 };

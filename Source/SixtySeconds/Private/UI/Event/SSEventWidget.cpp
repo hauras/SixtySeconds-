@@ -56,7 +56,7 @@ TSharedRef<SWidget> USSEventWidget::RebuildWidget()
 		UVerticalBox* Column = WidgetTree->ConstructWidget<UVerticalBox>();
 		Body->SetContent(Column);
 		Column->AddChildToVerticalBox(EventLabel(WidgetTree,
-			NSLOCTEXT("SSEvent", "NightEyebrow", "▲  밤 사건  /  제7연구소"), 17, TEXT("EBC085")))
+										  NSLOCTEXT("SSEvent", "NightEyebrow", "▲  밤 사건  /  제7연구소"), 17, TEXT("EBC085")))
 			->SetPadding(FMargin(0, 0, 0, 12));
 
 		TitleText = EventLabel(WidgetTree, FText::GetEmpty(), 32, TEXT("F3EBDE"));
@@ -64,8 +64,8 @@ TSharedRef<SWidget> USSEventWidget::RebuildWidget()
 		BodyText = EventLabel(WidgetTree, FText::GetEmpty(), 23, TEXT("E3EAF0"));
 		Column->AddChildToVerticalBox(BodyText)->SetPadding(FMargin(0, 0, 0, 26));
 
-		TObjectPtr<UButton>* Buttons[] = { &ChoiceButton0, &ChoiceButton1, &ChoiceButton2 };
-		TObjectPtr<UTextBlock>* Texts[] = { &ChoiceText0, &ChoiceText1, &ChoiceText2 };
+		TObjectPtr<UButton>* Buttons[] = {&ChoiceButton0, &ChoiceButton1, &ChoiceButton2};
+		TObjectPtr<UTextBlock>* Texts[] = {&ChoiceText0, &ChoiceText1, &ChoiceText2};
 		for (int32 Index = 0; Index < 3; ++Index)
 		{
 			UButton* Button = WidgetTree->ConstructWidget<UButton>();
@@ -144,7 +144,7 @@ void USSEventWidget::ShowEvent(USSEventDirector* InDirector, USSRunSubsystem* In
 		BodyText->SetText(FText::GetEmpty());
 	}
 	if (TitleText) TitleText->SetText(FText::GetEmpty());
-	UButton* ResetButtons[] = { ChoiceButton0, ChoiceButton1, ChoiceButton2 };
+	UButton* ResetButtons[] = {ChoiceButton0, ChoiceButton1, ChoiceButton2};
 	for (UButton* Button : ResetButtons)
 		if (Button) Button->SetVisibility(ESlateVisibility::Collapsed);
 	if (!IsValid(Director) || !IsValid(Run)) return;
@@ -153,12 +153,12 @@ void USSEventWidget::ShowEvent(USSEventDirector* InDirector, USSRunSubsystem* In
 	{
 		// {Target}을 아라 표적 이름으로 채움
 		if (TitleText) TitleText->SetText(USSEventDirector::FillText(Row->Title, *Run));
-		if (BodyText)  BodyText->SetText(USSEventDirector::FillText(Row->Body, *Run));
+		if (BodyText) BodyText->SetText(USSEventDirector::FillText(Row->Body, *Run));
 	}
 
 	const TArray<FSSEventChoiceView> Choices = Director->GetChoices(EventId, *Run);
-	UButton* Buttons[] = { ChoiceButton0, ChoiceButton1, ChoiceButton2 };
-	UTextBlock* Texts[] = { ChoiceText0, ChoiceText1, ChoiceText2 };
+	UButton* Buttons[] = {ChoiceButton0, ChoiceButton1, ChoiceButton2};
+	UTextBlock* Texts[] = {ChoiceText0, ChoiceText1, ChoiceText2};
 	if (Choices.Num() > UE_ARRAY_COUNT(Buttons))
 		UE_LOG(LogTemp, Warning, TEXT("[Event] '%s' has %d choices; only %d are shown"), *EventId.ToString(), Choices.Num(), (int32)UE_ARRAY_COUNT(Buttons));
 
@@ -169,7 +169,7 @@ void USSEventWidget::ShowEvent(USSEventDirector* InDirector, USSRunSubsystem* In
 		if (Buttons[i])
 		{
 			Buttons[i]->SetVisibility(bUsed ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
-			Buttons[i]->SetIsEnabled(bUsed && Choices[i].bAvailable);   // 조건 안 맞는 선택지는 보이되 누를 수 없음
+			Buttons[i]->SetIsEnabled(bUsed && Choices[i].bAvailable); // 조건 안 맞는 선택지는 보이되 누를 수 없음
 		}
 		if (Texts[i] && bUsed) Texts[i]->SetText(Choices[i].Text);
 	}
@@ -183,8 +183,10 @@ void USSEventWidget::NativeConstruct()
 	if (ChoiceButton2) ChoiceButton2->OnClicked.AddUniqueDynamic(this, &ThisClass::HandleChoice2);
 	if (ConfirmButton) ConfirmButton->OnClicked.AddUniqueDynamic(this, &ThisClass::HandleConfirm);
 	// 화면을 만들기 전에 사건을 받았어도 현재 단계를 표시한다.
-	if (bShowingResult) ShowResult();
-	else if (IsValid(Director) && IsValid(Run)) ShowEvent(Director, Run, EventId);
+	if (bShowingResult)
+		ShowResult();
+	else if (IsValid(Director) && IsValid(Run))
+		ShowEvent(Director, Run, EventId);
 }
 
 void USSEventWidget::NativeDestruct()
@@ -196,9 +198,18 @@ void USSEventWidget::NativeDestruct()
 	Super::NativeDestruct();
 }
 
-void USSEventWidget::HandleChoice0() { Choose(0); }
-void USSEventWidget::HandleChoice1() { Choose(1); }
-void USSEventWidget::HandleChoice2() { Choose(2); }
+void USSEventWidget::HandleChoice0()
+{
+	Choose(0);
+}
+void USSEventWidget::HandleChoice1()
+{
+	Choose(1);
+}
+void USSEventWidget::HandleChoice2()
+{
+	Choose(2);
+}
 
 void USSEventWidget::Choose(int32 Index)
 {
@@ -215,7 +226,7 @@ void USSEventWidget::ShowResult()
 {
 	bShowingResult = true;
 	if (BodyText) BodyText->SetVisibility(ESlateVisibility::Collapsed);
-	UButton* Buttons[] = { ChoiceButton0, ChoiceButton1, ChoiceButton2 };
+	UButton* Buttons[] = {ChoiceButton0, ChoiceButton1, ChoiceButton2};
 	for (UButton* Button : Buttons)
 		if (Button) Button->SetVisibility(ESlateVisibility::Collapsed);
 	if (ResultBox) ResultBox->SetVisibility(ESlateVisibility::Visible);
@@ -243,7 +254,8 @@ void USSEventWidget::ShowResult()
 				const FText Description = Director->DescribeChange(Change);
 				if (Description.IsEmpty()) continue;
 				const TCHAR* Color = Change.Amount < 0 ? TEXT("F08A7A")
-					: Change.Amount > 0 ? TEXT("8FE0A0") : TEXT("8EA3B5");
+					: Change.Amount > 0                ? TEXT("8FE0A0")
+													   : TEXT("8EA3B5");
 				UBorder* Chip = WidgetTree->ConstructWidget<UBorder>();
 				Chip->SetBrushColor(EventColor(TEXT("1B2C3B")));
 				Chip->SetPadding(FMargin(12, 6));

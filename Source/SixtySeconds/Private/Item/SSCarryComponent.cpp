@@ -43,8 +43,7 @@ bool USSCarryComponent::CanAddItem(USSItemDefinition* Item, int32 Quantity) cons
 {
 	if (!IsValid(Item) || Quantity <= 0 || Item->CarryCost <= 0) return false;
 	const int64 RequiredSlots = static_cast<int64>(Item->CarryCost) * Quantity;
-	return RequiredSlots <= GetRemainingSlots()
-		&& static_cast<int64>(GetQuantity(Item)) + Quantity <= MAX_int32;
+	return RequiredSlots <= GetRemainingSlots() && static_cast<int64>(GetQuantity(Item)) + Quantity <= MAX_int32;
 }
 
 bool USSCarryComponent::TryAddItem(USSItemDefinition* Item, int32 Quantity)

@@ -101,8 +101,8 @@ bool USSTruthDecodeWidget::StartDecode(int32 PendingIndex)
 	if (StatusText)
 	{
 		StatusText->SetText(Session->IsSolverDone()
-			? NSLOCTEXT("SSTruth", "Resume", "보라색 빈칸을 누르고 키보드로 원래 글자를 넣어.")
-			: NSLOCTEXT("SSTruth", "Intro", "평소와 다른 방식으로 잠긴 통신이야. 자동 해독기를 돌려보자."));
+				? NSLOCTEXT("SSTruth", "Resume", "보라색 빈칸을 누르고 키보드로 원래 글자를 넣어.")
+				: NSLOCTEXT("SSTruth", "Intro", "평소와 다른 방식으로 잠긴 통신이야. 자동 해독기를 돌려보자."));
 	}
 
 	Refresh();
@@ -183,8 +183,9 @@ TSharedRef<SWidget> USSTruthDecodeWidget::RebuildWidget()
 		Left->AddChildToVerticalBox(Label(WidgetTree, NSLOCTEXT("SSTruth", "Table", "치환표"), 19, TEXT("EBCB99")))
 			->SetPadding(FMargin(0, 0, 0, 8));
 		Left->AddChildToVerticalBox(Label(WidgetTree,
-			NSLOCTEXT("SSTruth", "TableHelp", "암호 글자 아래 숫자는 등장 횟수 · 칸 선택 후 A–Z 입력 · Backspace 지우기"),
-			13, TEXT("9A91A8")))->SetPadding(FMargin(0, 0, 0, 8));
+										NSLOCTEXT("SSTruth", "TableHelp", "암호 글자 아래 숫자는 등장 횟수 · 칸 선택 후 A–Z 입력 · Backspace 지우기"),
+										13, TEXT("9A91A8")))
+			->SetPadding(FMargin(0, 0, 0, 8));
 		CellBox = WidgetTree->ConstructWidget<UWrapBox>();
 		Left->AddChildToVerticalBox(CellBox);
 
@@ -356,8 +357,8 @@ void USSTruthDecodeWidget::Refresh()
 	if (LockStateText)
 	{
 		LockStateText->SetText(bUnlocked
-			? NSLOCTEXT("SSTruth", "UnlockedBadge", "● 잠금 해제")
-			: NSLOCTEXT("SSTruth", "Locked", "● 잠금 상태"));
+				? NSLOCTEXT("SSTruth", "UnlockedBadge", "● 잠금 해제")
+				: NSLOCTEXT("SSTruth", "Locked", "● 잠금 상태"));
 		LockStateText->SetColorAndOpacity(FSlateColor(Color(bUnlocked ? TEXT("8FE0A0") : TEXT("EB8076"))));
 	}
 
@@ -398,7 +399,8 @@ void USSTruthDecodeWidget::Refresh()
 		if (!IsValid(Bar)) continue;
 		const int32 HistoryIndex = Index - (FitnessChartBars.Num() - FitnessHistory.Num());
 		const float Height = FitnessHistory.IsValidIndex(HistoryIndex)
-			? FMath::Max(3.f, FitnessHistory[HistoryIndex] * 66.f) : 2.f;
+			? FMath::Max(3.f, FitnessHistory[HistoryIndex] * 66.f)
+			: 2.f;
 		if (UCanvasPanelSlot* BarSlot = Cast<UCanvasPanelSlot>(Bar->Slot))
 		{
 			BarSlot->SetPosition(FVector2D(4.f + Index * 10.f, 72.f - Height));
@@ -409,8 +411,8 @@ void USSTruthDecodeWidget::Refresh()
 	if (SolverLogText)
 	{
 		SolverLogText->SetText(SolverLogLines.IsEmpty()
-			? NSLOCTEXT("SSTruth", "LogIdle", "해독 기록 대기 중")
-			: FText::FromString(FString::Join(SolverLogLines, TEXT("\n"))));
+				? NSLOCTEXT("SSTruth", "LogIdle", "해독 기록 대기 중")
+				: FText::FromString(FString::Join(SolverLogLines, TEXT("\n"))));
 	}
 	if (SolverText)
 	{

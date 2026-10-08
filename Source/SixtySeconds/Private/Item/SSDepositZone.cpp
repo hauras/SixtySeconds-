@@ -35,21 +35,20 @@ void ASSDepositZone::OnActorEntered(AActor* OverlappedActor, AActor* OtherActor)
 	}
 
 	bIsPlayerInside = true;
-    const ASSGameMode* Mode = GetWorld()->GetAuthGameMode<ASSGameMode>();
-    if (!IsValid(Mode) || Mode->GetCurrentPhase() != ESSGamePhase::Scramble
-        || Mode->GetScrambleTimeRemaining() <= 0.f) return;
+	const ASSGameMode* Mode = GetWorld()->GetAuthGameMode<ASSGameMode>();
+	if (!IsValid(Mode) || Mode->GetCurrentPhase() != ESSGamePhase::Scramble || Mode->GetScrambleTimeRemaining() <= 0.f) return;
 
 	USSRunSubsystem* RunSub =
 		UGameplayStatics::GetGameInstance(this)->GetSubsystem<USSRunSubsystem>();
 	if (!IsValid(RunSub)) return;
 
-    const int32 RescuedCount = RunSub->RescueFollowingSurvivors();
-    if (RescuedCount > 0 && GEngine)
-        GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green,
-            FString::Printf(TEXT("동료 %d명 구조 완료!"), RescuedCount));
+	const int32 RescuedCount = RunSub->RescueFollowingSurvivors();
+	if (RescuedCount > 0 && GEngine)
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green,
+			FString::Printf(TEXT("동료 %d명 구조 완료!"), RescuedCount));
 
-    USSCarryComponent* Carry = PlayerPawn->FindComponentByClass<USSCarryComponent>();
-    if (!Carry || Carry->GetItems().IsEmpty()) return;
+	USSCarryComponent* Carry = PlayerPawn->FindComponentByClass<USSCarryComponent>();
+	if (!Carry || Carry->GetItems().IsEmpty()) return;
 
 	RunSub->DepositItems(Carry->GetItems());
 	Carry->ClearItems();

@@ -6,7 +6,7 @@
 namespace SSTraceTest
 {
 	// 목업과 같은 배치: 센서 세 대, 은신처 하나
-	const TArray<FVector2D> Sensors = { FVector2D(70.0, 55.0), FVector2D(540.0, 60.0), FVector2D(300.0, 320.0) };
+	const TArray<FVector2D> Sensors = {FVector2D(70.0, 55.0), FVector2D(540.0, 60.0), FVector2D(300.0, 320.0)};
 	const FVector2D Shelter(380.0, 175.0);
 
 	// 잡음 없이 Source에서 신호를 Rounds번 보냈을 때의 측정
@@ -78,7 +78,7 @@ bool FSSFinderOvalTest::RunTest(const FString& Parameters)
 
 	// 센서가 모두 왼쪽에 있으면: 좌우는 잘 재고 위아래는 못 잼 → 위아래로 길쭉한 타원
 	// (추정기는 센서 가운데에서 출발하므로, 가운데 센서를 대상 쪽으로 두어 게임처럼 출발점이 대상 방향에 있게 함)
-	const TArray<FVector2D> LeftSensors = { FVector2D(0.0, -60.0), FVector2D(0.0, 60.0), FVector2D(200.0, 0.0) };
+	const TArray<FVector2D> LeftSensors = {FVector2D(0.0, -60.0), FVector2D(0.0, 60.0), FVector2D(200.0, 0.0)};
 	const FVector2D Target(300.0, 0.0);
 	TArray<FSSSensorReading> LeftReadings;
 	for (int32 Index = 0; Index < LeftSensors.Num(); ++Index)

@@ -23,7 +23,7 @@ bool USSDialSession::Initialize(USSRunSubsystem* InRun, int32 InPendingIndex)
 	bTimed = Pending.Row.Kind == ESSTraceMessageKind::Info;
 	TimeLeft = bTimed ? InfoTimeLimit : 0.f;
 	bFailed = false;
-	
+
 	if (Key.IsEmpty()) return false;
 
 	// 저장된 다이얼 개수가 열쇠와 다르면(예전 데이터 등) 0부터 다시
@@ -137,7 +137,6 @@ void USSDialSession::CheckUnlock()
 	// 대기함에서 빠졌으니 더 이상 그 번호가 아님
 	PendingIndex = INDEX_NONE;
 }
-
 
 void USSDialSession::Tick(float DeltaSeconds)
 {

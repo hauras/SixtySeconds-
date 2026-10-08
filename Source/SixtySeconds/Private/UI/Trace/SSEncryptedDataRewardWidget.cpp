@@ -74,7 +74,7 @@ TSharedRef<SWidget> USSEncryptedDataRewardWidget::RebuildWidget()
 		Column->AddChildToVerticalBox(Label(WidgetTree,
 			NSLOCTEXT("SSTraceReward", "Source", "제7연구소  /  외부 통신 수신"), 17, TEXT("83BFC4")));
 		Column->AddChildToVerticalBox(Label(WidgetTree,
-			NSLOCTEXT("SSTraceReward", "Title", "암호문 획득!"), 42, TEXT("D8FFFF")))
+										  NSLOCTEXT("SSTraceReward", "Title", "암호문 획득!"), 42, TEXT("D8FFFF")))
 			->SetPadding(FMargin(0, 12, 0, 10));
 
 		UBorder* DataRim = WidgetTree->ConstructWidget<UBorder>();
@@ -108,7 +108,7 @@ TSharedRef<SWidget> USSEncryptedDataRewardWidget::RebuildWidget()
 		UVerticalBox* CoreColumn = WidgetTree->ConstructWidget<UVerticalBox>();
 		DataCore->SetContent(CoreColumn);
 		CoreColumn->AddChildToVerticalBox(Label(WidgetTree,
-			NSLOCTEXT("SSTraceReward", "CoreMark", "◇"), 56, TEXT("A4F7FF")))
+											  NSLOCTEXT("SSTraceReward", "CoreMark", "◇"), 56, TEXT("A4F7FF")))
 			->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
 		CoreColumn->AddChildToVerticalBox(Label(WidgetTree,
 			NSLOCTEXT("SSTraceReward", "CoreLocked", "DATA LOCKED"), 20, TEXT("D8FFFF")));
@@ -121,7 +121,7 @@ TSharedRef<SWidget> USSEncryptedDataRewardWidget::RebuildWidget()
 			15, TEXT("75C7D0")));
 
 		Column->AddChildToVerticalBox(Label(WidgetTree,
-			NSLOCTEXT("SSTraceReward", "ItemName", "암호화된 외부 기록"), 27, TEXT("D8FFFF")))
+										  NSLOCTEXT("SSTraceReward", "ItemName", "암호화된 외부 기록"), 27, TEXT("D8FFFF")))
 			->SetPadding(FMargin(0, 16, 0, 4));
 		Column->AddChildToVerticalBox(Label(WidgetTree,
 			NSLOCTEXT("SSTraceReward", "Stored", "해독 대기함에 추가되었습니다."), 18, TEXT("D4E3E4")));

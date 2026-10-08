@@ -9,8 +9,7 @@ UTexture2D* USSItemDefinition::GetStockTexture(int32 Quantity) const
 	int32 BestThreshold = 0;
 	for (const FSSStockVisual& Visual : ShelterVisuals)
 	{
-		if (Visual.MinQuantity > BestThreshold && Visual.MinQuantity <= Quantity
-			&& IsValid(Visual.Texture))
+		if (Visual.MinQuantity > BestThreshold && Visual.MinQuantity <= Quantity && IsValid(Visual.Texture))
 		{
 			BestThreshold = Visual.MinQuantity;
 			Selected = Visual.Texture.Get();

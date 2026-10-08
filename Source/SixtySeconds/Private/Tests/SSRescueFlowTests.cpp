@@ -19,7 +19,7 @@ namespace SSRescueFlowTest
 		UGameInstance* GameInstance = NewObject<UGameInstance>();
 		USSRunSubsystem* Run = NewObject<USSRunSubsystem>(GameInstance);
 		Run->InitializeShelterStats(100.f, 100.f, 100.f);
-		for (const TCHAR* Id : { TEXT("TestResearcher"), TEXT("Technician") })
+		for (const TCHAR* Id : {TEXT("TestResearcher"), TEXT("Technician")})
 		{
 			USSSurvivorDefinition* Survivor = NewObject<USSSurvivorDefinition>(Run);
 			Survivor->SurvivorId = Id;

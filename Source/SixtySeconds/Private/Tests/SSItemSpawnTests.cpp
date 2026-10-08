@@ -56,8 +56,7 @@ bool FSSItemSpawnPlanTest::RunTest(const FString& Parameters)
 	bool bSame = PlanA.Num() == PlanB.Num();
 	for (int32 Index = 0; bSame && Index < PlanA.Num(); ++Index)
 	{
-		bSame = PlanA[Index].PointIndex == PlanB[Index].PointIndex && PlanA[Index].EntryIndex == PlanB[Index].EntryIndex
-			&& PlanA[Index].Quantity == PlanB[Index].Quantity;
+		bSame = PlanA[Index].PointIndex == PlanB[Index].PointIndex && PlanA[Index].EntryIndex == PlanB[Index].EntryIndex && PlanA[Index].Quantity == PlanB[Index].Quantity;
 	}
 	TestTrue(TEXT("Same seed, same placement"), bSame);
 
@@ -108,7 +107,7 @@ bool FSSItemSpawnPlanTest::RunTest(const FString& Parameters)
 
 	// 동료 3명: 방 4곳(각 2자리)이면 늘 서로 다른 방, 같은 시드면 같은 자리
 	TArray<FName> SurvivorRooms;
-	for (const TCHAR* Room : { TEXT("Lab"), TEXT("Lab"), TEXT("Med"), TEXT("Med"), TEXT("Store"), TEXT("Store"), TEXT("Break"), TEXT("Break") })
+	for (const TCHAR* Room : {TEXT("Lab"), TEXT("Lab"), TEXT("Med"), TEXT("Med"), TEXT("Store"), TEXT("Store"), TEXT("Break"), TEXT("Break")})
 	{
 		SurvivorRooms.Add(Room);
 	}
@@ -128,7 +127,7 @@ bool FSSItemSpawnPlanTest::RunTest(const FString& Parameters)
 		FSSItemSpawnPlanner::PlanSurvivors(SurvivorRooms, 3, SurvivorA) == FSSItemSpawnPlanner::PlanSurvivors(SurvivorRooms, 3, SurvivorB));
 
 	// 방이 2곳뿐이면 같은 방을 쓰더라도 자리는 겹치지 않음
-	const TArray<FName> TwoRooms = { TEXT("Lab"), TEXT("Lab"), TEXT("Med"), TEXT("Med") };
+	const TArray<FName> TwoRooms = {TEXT("Lab"), TEXT("Lab"), TEXT("Med"), TEXT("Med")};
 	FRandomStream RandomTwo(3);
 	const TArray<int32> Crowded = FSSItemSpawnPlanner::PlanSurvivors(TwoRooms, 3, RandomTwo);
 	TestEqual(TEXT("Three spots even with two rooms"), Crowded.Num(), 3);

@@ -9,8 +9,8 @@ namespace
 	{
 		int32 CellA = 0;
 		int32 CellB = 0;
-		uint8 SideA = 0;   // A 칸에서 B 쪽으로 열 면
-		uint8 SideB = 0;   // B 칸에서 A 쪽으로 열 면
+		uint8 SideA = 0; // A 칸에서 B 쪽으로 열 면
+		uint8 SideB = 0; // B 칸에서 A 쪽으로 열 면
 	};
 
 	int32 FindRoot(TArray<int32>& Parent, int32 Cell)
@@ -37,7 +37,7 @@ void FSSPowerGrid::Generate(int32 InWidth, int32 InHeight, int32 AlarmCount, FRa
 	Height = InHeight;
 
 	const int32 CellCount = Width * Height;
-	
+
 	Tiles.Init(0, CellCount);
 	Solution.Init(0, CellCount);
 
@@ -50,12 +50,12 @@ void FSSPowerGrid::Generate(int32 InWidth, int32 InHeight, int32 AlarmCount, FRa
 
 			if (Col < Width - 1)
 			{
-				FSSPowerEdge Edge;                    // 1) 이음선 하나 만들기
-				Edge.CellA = Cell;                    // 2) 이 칸
-				Edge.CellB = Cell + 1;                //    오른쪽 이웃
-				Edge.SideA = SSPowerSide::East;       // 3) 이 칸은 동쪽을 열고
-				Edge.SideB = SSPowerSide::West;       //    이웃은 서쪽을 염
-				Edges.Add(Edge);                      // 4) 목록에 넣기
+				FSSPowerEdge Edge;              // 1) 이음선 하나 만들기
+				Edge.CellA = Cell;              // 2) 이 칸
+				Edge.CellB = Cell + 1;          //    오른쪽 이웃
+				Edge.SideA = SSPowerSide::East; // 3) 이 칸은 동쪽을 열고
+				Edge.SideB = SSPowerSide::West; //    이웃은 서쪽을 염
+				Edges.Add(Edge);                // 4) 목록에 넣기
 			}
 
 			// 아래 이웃이 있으면 (맨 아래 행이 아니면)
@@ -63,9 +63,9 @@ void FSSPowerGrid::Generate(int32 InWidth, int32 InHeight, int32 AlarmCount, FRa
 			{
 				FSSPowerEdge Edge;
 				Edge.CellA = Cell;
-				Edge.CellB = Cell + Width;            // 한 행 아래 = 한 줄(Width칸)을 건너뜀
-				Edge.SideA = SSPowerSide::South;      // 이 칸은 아래(남)를 열고
-				Edge.SideB = SSPowerSide::North;      // 아래 칸은 위(북)를 염
+				Edge.CellB = Cell + Width;       // 한 행 아래 = 한 줄(Width칸)을 건너뜀
+				Edge.SideA = SSPowerSide::South; // 이 칸은 아래(남)를 열고
+				Edge.SideB = SSPowerSide::North; // 아래 칸은 위(북)를 염
 				Edges.Add(Edge);
 			}
 		}
@@ -78,7 +78,7 @@ void FSSPowerGrid::Generate(int32 InWidth, int32 InHeight, int32 AlarmCount, FRa
 	TArray<int32> Parent;
 	for (int32 Index = 0; Index < CellCount; ++Index)
 	{
-		Parent.Add(Index);   // 0번 칸의 대장은 0, 1번 칸의 대장은 1, ...
+		Parent.Add(Index); // 0번 칸의 대장은 0, 1번 칸의 대장은 1, ...
 	}
 
 	for (const FSSPowerEdge& Edge : Edges)
@@ -171,8 +171,7 @@ void FSSPowerGrid::Generate(int32 InWidth, int32 InHeight, int32 AlarmCount, FRa
 			RotateTile(Wrong[Random.RandRange(0, Wrong.Num() - 1)]);
 		}
 		++Attempts;
-	}
-	while (IsUnlocked() && Attempts < 100);
+	} while (IsUnlocked() && Attempts < 100);
 }
 
 TArray<int32> FSSPowerGrid::FindSolutionPath() const
@@ -186,10 +185,10 @@ TArray<int32> FSSPowerGrid::FindSolutionPath() const
 	CameFrom.Init(INDEX_NONE, CellCount);
 	CameFrom[SourceCell] = SourceCell;
 
-	const int32 Steps[4] = { -Width, 1, Width, -1 };   // 북·동·남·서 이웃의 칸 번호 차이
-	const uint8 Sides[4] = { SSPowerSide::North, SSPowerSide::East, SSPowerSide::South, SSPowerSide::West };
+	const int32 Steps[4] = {-Width, 1, Width, -1}; // 북·동·남·서 이웃의 칸 번호 차이
+	const uint8 Sides[4] = {SSPowerSide::North, SSPowerSide::East, SSPowerSide::South, SSPowerSide::West};
 
-	TArray<int32> Stack = { SourceCell };
+	TArray<int32> Stack = {SourceCell};
 	while (!Stack.IsEmpty())
 	{
 		const int32 Cell = Stack.Pop();
@@ -227,7 +226,7 @@ int32 FSSPowerGrid::TurnsToSolve(int32 Cell) const
 		if (Turned == Solution[Cell]) return Turns;
 		Turned = RotateClockwise(Turned);
 	}
-	return 0;   // 같은 타일을 돌린 것이라 여기 올 일은 없음
+	return 0; // 같은 타일을 돌린 것이라 여기 올 일은 없음
 }
 
 int32 FSSPowerGrid::CountTurnsToSolve() const
@@ -283,17 +282,13 @@ TSet<int32> FSSPowerGrid::ComputePowered() const
 			const int32 Cell = Row * Width + Col;
 
 			// 오른쪽 이웃: 내 동쪽 + 이웃 서쪽
-			if (Col < Width - 1
-				&& (Tiles[Cell] & SSPowerSide::East) != 0
-				&& (Tiles[Cell + 1] & SSPowerSide::West) != 0)
+			if (Col < Width - 1 && (Tiles[Cell] & SSPowerSide::East) != 0 && (Tiles[Cell + 1] & SSPowerSide::West) != 0)
 			{
 				UnionCells(Parent, Cell, Cell + 1);
 			}
 
 			// 아래 이웃: 내 남쪽 + 이웃 북쪽
-			if (Row < Height - 1
-				&& (Tiles[Cell] & SSPowerSide::South) != 0
-				&& (Tiles[Cell + Width] & SSPowerSide::North) != 0)
+			if (Row < Height - 1 && (Tiles[Cell] & SSPowerSide::South) != 0 && (Tiles[Cell + Width] & SSPowerSide::North) != 0)
 			{
 				UnionCells(Parent, Cell, Cell + Width);
 			}

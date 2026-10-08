@@ -66,7 +66,7 @@ public:
 
 	// 진실 통신 추측표와 자동 해독 여부 저장 (창을 닫아도 이어서 풀 수 있게)
 	void SaveGuess(int32 PendingIndex, const TArray<int32>& Guess, bool bSolverDone);
-	
+
 	// 마지막으로 해독한 메시지 (Title = 제목, Lines[0] = 원문, Changes = 실제로 바뀐 것)
 	const FSSEventResult& GetLastMessage() const { return LastMessage; }
 
@@ -125,7 +125,7 @@ private:
 	// 해독 대기함 (다 받았지만 아직 못 푼 메시지들)
 	UPROPERTY(Transient)
 	TArray<FSSPendingMessage> PendingMessages;
-	
+
 	// 실용 정보를 뽑을 난수
 	FRandomStream MessageRandom = FRandomStream(FPlatformTime::Cycles());
 };

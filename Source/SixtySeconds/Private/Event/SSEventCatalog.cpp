@@ -35,9 +35,7 @@ bool USSEventCatalog::Validate(TArray<FText>& OutErrors) const
 		}
 		return true;
 	};
-	const bool bTablesOk = CheckTable(EventTable, FSSEventRow::StaticStruct(), TEXT("Event"))
-		& CheckTable(ChoiceTable, FSSEventChoiceRow::StaticStruct(), TEXT("Choice"))
-		& CheckTable(EffectTable, FSSEventEffectRow::StaticStruct(), TEXT("Effect"));
+	const bool bTablesOk = CheckTable(EventTable, FSSEventRow::StaticStruct(), TEXT("Event")) & CheckTable(ChoiceTable, FSSEventChoiceRow::StaticStruct(), TEXT("Choice")) & CheckTable(EffectTable, FSSEventEffectRow::StaticStruct(), TEXT("Effect"));
 	if (!bTablesOk) return false;
 
 	const auto CheckItemRef = [this, &OutErrors](FName ItemId, const FName& RowName)

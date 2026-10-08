@@ -6,7 +6,10 @@
 int32 USSExplorationMapDefinition::FindRoomIndex(FName RoomId) const
 {
 	if (RoomId.IsNone()) return INDEX_NONE;
-	return Rooms.IndexOfByPredicate([RoomId](const FSSExplorationRoom& Room) { return Room.RoomId == RoomId; });
+	return Rooms.IndexOfByPredicate([RoomId](const FSSExplorationRoom& Room)
+	{
+		return Room.RoomId == RoomId;
+	});
 }
 
 TArray<TArray<int32>> USSExplorationMapDefinition::BuildAdjacency() const
@@ -34,7 +37,7 @@ TArray<int32> USSExplorationMapDefinition::FindShortestPath(const TArray<TArray<
 	TArray<bool> Visited;
 	Visited.Init(false, Adjacency.Num());
 
-	TArray<int32> Queue = { From };
+	TArray<int32> Queue = {From};
 	Visited[From] = true;
 	for (int32 Head = 0; Head < Queue.Num(); ++Head)
 	{
@@ -42,7 +45,7 @@ TArray<int32> USSExplorationMapDefinition::FindShortestPath(const TArray<TArray<
 		if (Current == To) break;
 		for (const int32 Next : Adjacency[Current])
 		{
-			if (!Adjacency.IsValidIndex(Next) || Visited[Next]) continue;   // 잘못된 인접 배열이 넘어와도 범위 밖 접근 방지
+			if (!Adjacency.IsValidIndex(Next) || Visited[Next]) continue; // 잘못된 인접 배열이 넘어와도 범위 밖 접근 방지
 			Visited[Next] = true;
 			Previous[Next] = Current;
 			Queue.Add(Next);

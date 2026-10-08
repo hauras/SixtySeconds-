@@ -32,7 +32,7 @@ namespace SSTruthSessionTest
 		Table->AddRow(TEXT("Truth_Replace"), Row);
 
 		USSTraceConfig* Config = NewObject<USSTraceConfig>();
-		Config->SensorPositions = { FVector2D(60.0, 50.0), FVector2D(550.0, 55.0), FVector2D(300.0, 360.0) };
+		Config->SensorPositions = {FVector2D(60.0, 50.0), FVector2D(550.0, 55.0), FVector2D(300.0, 360.0)};
 		Config->ShelterPosition = FVector2D(360.0, 190.0);
 		Config->MessageTable = Table;
 		Config->TruthEvery = 1;

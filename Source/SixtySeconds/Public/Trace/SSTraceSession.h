@@ -14,10 +14,10 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FSSOnTraceChanged);
 UENUM(BlueprintType)
 enum class ESSTraceOutcome : uint8
 {
-	InProgress,   // 진행 중
-	Completed,    // 메시지 수신 100%
-	Stopped,      // 플레이어가 종료했거나 턴을 다 씀
-	Exposed,      // 들킴 → 그날 밤 습격
+	InProgress, // 진행 중
+	Completed,  // 메시지 수신 100%
+	Stopped,    // 플레이어가 종료했거나 턴을 다 씀
+	Exposed,    // 들킴 → 그날 밤 습격
 };
 
 // ─────────────────────────────────────────────

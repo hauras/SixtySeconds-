@@ -45,14 +45,18 @@ bool FSSCompanionTalkBindingTest::RunTest(const FString& Parameters)
 	{
 		FClassProperty* Assigned = HUDClass ? FindFProperty<FClassProperty>(HUDClass, TEXT("CompanionTalkWidgetClass")) : nullptr;
 		TestTrue(TEXT("Shelter uses the talk WBP"), Assigned && Assigned->GetObjectPropertyValue_InContainer(HUDClass->GetDefaultObject()) == Class);
-		Run->RecruitSurvivor(Person); Run->RescueFollowingSurvivors();
+		Run->RecruitSurvivor(Person);
+		Run->RescueFollowingSurvivors();
 		USSCompanionState* Companions = Run->GetCompanions();
 		Companions->SetInvestigationSeed(7);
 		// Produce one genuine clue report before opening the window.
 		for (int32 Night = 0; Night < 10; ++Night)
 		{
 			const FSSCompanionRecord* Record = Companions->FindRecord(Person->SurvivorId);
-			if (Record && Record->PendingReports.ContainsByPredicate([](const FSSInvestigationReport& Item) { return Item.bFoundClue; })) break;
+			if (Record && Record->PendingReports.ContainsByPredicate([](const FSSInvestigationReport& Item)
+			{
+				return Item.bFoundClue;
+			})) break;
 			Companions->RunNight();
 		}
 		USSCompanionTalkWidget* Talk = CreateWidget<USSCompanionTalkWidget>(Instance, Class);
@@ -64,9 +68,7 @@ bool FSSCompanionTalkBindingTest::RunTest(const FString& Parameters)
 		UHorizontalBox* Spots = Cast<UHorizontalBox>(Talk->GetWidgetFromName(TEXT("SpotList")));
 		UBorder* Card = Cast<UBorder>(Talk->GetWidgetFromName(TEXT("ClueCard")));
 		UTextBlock* Name = Cast<UTextBlock>(Talk->GetWidgetFromName(TEXT("NameText")));
-		if (TestNotNull(TEXT("Report button bound"), Report) && TestNotNull(TEXT("Order button bound"), Order)
-			&& TestNotNull(TEXT("Close button bound"), Close) && TestNotNull(TEXT("Spot list bound"), Spots)
-			&& TestNotNull(TEXT("Clue card bound"), Card) && TestNotNull(TEXT("Name bound"), Name))
+		if (TestNotNull(TEXT("Report button bound"), Report) && TestNotNull(TEXT("Order button bound"), Order) && TestNotNull(TEXT("Close button bound"), Close) && TestNotNull(TEXT("Spot list bound"), Spots) && TestNotNull(TEXT("Clue card bound"), Card) && TestNotNull(TEXT("Name bound"), Name))
 		{
 			TestEqual(TEXT("Selected companion name"), Name->GetText().ToString(), Person->DisplayName.ToString());
 			TestEqual(TEXT("Five runtime spot controls"), Spots->GetChildrenCount(), 5);
@@ -81,8 +83,7 @@ bool FSSCompanionTalkBindingTest::RunTest(const FString& Parameters)
 				FWidgetRenderer Renderer(false);
 				UTextureRenderTarget2D* Target = Renderer.DrawWidget(Slate, FVector2D(1920, 1080));
 				FBufferArchive PNG;
-				TestTrue(TEXT("Render WBP preview"), Target && FImageUtils::ExportRenderTarget2DAsPNG(Target, PNG)
-					&& FFileHelper::SaveArrayToFile(PNG, *(FPaths::ProjectSavedDir()/TEXT("Tests/SS_CompanionTalk.png"))));
+				TestTrue(TEXT("Render WBP preview"), Target && FImageUtils::ExportRenderTarget2DAsPNG(Target, PNG) && FFileHelper::SaveArrayToFile(PNG, *(FPaths::ProjectSavedDir() / TEXT("Tests/SS_CompanionTalk.png"))));
 			}
 			Order->OnClicked.Broadcast();
 			TestEqual(TEXT("Order opens spot choices"), Spots->GetVisibility(), ESlateVisibility::Visible);
@@ -96,7 +97,9 @@ bool FSSCompanionTalkBindingTest::RunTest(const FString& Parameters)
 			Talk->RemoveFromParent();
 		}
 	}
-	Instance->Shutdown(); GEngine->DestroyWorldContext(World); World->DestroyWorld(false);
+	Instance->Shutdown();
+	GEngine->DestroyWorldContext(World);
+	World->DestroyWorld(false);
 	return true;
 }
 #endif

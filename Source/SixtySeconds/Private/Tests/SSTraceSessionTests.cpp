@@ -13,9 +13,9 @@ namespace SSTraceSessionTest
 	USSTraceConfig* MakeConfig()
 	{
 		USSTraceConfig* Config = NewObject<USSTraceConfig>();
-		Config->SensorPositions = { FVector2D(60.0, 50.0), FVector2D(550.0, 55.0), FVector2D(300.0, 360.0) };
+		Config->SensorPositions = {FVector2D(60.0, 50.0), FVector2D(550.0, 55.0), FVector2D(300.0, 360.0)};
 		Config->ShelterPosition = FVector2D(360.0, 190.0);
-		Config->RelayPositions = { FVector2D(250.0, 150.0), FVector2D(450.0, 120.0) };
+		Config->RelayPositions = {FVector2D(250.0, 150.0), FVector2D(450.0, 120.0)};
 		return Config;
 	}
 
@@ -23,7 +23,7 @@ namespace SSTraceSessionTest
 	{
 		USSTraceSession* Session = NewObject<USSTraceSession>();
 		Session->Initialize(Config, {}, BlockedRelays, Received);
-		Session->SetSeed(1234);   // 매번 같은 잡음
+		Session->SetSeed(1234); // 매번 같은 잡음
 		return Session;
 	}
 }
@@ -45,7 +45,7 @@ bool FSSTraceSessionRulesTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("Already received everything"), MakeSession(Config, Config->ReceiveGoal)->GetOutcome(), ESSTraceOutcome::Completed);
 
 	// 단자 고르기: 없는 번호 거부, 차단된 단자 거부, 다른 단자로 바꾸기 가능
-	USSTraceSession* Relay = MakeSession(Config, 0, { 1 });
+	USSTraceSession* Relay = MakeSession(Config, 0, {1});
 	TestFalse(TEXT("No relay selected at start"), Relay->HasRelay());
 	TestFalse(TEXT("Cannot send via relay without one"), Relay->SendViaRelay());
 	TestFalse(TEXT("Invalid relay index is rejected"), Relay->SelectRelay(5));
@@ -82,7 +82,7 @@ bool FSSTraceSessionExposeTest::RunTest(const FString& Parameters)
 {
 	using namespace SSTraceSessionTest;
 	USSTraceConfig* Config = MakeConfig();
-	Config->ReceiveGoal = 99;   // 완료로 끝나지 않게 (들킴만 보려고)
+	Config->ReceiveGoal = 99; // 완료로 끝나지 않게 (들킴만 보려고)
 	Config->MaxTurns = 10;
 
 	// 직접 송신만 계속하면: 의심 장소는 하나(은신처)로 모이고, 결국 들킴
@@ -109,7 +109,7 @@ bool FSSTraceRelayBlockTest::RunTest(const FString& Parameters)
 	USSRunSubsystem* Run = NewObject<USSRunSubsystem>(GameInstance);
 	Run->InitializeShelterStats(100.f, 100.f, 100.f);
 	USSTraceConfig* Config = MakeConfig();
-	Config->ReceiveGoal = 99;   // 완료로 끝나지 않게 (차단만 보려고)
+	Config->ReceiveGoal = 99; // 완료로 끝나지 않게 (차단만 보려고)
 	Config->MaxTurns = 10;
 
 	// 같은 단자로만 계속 보내면: 적이 그 단자를 확신하고 차단

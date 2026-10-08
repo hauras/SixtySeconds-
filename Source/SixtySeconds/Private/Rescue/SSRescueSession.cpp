@@ -58,7 +58,6 @@ bool USSRescueSession::Rotate(int32 Cell)
 	// 5) 화면 알림
 	OnChanged.Broadcast();
 	return true;
-	
 }
 
 void USSRescueSession::Abort()

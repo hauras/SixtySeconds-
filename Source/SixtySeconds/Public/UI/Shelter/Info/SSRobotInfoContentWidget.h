@@ -12,21 +12,23 @@ class UButton;
 UCLASS()
 class SIXTYSECONDS_API USSRobotInfoContentWidget : public UUserWidget
 {
-    GENERATED_BODY()
+	GENERATED_BODY()
 public:
-    UWidget* GetActionWidget() const;
-protected:
-    virtual TSharedRef<SWidget> RebuildWidget() override;
-    virtual void NativeConstruct() override;
-    virtual void NativeDestruct() override;
-private:
-    UFUNCTION() void RefreshDisplay();
-    UFUNCTION() void OnRepairClicked();
+	UWidget* GetActionWidget() const;
 
-    UPROPERTY(Transient) TObjectPtr<USSRunSubsystem> RunSubsystem;
-    UPROPERTY(Transient) TObjectPtr<UTextBlock> StatusText;
-    UPROPERTY(Transient) TObjectPtr<UTextBlock> DescriptionText;
-    UPROPERTY(Transient) TObjectPtr<UTextBlock> ObservationText;
-    UPROPERTY(Transient) TObjectPtr<UTextBlock> RepairInfoText;
-    UPROPERTY(Transient) TObjectPtr<UButton> RepairButton;
+protected:
+	virtual TSharedRef<SWidget> RebuildWidget() override;
+	virtual void NativeConstruct() override;
+	virtual void NativeDestruct() override;
+
+private:
+	UFUNCTION() void RefreshDisplay();
+	UFUNCTION() void OnRepairClicked();
+
+	UPROPERTY(Transient) TObjectPtr<USSRunSubsystem> RunSubsystem;
+	UPROPERTY(Transient) TObjectPtr<UTextBlock> StatusText;
+	UPROPERTY(Transient) TObjectPtr<UTextBlock> DescriptionText;
+	UPROPERTY(Transient) TObjectPtr<UTextBlock> ObservationText;
+	UPROPERTY(Transient) TObjectPtr<UTextBlock> RepairInfoText;
+	UPROPERTY(Transient) TObjectPtr<UButton> RepairButton;
 };

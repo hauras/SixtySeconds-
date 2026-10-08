@@ -12,6 +12,7 @@ class SIXTYSECONDS_API USSScrambleTimerWidget : public UUserWidget
 	GENERATED_BODY()
 public:
 	void InitializeTimer(ASSGameMode* InGameMode);
+
 protected:
 	virtual void NativeConstruct() override;
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
@@ -19,6 +20,7 @@ protected:
 	TObjectPtr<UTextBlock> TimerText;
 	UPROPERTY(meta=(BindWidgetOptional))
 	TObjectPtr<UTextBlock> GuidanceText;
+
 private:
 	void UpdateTimerDisplay();
 	UPROPERTY(Transient)

@@ -9,10 +9,10 @@ class UTextBlock;
 class UBorder;
 class UImage;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FSSOnRoomClicked, int32, RoomIndex);   // 눌린 방 번호를 실어 보냄
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FSSOnRoomClicked, int32, RoomIndex); // 눌린 방 번호를 실어 보냄
 
 // 탐사 지도 위 방 하나. WBP에 직접 배치하고 인스턴스마다 RoomId를 입력한다.
-UCLASS(Abstract)   // 이 클래스 자체는 못 쓰고, WBP_ExplorationRoom으로만 쓰게 막음
+UCLASS(Abstract) // 이 클래스 자체는 못 쓰고, WBP_ExplorationRoom으로만 쓰게 막음
 class SIXTYSECONDS_API USSExplorationRoomWidget : public UUserWidget
 {
 	GENERATED_BODY()
@@ -27,11 +27,11 @@ public:
 	FName GetRoomId() const { return RoomId; }
 	int32 GetRoomIndex() const { return RoomIndex; }
 	// 추가
-	FSSOnRoomClicked OnRoomClicked;   // C++에서만 구독하니까 UPROPERTY 없이도 됨
+	FSSOnRoomClicked OnRoomClicked; // C++에서만 구독하니까 UPROPERTY 없이도 됨
 
 protected:
-	virtual void NativeConstruct() override;   // 버튼 클릭 연결
-	virtual void NativeDestruct() override;    // 연결 해제
+	virtual void NativeConstruct() override; // 버튼 클릭 연결
+	virtual void NativeDestruct() override;  // 연결 해제
 
 	// EditAnywhere → 배치한 인스턴스마다 디자이너에서 다른 값을 입력할 수 있음
 	UPROPERTY(EditAnywhere, Category="SS|Exploration")
@@ -48,29 +48,29 @@ protected:
 	FLinearColor CurrentColor = FLinearColor(0.1f, 0.8f, 0.5f);
 
 	UPROPERTY(EditAnywhere, Category="SS|Exploration|Style")
-	FLinearColor DangerColor = FLinearColor(0.9f, 0.25f, 0.2f);   // 경비가 다음 턴에 올 방
+	FLinearColor DangerColor = FLinearColor(0.9f, 0.25f, 0.2f); // 경비가 다음 턴에 올 방
 
-	UPROPERTY(meta=(BindWidget))           // 없으면 클릭을 못 받으니까 필수
+	UPROPERTY(meta=(BindWidget)) // 없으면 클릭을 못 받으니까 필수
 	TObjectPtr<UButton> RoomButton;
 
-	UPROPERTY(meta=(BindWidgetOptional))   // 나머지는 모양이라 없어도 동작
+	UPROPERTY(meta=(BindWidgetOptional)) // 나머지는 모양이라 없어도 동작
 	TObjectPtr<UTextBlock> NameText;
 
 	UPROPERTY(meta=(BindWidgetOptional))
-	TObjectPtr<UBorder> HighlightBorder;   // 상태 색을 입힐 테두리
+	TObjectPtr<UBorder> HighlightBorder; // 상태 색을 입힐 테두리
 
 	UPROPERTY(meta=(BindWidgetOptional))
-	TObjectPtr<UImage> PlayerIcon;         // 현재 방일 때만 보임
+	TObjectPtr<UImage> PlayerIcon; // 현재 방일 때만 보임
 
 	UPROPERTY(meta=(BindWidgetOptional))
-	TObjectPtr<UImage> GuardIcon;          // 경비가 있는 방일 때만 보임
+	TObjectPtr<UImage> GuardIcon; // 경비가 있는 방일 때만 보임
 
 	UPROPERTY(meta=(BindWidgetOptional))
-	TObjectPtr<UTextBlock> RoomStateText;  // 색상과 함께 현재 상태·순찰 예고 표시
+	TObjectPtr<UTextBlock> RoomStateText; // 색상과 함께 현재 상태·순찰 예고 표시
 
 private:
-	UFUNCTION()               // AddDynamic으로 연결하려면 UFUNCTION 필수
-	void HandleClicked();     // OnRoomClicked.Broadcast(RoomIndex)
+	UFUNCTION()           // AddDynamic으로 연결하려면 UFUNCTION 필수
+	void HandleClicked(); // OnRoomClicked.Broadcast(RoomIndex)
 
-	int32 RoomIndex = INDEX_NONE;   // Setup 전에는 -1
+	int32 RoomIndex = INDEX_NONE; // Setup 전에는 -1
 };

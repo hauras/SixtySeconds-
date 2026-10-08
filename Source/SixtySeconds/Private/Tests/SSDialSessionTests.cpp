@@ -32,7 +32,7 @@ namespace SSDialSessionTest
 		Table->AddRow(TEXT("Info_Patrol"), Row);
 
 		USSTraceConfig* Config = NewObject<USSTraceConfig>();
-		Config->SensorPositions = { FVector2D(60.0, 50.0), FVector2D(550.0, 55.0), FVector2D(300.0, 360.0) };
+		Config->SensorPositions = {FVector2D(60.0, 50.0), FVector2D(550.0, 55.0), FVector2D(300.0, 360.0)};
 		Config->ShelterPosition = FVector2D(360.0, 190.0);
 		Config->MessageTable = Table;
 		Config->TruthEvery = Kind == ESSTraceMessageKind::Truth ? 1 : 0;
@@ -143,8 +143,7 @@ bool FSSDialSessionTimeTest::RunTest(const FString& Parameters)
 		TestTrue(TEXT("Time left is 0"), FMath::IsNearlyZero(Session->GetTimeLeft()));
 		TestEqual(TEXT("Message lost"), Run->GetComms()->GetPendingMessages().Num(), 0);
 		TestTrue(TEXT("No effect from a lost message"), FMath::IsNearlyEqual(Run->GetHealth(), 100.f));
-		TestTrue(TEXT("Loss is recorded"), !Run->GetJournalEntries().IsEmpty()
-			&& Run->GetJournalEntries().Last().Event == ESSJournalEvent::Signal);
+		TestTrue(TEXT("Loss is recorded"), !Run->GetJournalEntries().IsEmpty() && Run->GetJournalEntries().Last().Event == ESSJournalEvent::Signal);
 
 		// 실패한 뒤엔 돌려도·힌트도 아무 일 없음
 		const int32 DialBefore = Session->GetDial(0);

@@ -21,7 +21,7 @@ class SIXTYSECONDS_API USSExplorationWidget : public UUserWidget
 {
 	GENERATED_BODY()
 public:
-	bool StartExploration(USSExplorationMapDefinition* Map, int32 TurnBudget = 0);   // TurnBudget 0 이하면 지도 기본 턴
+	bool StartExploration(USSExplorationMapDefinition* Map, int32 TurnBudget = 0); // TurnBudget 0 이하면 지도 기본 턴
 
 	FSSOnExplorationFinished OnExplorationFinished;
 
@@ -36,7 +36,7 @@ protected:
 	TObjectPtr<UButton> CloseButton;
 
 	UPROPERTY(meta=(BindWidgetOptional))
-	TObjectPtr<UTextBlock> ResultText;   // 발각·시간 초과 등 결과 문구
+	TObjectPtr<UTextBlock> ResultText; // 발각·시간 초과 등 결과 문구
 
 	UPROPERTY(meta=(BindWidgetOptional))
 	TObjectPtr<UButton> SearchButton;
@@ -74,7 +74,7 @@ private:
 	void HandleRoomClicked(int32 RoomIndex);
 
 	UFUNCTION()
-	void HandleCloseClicked();                 // RemoveFromParent
+	void HandleCloseClicked(); // RemoveFromParent
 
 	UFUNCTION()
 	void HandleSearchClicked();
@@ -86,19 +86,19 @@ private:
 	void HandleReturnClicked();
 
 	UFUNCTION()
-	void HandleResultConfirmed();              // 결과창 확인 → 탐사 화면 닫기 (5단계에서 은신처 정산 추가)
+	void HandleResultConfirmed(); // 결과창 확인 → 탐사 화면 닫기 (5단계에서 은신처 정산 추가)
 
-	void ShowResultWindow();                   // 탐사가 끝난 순간 한 번만 호출
-	void FinishExploration();                  // 결과 방송(한 번만) → 탐사 화면 닫기
+	void ShowResultWindow();  // 탐사가 끝난 순간 한 번만 호출
+	void FinishExploration(); // 결과 방송(한 번만) → 탐사 화면 닫기
 
-	UPROPERTY(Transient)                       // GC가 세션을 지우지 않게 잡아둠
+	UPROPERTY(Transient) // GC가 세션을 지우지 않게 잡아둠
 	TObjectPtr<USSExplorationSession> Session;
 
-	UPROPERTY(Transient)                       // 지도와 연결된 방 위젯만 모아둠
+	UPROPERTY(Transient) // 지도와 연결된 방 위젯만 모아둠
 	TArray<TObjectPtr<USSExplorationRoomWidget>> RoomWidgets;
 
 	UPROPERTY(Transient)
-	TObjectPtr<USSExplorationResultWidget> ResultWidget;   // 이미 띄웠는지 확인용 (중복 방지)
+	TObjectPtr<USSExplorationResultWidget> ResultWidget; // 이미 띄웠는지 확인용 (중복 방지)
 
-	bool bFinishBroadcast = false;   // 정산이 두 번 되지 않게
+	bool bFinishBroadcast = false; // 정산이 두 번 되지 않게
 };

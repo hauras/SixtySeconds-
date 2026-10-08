@@ -9,14 +9,14 @@
 namespace
 {
 	// 색 (단말 화면 톤)
-	const FLinearColor BackColor   = FLinearColor::FromSRGBColor(FColor(7, 16, 12));
-	const FLinearColor GridColor   = FLinearColor::FromSRGBColor(FColor(80, 160, 120, 22));
-	const FLinearColor FrameColor  = FLinearColor::FromSRGBColor(FColor(120, 190, 150, 70));
+	const FLinearColor BackColor = FLinearColor::FromSRGBColor(FColor(7, 16, 12));
+	const FLinearColor GridColor = FLinearColor::FromSRGBColor(FColor(80, 160, 120, 22));
+	const FLinearColor FrameColor = FLinearColor::FromSRGBColor(FColor(120, 190, 150, 70));
 	const FLinearColor SensorColor = FLinearColor::FromSRGBColor(FColor(255, 160, 60));
-	const FLinearColor ShelterColor= FLinearColor::FromSRGBColor(FColor(143, 224, 160));
-	const FLinearColor RelayColor  = FLinearColor::FromSRGBColor(FColor(235, 192, 133));
-	const FLinearColor SpotColor   = FLinearColor::FromSRGBColor(FColor(226, 75, 74));
-	const FLinearColor BlockedColor= FLinearColor::FromSRGBColor(FColor(110, 120, 115));
+	const FLinearColor ShelterColor = FLinearColor::FromSRGBColor(FColor(143, 224, 160));
+	const FLinearColor RelayColor = FLinearColor::FromSRGBColor(FColor(235, 192, 133));
+	const FLinearColor SpotColor = FLinearColor::FromSRGBColor(FColor(226, 75, 74));
+	const FLinearColor BlockedColor = FLinearColor::FromSRGBColor(FColor(110, 120, 115));
 
 	// 선 긋기
 	void DrawLines(FSlateWindowElementList& Out, int32 Layer, const FGeometry& Geo,
@@ -76,7 +76,7 @@ namespace
 		{
 			const FVector2D A = From + Dir * D;
 			const FVector2D B = From + Dir * FMath::Min(D + Dash, Length);
-			DrawLines(Out, Layer, Geo, { FVector2f(A), FVector2f(B) }, Color, 1.5f);
+			DrawLines(Out, Layer, Geo, {FVector2f(A), FVector2f(B)}, Color, 1.5f);
 		}
 	}
 
@@ -152,7 +152,7 @@ void USSTraceMapWidget::PlayExposed()
 void USSTraceMapWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
-	SetVisibility(ESlateVisibility::Visible);   // 빈 위젯이라도 클릭을 받게
+	SetVisibility(ESlateVisibility::Visible); // 빈 위젯이라도 클릭을 받게
 }
 
 void USSTraceMapWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
@@ -177,7 +177,10 @@ void USSTraceMapWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTim
 			Ring.Life -= 0.6f * InDeltaTime;
 		}
 	}
-	Rings.RemoveAll([](const FRing& Ring) { return Ring.Life <= 0.f; });
+	Rings.RemoveAll([](const FRing& Ring)
+	{
+		return Ring.Life <= 0.f;
+	});
 
 	// 센서가 가끔 작게 퍼짐 ("듣고 있음")
 	if (IsValid(Config))
@@ -243,7 +246,10 @@ int32 USSTraceMapWidget::NativePaint(const FPaintArgs& Args, const FGeometry& Al
 	if (!IsValid(Config)) return Layer + 1;
 
 	const float Scale = MapScale(Size);
-	const auto ToLocal = [&](const FVector2D& P) { return MapToLocal(P, Size); };
+	const auto ToLocal = [&](const FVector2D& P)
+	{
+		return MapToLocal(P, Size);
+	};
 
 	const FVector2D TopLeft = ToLocal(FVector2D::ZeroVector);
 	const FVector2D BottomRight = ToLocal(Config->MapSize);
@@ -260,15 +266,15 @@ int32 USSTraceMapWidget::NativePaint(const FPaintArgs& Args, const FGeometry& Al
 	for (double X = 0.0; X <= Config->MapSize.X; X += 40.0)
 	{
 		DrawLines(OutDrawElements, Layer + 1, AllottedGeometry,
-			{ FVector2f(ToLocal(FVector2D(X, 0.0))), FVector2f(ToLocal(FVector2D(X, Config->MapSize.Y))) }, GridColor, 1.f);
+			{FVector2f(ToLocal(FVector2D(X, 0.0))), FVector2f(ToLocal(FVector2D(X, Config->MapSize.Y)))}, GridColor, 1.f);
 	}
 	for (double Y = 0.0; Y <= Config->MapSize.Y; Y += 40.0)
 	{
 		DrawLines(OutDrawElements, Layer + 1, AllottedGeometry,
-			{ FVector2f(ToLocal(FVector2D(0.0, Y))), FVector2f(ToLocal(FVector2D(Config->MapSize.X, Y))) }, GridColor, 1.f);
+			{FVector2f(ToLocal(FVector2D(0.0, Y))), FVector2f(ToLocal(FVector2D(Config->MapSize.X, Y)))}, GridColor, 1.f);
 	}
 	DrawLines(OutDrawElements, Layer + 1, AllottedGeometry,
-		{ FVector2f(TopLeft), FVector2f(float(BottomRight.X), float(TopLeft.Y)), FVector2f(BottomRight), FVector2f(float(TopLeft.X), float(BottomRight.Y)), FVector2f(TopLeft) },
+		{FVector2f(TopLeft), FVector2f(float(BottomRight.X), float(TopLeft.Y)), FVector2f(BottomRight), FVector2f(float(TopLeft.X), float(BottomRight.Y)), FVector2f(TopLeft)},
 		FrameColor, 2.f);
 
 	// 퍼지는 원들 (탐지기가 없으면 흐리게)
@@ -281,7 +287,7 @@ int32 USSTraceMapWidget::NativePaint(const FPaintArgs& Args, const FGeometry& Al
 	}
 
 	// 적의 의심 범위(타원): 확신할수록 빠르고 밝게 깜빡임
-	bool bShelterInRange = false;   // 은신처가 어떤 타원 안에 들어갔나 (위험 표시용)
+	bool bShelterInRange = false; // 은신처가 어떤 타원 안에 들어갔나 (위험 표시용)
 	if (bShowEnemyInfo && IsValid(Session))
 	{
 		for (const FSSSuspectSpot& Spot : Session->GetSpots())
@@ -293,8 +299,8 @@ int32 USSTraceMapWidget::NativePaint(const FPaintArgs& Args, const FGeometry& Al
 			DrawOval(OutDrawElements, Layer + 3, AllottedGeometry, Center, Spot.OvalSize * Scale, Spot.OvalAngle, Color, 2.f);
 
 			// 적이 생각하는 위치 (작은 +)
-			DrawLines(OutDrawElements, Layer + 3, AllottedGeometry, { FVector2f(Center + FVector2D(-4.0, 0.0)), FVector2f(Center + FVector2D(4.0, 0.0)) }, Color, 1.5f);
-			DrawLines(OutDrawElements, Layer + 3, AllottedGeometry, { FVector2f(Center + FVector2D(0.0, -4.0)), FVector2f(Center + FVector2D(0.0, 4.0)) }, Color, 1.5f);
+			DrawLines(OutDrawElements, Layer + 3, AllottedGeometry, {FVector2f(Center + FVector2D(-4.0, 0.0)), FVector2f(Center + FVector2D(4.0, 0.0))}, Color, 1.5f);
+			DrawLines(OutDrawElements, Layer + 3, AllottedGeometry, {FVector2f(Center + FVector2D(0.0, -4.0)), FVector2f(Center + FVector2D(0.0, 4.0))}, Color, 1.5f);
 
 			if (FSSSuspectMemory::IsInsideOval(Spot, Config->ShelterPosition)) bShelterInRange = true;
 
@@ -340,14 +346,14 @@ int32 USSTraceMapWidget::NativePaint(const FPaintArgs& Args, const FGeometry& Al
 		}
 
 		DrawLines(OutDrawElements, Layer + 4, AllottedGeometry,
-			{ FVector2f(R + FVector2D(0.0, -10.0)), FVector2f(R + FVector2D(9.0, 7.0)), FVector2f(R + FVector2D(-9.0, 7.0)), FVector2f(R + FVector2D(0.0, -10.0)) },
+			{FVector2f(R + FVector2D(0.0, -10.0)), FVector2f(R + FVector2D(9.0, 7.0)), FVector2f(R + FVector2D(-9.0, 7.0)), FVector2f(R + FVector2D(0.0, -10.0))},
 			Color, bSelected ? 2.5f : 1.5f);
 
 		// 차단된 단자: X 표시
 		if (bBlocked)
 		{
-			DrawLines(OutDrawElements, Layer + 4, AllottedGeometry, { FVector2f(R + FVector2D(-7.0, -7.0)), FVector2f(R + FVector2D(7.0, 7.0)) }, Color, 2.f);
-			DrawLines(OutDrawElements, Layer + 4, AllottedGeometry, { FVector2f(R + FVector2D(7.0, -7.0)), FVector2f(R + FVector2D(-7.0, 7.0)) }, Color, 2.f);
+			DrawLines(OutDrawElements, Layer + 4, AllottedGeometry, {FVector2f(R + FVector2D(-7.0, -7.0)), FVector2f(R + FVector2D(7.0, 7.0))}, Color, 2.f);
+			DrawLines(OutDrawElements, Layer + 4, AllottedGeometry, {FVector2f(R + FVector2D(7.0, -7.0)), FVector2f(R + FVector2D(-7.0, 7.0))}, Color, 2.f);
 		}
 
 		const TCHAR* State = bBlocked ? TEXT(" 차단") : (bSelected ? TEXT(" 선택") : TEXT(""));

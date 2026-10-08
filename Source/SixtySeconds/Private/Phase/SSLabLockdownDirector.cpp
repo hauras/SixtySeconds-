@@ -49,14 +49,14 @@ void ASSLabLockdownDirector::CacheScene()
 	UGameplayStatics::GetAllActorsOfClass(this, AActor::StaticClass(), SceneActors);
 	for (AActor* Actor : SceneActors)
 	{
-		for (const FName DoorTag : { FName(TEXT("SSLockdownShelterDoor")), FName(TEXT("SSLockdownResearchDoor")) })
+		for (const FName DoorTag : {FName(TEXT("SSLockdownShelterDoor")), FName(TEXT("SSLockdownResearchDoor"))})
 		{
-			if (Actor->ActorHasTag(DoorTag)) Doors.Add({ Actor, Actor->GetActorLocation(), DoorTag });
+			if (Actor->ActorHasTag(DoorTag)) Doors.Add({Actor, Actor->GetActorLocation(), DoorTag});
 		}
 
 		if (Actor->ActorHasTag(TEXT("SSLockdownGuard")))
 		{
-			Guards.Add({ Actor, Actor->GetActorLocation(), NAME_None });
+			Guards.Add({Actor, Actor->GetActorLocation(), NAME_None});
 			Actor->SetActorHiddenInGame(true);
 		}
 
@@ -73,7 +73,7 @@ void ASSLabLockdownDirector::CacheScene()
 					continue;
 				}
 				Light->SetLightColor(FLinearColor(1.f, 0.035f, 0.015f));
-				Lights.Add({ Light, Light->Intensity });
+				Lights.Add({Light, Light->Intensity});
 			}
 		}
 	}

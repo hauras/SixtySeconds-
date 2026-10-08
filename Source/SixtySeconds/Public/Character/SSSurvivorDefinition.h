@@ -17,7 +17,6 @@ class SIXTYSECONDS_API USSSurvivorDefinition : public UDataAsset
 {
 	GENERATED_BODY()
 public:
-
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "SS|Survivor")
 	FName SurvivorId;
 

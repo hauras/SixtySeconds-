@@ -9,12 +9,12 @@ float USSCharacterStats::GetStat(ESSStatType StatType) const
 {
 	switch (StatType)
 	{
-	case ESSStatType::HP:        return CurrentHP;
-	case ESSStatType::Hunger:    return CurrentHunger;
-	case ESSStatType::Thirst:    return CurrentThirst;
+	case ESSStatType::HP: return CurrentHP;
+	case ESSStatType::Hunger: return CurrentHunger;
+	case ESSStatType::Thirst: return CurrentThirst;
 	case ESSStatType::Radiation: return CurrentRadiation;
-	case ESSStatType::Sanity:    return CurrentSanity;
-	default:                     return 0.f;
+	case ESSStatType::Sanity: return CurrentSanity;
+	default: return 0.f;
 	}
 }
 
@@ -25,11 +25,11 @@ void USSCharacterStats::SetStat(ESSStatType StatType, float NewValue)
 
 	switch (StatType)
 	{
-	case ESSStatType::HP:        CurrentHP = Clamped;        break;
-	case ESSStatType::Hunger:    CurrentHunger = Clamped;    break;
-	case ESSStatType::Thirst:    CurrentThirst = Clamped;    break;
+	case ESSStatType::HP: CurrentHP = Clamped; break;
+	case ESSStatType::Hunger: CurrentHunger = Clamped; break;
+	case ESSStatType::Thirst: CurrentThirst = Clamped; break;
 	case ESSStatType::Radiation: CurrentRadiation = Clamped; break;
-	case ESSStatType::Sanity:    CurrentSanity = Clamped;    break;
+	case ESSStatType::Sanity: CurrentSanity = Clamped; break;
 	}
 }
 
@@ -52,11 +52,11 @@ float USSCharacterStats::GetMaxStatInternal(ESSStatType StatType) const
 {
 	switch (StatType)
 	{
-	case ESSStatType::HP:        return MaxHP;
-	case ESSStatType::Hunger:    return MaxHunger;
-	case ESSStatType::Thirst:    return MaxThirst;
+	case ESSStatType::HP: return MaxHP;
+	case ESSStatType::Hunger: return MaxHunger;
+	case ESSStatType::Thirst: return MaxThirst;
 	case ESSStatType::Radiation: return MaxRadiation;
-	case ESSStatType::Sanity:    return MaxSanity;
-	default:                     return 0.f;
+	case ESSStatType::Sanity: return MaxSanity;
+	default: return 0.f;
 	}
 }

@@ -13,8 +13,8 @@ void USSExplorationResultWidget::ShowResult(const FSSExplorationResult& Result, 
 	if (TitleText)
 	{
 		TitleText->SetText(bReturned
-			? NSLOCTEXT("SSExploration", "ResultTitleReturned", "탐사 귀환")
-			: NSLOCTEXT("SSExploration", "ResultTitleEmergency", "비상 귀환"));
+				? NSLOCTEXT("SSExploration", "ResultTitleReturned", "탐사 귀환")
+				: NSLOCTEXT("SSExploration", "ResultTitleEmergency", "비상 귀환"));
 		TitleText->SetColorAndOpacity(FSlateColor(bReturned ? SuccessColor : FailureColor));
 	}
 	if (SubtitleText)
@@ -51,7 +51,7 @@ void USSExplorationResultWidget::ShowResult(const FSSExplorationResult& Result, 
 				ItemContainer->AddChild(Card);
 				Card->Setup(i, Result.Items[i]);
 				Card->SetAvailable(bReturned);
-				Card->SetVisibility(ESlateVisibility::HitTestInvisible);   // 결과창에서는 보여주기만
+				Card->SetVisibility(ESlateVisibility::HitTestInvisible); // 결과창에서는 보여주기만
 				ItemCount += Result.Items[i].Quantity;
 			}
 		}
@@ -77,8 +77,8 @@ void USSExplorationResultWidget::ShowResult(const FSSExplorationResult& Result, 
 	if (InjuryText)
 	{
 		InjuryText->SetText(Result.Injury > 0.f
-			? FText::Format(NSLOCTEXT("SSExploration", "ResultInjury", "체력 -{0}"), FMath::RoundToInt(Result.Injury))
-			: NSLOCTEXT("SSExploration", "ResultNoInjury", "없음"));
+				? FText::Format(NSLOCTEXT("SSExploration", "ResultInjury", "체력 -{0}"), FMath::RoundToInt(Result.Injury))
+				: NSLOCTEXT("SSExploration", "ResultNoInjury", "없음"));
 	}
 }
 
@@ -96,6 +96,6 @@ void USSExplorationResultWidget::NativeDestruct()
 
 void USSExplorationResultWidget::HandleConfirmClicked()
 {
-	OnConfirmed.Broadcast();   // 받은 쪽(탐사 위젯)이 정산과 닫기를 처리
+	OnConfirmed.Broadcast(); // 받은 쪽(탐사 위젯)이 정산과 닫기를 처리
 	RemoveFromParent();
 }

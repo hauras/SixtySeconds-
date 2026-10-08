@@ -46,8 +46,8 @@ FSSEnemyGuess FSSSignalFinder::Find(const TArray<FVector2D>& Sensors,
 			Axx += W * U.X * U.X;
 			Axy += W * U.X * U.Y;
 			Ayy += W * U.Y * U.Y;
-			Bx  += W * U.X * R;
-			By  += W * U.Y * R;
+			Bx += W * U.X * R;
+			By += W * U.Y * R;
 		}
 
 		// 2×2 연립방정식  A · Δ = −B  풀기 (크래머 공식)
@@ -72,14 +72,14 @@ FSSEnemyGuess FSSSignalFinder::Find(const TArray<FVector2D>& Sensors,
 	if (FMath::Abs(FinalDet) < 1e-9) return Result;
 
 	const double Sigma2 = double(NoiseSigma) * double(NoiseSigma);
-	const double Cxx =  Ayy / FinalDet * Sigma2;
+	const double Cxx = Ayy / FinalDet * Sigma2;
 	const double Cxy = -Axy / FinalDet * Sigma2;
-	const double Cyy =  Axx / FinalDet * Sigma2;
+	const double Cyy = Axx / FinalDet * Sigma2;
 
 	// 공분산의 고윳값 두 개 = 타원의 긴 방향·짧은 방향의 퍼짐
 	const double Mean = (Cxx + Cyy) * 0.5;
 	const double Half = FMath::Sqrt(FMath::Square((Cxx - Cyy) * 0.5) + Cxy * Cxy);
-	const double Major = FMath::Max(Mean + Half, 0.0);   // 계산 오차로 살짝 음수가 되는 것 방지
+	const double Major = FMath::Max(Mean + Half, 0.0); // 계산 오차로 살짝 음수가 되는 것 방지
 	const double Minor = FMath::Max(Mean - Half, 0.0);
 
 	// 반지름 = 2 × 표준편차 (약 86% 확률로 이 안에 있음)

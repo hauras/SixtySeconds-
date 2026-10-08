@@ -11,13 +11,13 @@ class UDataTable;
 UENUM(BlueprintType)
 enum class ESSInvestigationSpot : uint8
 {
-	TerminalLog,   // 단말 로그: 아라 행동 기록 (가장 중요한 단서, 아라가 직접 봄)
-	Vent,          // 환풍구: 정비 드론 경로, 숨겨진 통로
-	Door,          // 출입문: 밤에 누가 오갔는지
-	PatrolNoise,   // 순찰 소리: 로봇 순찰 시간
-	Storage,       // 저장고: 물자
+	TerminalLog, // 단말 로그: 아라 행동 기록 (가장 중요한 단서, 아라가 직접 봄)
+	Vent,        // 환풍구: 정비 드론 경로, 숨겨진 통로
+	Door,        // 출입문: 밤에 누가 오갔는지
+	PatrolNoise, // 순찰 소리: 로봇 순찰 시간
+	Storage,     // 저장고: 물자
 	Count UMETA(Hidden)
-};
+	};
 
 // 장소 하나의 기본 수치 (임시값, 플레이 후 조정)
 struct FSSInvestigationSpotData

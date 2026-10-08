@@ -23,13 +23,12 @@ public:
 	FSSOnDeposited OnDeposited;
 
 	bool IsPlayerInside() const { return bIsPlayerInside; }
-	
+
 protected:
 	virtual void BeginPlay() override;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="SS|Deposit")
 	TObjectPtr<UBoxComponent> TriggerBox;
-
 
 private:
 	bool bIsPlayerInside = false;

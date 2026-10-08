@@ -117,11 +117,11 @@ bool USSPowerPanelWidget::ResolveTileShape(uint8 Mask, ESSPowerTileShape& OutSha
 		uint8 Mask;
 	};
 	static const FBaseShape BaseShapes[] = {
-		{ ESSPowerTileShape::End, North },
-		{ ESSPowerTileShape::Straight, North | South },
-		{ ESSPowerTileShape::Corner, North | East },
-		{ ESSPowerTileShape::Tee, North | East | South },
-		{ ESSPowerTileShape::Cross, North | East | South | West },
+		{ESSPowerTileShape::End, North},
+		{ESSPowerTileShape::Straight, North | South},
+		{ESSPowerTileShape::Corner, North | East},
+		{ESSPowerTileShape::Tee, North | East | South},
+		{ESSPowerTileShape::Cross, North | East | South | West},
 	};
 
 	// 기본 방향을 0~3번 돌려서 같아지는 그림을 찾음
@@ -255,7 +255,7 @@ void USSPowerPanelWidget::BuildBoard()
 
 	// 2) 경보 램프: 위·아래 줄의 열마다 자리, 단자가 있는 열에만 램프
 	AlarmLamps.Init(nullptr, Grid.Alarms.Num());
-	for (UHorizontalBox* Row : { TopAlarmRow.Get(), BottomAlarmRow.Get() })
+	for (UHorizontalBox* Row : {TopAlarmRow.Get(), BottomAlarmRow.Get()})
 	{
 		if (!Row) continue;
 		Row->ClearChildren();
@@ -273,7 +273,7 @@ void USSPowerPanelWidget::BuildBoard()
 
 	// 3) 전원·잠금 표시: 판 양옆 줄의 해당 행에만 아이콘
 	LockImage = nullptr;
-	for (UVerticalBox* Column : { SourceColumn.Get(), LockColumn.Get() })
+	for (UVerticalBox* Column : {SourceColumn.Get(), LockColumn.Get()})
 	{
 		if (!Column) continue;
 		Column->ClearChildren();
@@ -387,10 +387,10 @@ void USSPowerPanelWidget::Refresh()
 	if (ActionButtonText)
 	{
 		ActionButtonText->SetText(bUnlocked
-			? NSLOCTEXT("SSPowerPanel", "RescueReturn", "구출 완료 · 돌아가기")
-			: Session->IsFinished()
-			? NSLOCTEXT("SSPowerPanel", "Return", "돌아가기")
-			: NSLOCTEXT("SSPowerPanel", "Abort", "작업 중단"));
+				? NSLOCTEXT("SSPowerPanel", "RescueReturn", "구출 완료 · 돌아가기")
+				: Session->IsFinished()
+				? NSLOCTEXT("SSPowerPanel", "Return", "돌아가기")
+				: NSLOCTEXT("SSPowerPanel", "Abort", "작업 중단"));
 	}
 
 	// 끝나면 배선판을 잠그고, 결과가 확정될 때까지 기존 버튼도 잠금
@@ -594,7 +594,7 @@ void USSPowerPanelWidget::OnTileClicked(int32 Cell)
 
 	// 타일을 만지면 중단 확인은 풀림
 	bAbortArmed = false;
-	Session->Rotate(Cell);   // 바뀌면 세션 알림으로 Refresh
+	Session->Rotate(Cell); // 바뀌면 세션 알림으로 Refresh
 }
 
 void USSPowerPanelWidget::OnActionClicked()
@@ -611,10 +611,9 @@ void USSPowerPanelWidget::OnActionClicked()
 			return;
 		}
 		Session->Abort();
-		return;   // 결과 카드가 뜬 뒤에 닫을 수 있음
+		return; // 결과 카드가 뜬 뒤에 닫을 수 있음
 	}
 
 	// 결과가 확정된 뒤에만 닫힘 (연출 중에 눌러도 무시)
 	if (bResultShown) OnClosed.Broadcast();
 }
-

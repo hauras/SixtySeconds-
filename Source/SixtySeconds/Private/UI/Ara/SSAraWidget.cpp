@@ -56,11 +56,11 @@ TSharedRef<SWidget> USSAraWidget::RebuildWidget()
 		UVerticalBox* Column = WidgetTree->ConstructWidget<UVerticalBox>();
 		Body->SetContent(Column);
 		Column->AddChildToVerticalBox(AraLabel(WidgetTree,
-			NSLOCTEXT("SSAra", "Header", "아라  /  제7연구소 관리 AI"), 22, TEXT("76DFEA")))
+										  NSLOCTEXT("SSAra", "Header", "아라  /  제7연구소 관리 AI"), 22, TEXT("76DFEA")))
 			->SetPadding(FMargin(0, 0, 0, 12));
 
 		Column->AddChildToVerticalBox(AraLabel(WidgetTree,
-			NSLOCTEXT("SSAra", "MorningReport", "오늘의 브리핑"), 17, TEXT("8CBCCB")))
+										  NSLOCTEXT("SSAra", "MorningReport", "오늘의 브리핑"), 17, TEXT("8CBCCB")))
 			->SetPadding(FMargin(0, 0, 0, 5));
 		BriefingText = AraLabel(WidgetTree, Briefing, 20, TEXT("ECF5F8"));
 		Column->AddChildToVerticalBox(BriefingText)->SetPadding(FMargin(0, 0, 0, 18));
@@ -70,8 +70,7 @@ TSharedRef<SWidget> USSAraWidget::RebuildWidget()
 		static const FText Questions[] = {
 			NSLOCTEXT("SSAra", "OutsideQuestion", "밖은 안전한가?"),
 			NSLOCTEXT("SSAra", "PatrolQuestion", "경비 로봇은 왜 순찰하나?"),
-			NSLOCTEXT("SSAra", "SurvivorQuestion", "다른 생존자는 어디 있나?")
-		};
+			NSLOCTEXT("SSAra", "SurvivorQuestion", "다른 생존자는 어디 있나?")};
 		for (const FText& Question : Questions)
 		{
 			UButton* QuestionButton = WidgetTree->ConstructWidget<UButton>();
@@ -86,7 +85,7 @@ TSharedRef<SWidget> USSAraWidget::RebuildWidget()
 		}
 
 		Column->AddChildToVerticalBox(AraLabel(WidgetTree,
-			NSLOCTEXT("SSAra", "AnswerHeader", "아라의 답변"), 17, TEXT("76DFEA")))
+										  NSLOCTEXT("SSAra", "AnswerHeader", "아라의 답변"), 17, TEXT("76DFEA")))
 			->SetPadding(FMargin(0, 8, 0, 5));
 		AnswerText = AraLabel(WidgetTree,
 			NSLOCTEXT("SSAra", "AnswerPlaceholder", "질문을 선택하세요."), 19, TEXT("ECF5F8"));
@@ -140,9 +139,18 @@ void USSAraWidget::NativeDestruct()
 	Super::NativeDestruct();
 }
 
-void USSAraWidget::AskOutside() { AskQuestion(0); }
-void USSAraWidget::AskPatrol() { AskQuestion(1); }
-void USSAraWidget::AskSurvivors() { AskQuestion(2); }
+void USSAraWidget::AskOutside()
+{
+	AskQuestion(0);
+}
+void USSAraWidget::AskPatrol()
+{
+	AskQuestion(1);
+}
+void USSAraWidget::AskSurvivors()
+{
+	AskQuestion(2);
+}
 
 void USSAraWidget::AskQuestion(int32 QuestionIndex)
 {
@@ -162,8 +170,7 @@ void USSAraWidget::RefreshQuestions()
 			RunSubsystem->GetActionPoints()));
 	for (int32 Index = 0; Index < QuestionButtons.Num(); ++Index)
 		if (QuestionButtons[Index])
-			QuestionButtons[Index]->SetIsEnabled(RunSubsystem->GetActionPoints() >= 1
-				&& !RunSubsystem->HasAskedAraQuestionToday(Index));
+			QuestionButtons[Index]->SetIsEnabled(RunSubsystem->GetActionPoints() >= 1 && !RunSubsystem->HasAskedAraQuestionToday(Index));
 }
 
 void USSAraWidget::CloseBriefing()

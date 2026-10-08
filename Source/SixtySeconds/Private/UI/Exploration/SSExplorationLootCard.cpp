@@ -25,7 +25,7 @@ void USSExplorationLootCard::Setup(int32 InLootIndex, const FSSItemStack& Stack)
 
 void USSExplorationLootCard::SetAvailable(bool bCanTake)
 {
-	SetRenderOpacity(bCanTake ? 1.f : 0.4f);   // 비활성 대신 어둡게: 클릭은 받아도 세션이 거절함
+	SetRenderOpacity(bCanTake ? 1.f : 0.4f); // 비활성 대신 어둡게: 클릭은 받아도 세션이 거절함
 }
 
 void USSExplorationLootCard::NativeConstruct()
@@ -42,6 +42,6 @@ void USSExplorationLootCard::NativeDestruct()
 
 void USSExplorationLootCard::HandleClicked()
 {
-	if (LootIndex == INDEX_NONE) return;   // Setup 전 클릭은 무시
+	if (LootIndex == INDEX_NONE) return; // Setup 전 클릭은 무시
 	OnCardClicked.Broadcast(LootIndex);
 }

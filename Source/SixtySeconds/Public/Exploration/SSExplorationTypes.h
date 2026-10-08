@@ -69,7 +69,7 @@ struct SIXTYSECONDS_API FSSExplorationResult
 	GENERATED_BODY()
 
 	UPROPERTY(BlueprintReadOnly) ESSExplorationOutcome Outcome = ESSExplorationOutcome::InProgress;
-	UPROPERTY(BlueprintReadOnly) TArray<FSSItemStack> Items;   // 탐사 중 운반함. 실패해도 채워짐 → 입고는 Outcome == Returned일 때만
+	UPROPERTY(BlueprintReadOnly) TArray<FSSItemStack> Items; // 탐사 중 운반함. 실패해도 채워짐 → 입고는 Outcome == Returned일 때만
 	UPROPERTY(BlueprintReadOnly) float Injury = 0.f;
 	UPROPERTY(BlueprintReadOnly) int32 TurnsUsed = 0;
 };
