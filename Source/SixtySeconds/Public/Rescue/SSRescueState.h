@@ -45,6 +45,10 @@ public:
 	// 덕트 단서를 끝내 못 들어 구출·반전 엔딩이 막히는 판을 없애기 위함
 	void OnSurvivorCaptured();
 
+	// 구출 버튼이 처음 나타날 때 한 번: 왜 버튼이 생겼는지 기록창에 남김 (B2에 누군가 있고, 덕트로 갈 수 있음)
+	// 이미 남겼으면 false
+	bool AnnounceRouteOnce();
+
 	// 새 판
 	void ResetRun();
 
@@ -64,6 +68,9 @@ private:
 
 	// 이번 패널 작업에 쓴 행동력 (결과 카드용)
 	int32 SpentActionPoints = 0;
+
+	// 구출 길을 기록창에 알렸나 (한 판에 한 번)
+	bool bRouteAnnounced = false;
 
 	// 구출 성공 수, 패널 경보 합계 (엔딩 기록)
 	int32 SuccessCount = 0;

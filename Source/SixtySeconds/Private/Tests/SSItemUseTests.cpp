@@ -41,7 +41,7 @@ bool FSSItemUseTest::RunTest(const FString& Parameters)
 	Water->EffectAmount = 50.f;
 	TestTrue(TEXT("Rations advance day"), Run->AdvanceDay(true, true));
 	TestEqual(TEXT("Food recovery then daily loss"), Run->GetSatiety(), 50.f);
-	TestEqual(TEXT("Water recovery then daily loss"), Run->GetHydration(), 45.f);
+	TestEqual(TEXT("Water recovery then daily loss"), Run->GetHydration(), 50.f);
 	TestEqual(TEXT("Water spent"), Run->GetStoredQuantityById(TEXT("Water")), 0);
 	USSItemDefinition* Reusable = AddItem(TEXT("Reusable"), ESSItemUseEffect::RestoreHealth, 10.f);
 	Reusable->bConsumeOnUse = false;

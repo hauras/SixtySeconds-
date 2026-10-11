@@ -20,6 +20,8 @@ class USSTraceWidget;
 class USSTraceConfig;
 class USSInfoPanelWidget;
 class UTexture2D;
+class USoundBase;
+class UAudioComponent;
 class USSSurvivorInfoContentWidget;
 class USSEventCatalog;
 class USSEventWidget;
@@ -120,6 +122,30 @@ protected:
 	// 엔딩 카드 (WBP_Ending) — Class Defaults에서 지정
 	UPROPERTY(EditDefaultsOnly, Category="SS|Ending")
 	TSubclassOf<USSEndingWidget> EndingWidgetClass;
+
+	// ── 은신처 배경음 ──
+
+	// 깔아 두는 배경음 (반복 재생되도록 Sound Wave의 Looping을 켤 것) — Class Defaults에서 지정
+	UPROPERTY(EditDefaultsOnly, Category="SS|Audio")
+	TObjectPtr<USoundBase> ShelterAmbience;
+
+	// 낮 음량 (효과음·경보를 덮지 않게 낮게)
+	UPROPERTY(EditDefaultsOnly, Category="SS|Audio", meta=(ClampMin="0", ClampMax="1"))
+	float AmbienceVolume = 0.45f;
+
+	// 밤에는 낮 음량에 이 비율을 곱함 (밤 사건 긴장감)
+	UPROPERTY(EditDefaultsOnly, Category="SS|Audio", meta=(ClampMin="0", ClampMax="1"))
+	float NightAmbienceRatio = 0.35f;
+
+	// 은신처에 들어올 때 서서히 커지는 시간 / 밤·아침으로 바뀌는 시간 / 끝날 때 줄어드는 시간 (초)
+	UPROPERTY(EditDefaultsOnly, Category="SS|Audio", meta=(ClampMin="0"))
+	float AmbienceFadeInSeconds = 2.f;
+
+	UPROPERTY(EditDefaultsOnly, Category="SS|Audio", meta=(ClampMin="0"))
+	float AmbienceNightFadeSeconds = 1.2f;
+
+	UPROPERTY(EditDefaultsOnly, Category="SS|Audio", meta=(ClampMin="0"))
+	float AmbienceFadeOutSeconds = 2.f;
 
 	// B2 정비 패널 창 (WBP_PowerPanel) — Class Defaults에서 지정
 	UPROPERTY(EditDefaultsOnly, Category="SS|Rescue")
@@ -326,6 +352,14 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<USSEndingWidget> EndingWidget;
+
+	// 은신처 배경음: 들어올 때 시작, 밤엔 작게, 엔딩·나갈 때 끔
+	void StartAmbience();
+	void SetAmbienceNight(bool bInNight);
+	void StopAmbience(float FadeSeconds);
+
+	UPROPERTY(Transient)
+	TObjectPtr<UAudioComponent> AmbienceComponent;
 
 	int32 CurrentDay = 1;
 	float CachedHealth = 0.f;

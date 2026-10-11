@@ -14,7 +14,8 @@
 namespace
 {
 	constexpr float DailySatietyLoss = 20.f;
-	constexpr float DailyHydrationLoss = 25.f;
+	// 물 1개(+50)로 이틀 반. 25면 12일 동안 물이 크게 모자람
+	constexpr float DailyHydrationLoss = 20.f;
 	constexpr float StarvationDamage = 10.f;
 	constexpr float DehydrationDamage = 20.f;
 
@@ -314,8 +315,8 @@ bool USSRunSubsystem::ReleaseCapturedSurvivor(FName SurvivorId, bool& bOutReplac
 
 	GetCompanions()->RestoreHuman(SurvivorId);
 
-	// 하린은 돌아오면 다음 대화에서 폐기 회의를 증언함 (숨은 진실 2)
-	if (SurvivorId == SSRescueIds::Researcher() && !GetEnding()->HasHiddenTruth(SSRescueIds::TestimonyTruth()))
+	// B2에서 돌아온 사람은 누구든 다음 대화에서 폐기 계획을 증언함 (숨은 진실 2, 한 번만)
+	if (!GetEnding()->HasHiddenTruth(SSRescueIds::TestimonyTruth()))
 	{
 		GetCompanions()->QueueTestimony(SurvivorId);
 	}

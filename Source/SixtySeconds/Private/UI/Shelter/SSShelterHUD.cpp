@@ -31,11 +31,14 @@
 #include "UI/Ara/SSAraWidget.h"
 #include "UI/Rescue/SSPowerPanelWidget.h"
 #include "UI/Ending/SSEndingWidget.h"
+#include "Components/AudioComponent.h"
+#include "Sound/SoundBase.h"
 #include "Components/CanvasPanelSlot.h"
 
 void USSShelterHUD::NativeConstruct()
 {
 	Super::NativeConstruct();
+	StartAmbience();
 
 	if (UGameInstance* GameInstance = GetGameInstance())
 	{
@@ -126,6 +129,7 @@ void USSShelterHUD::NativeConstruct()
 
 void USSShelterHUD::NativeDestruct()
 {
+	StopAmbience(0.5f);
 	if (ComputerButton) ComputerButton->OnClicked.RemoveDynamic(this, &ThisClass::OnComputerClicked);
 	if (RadioButton) RadioButton->OnClicked.RemoveDynamic(this, &ThisClass::OnRadioClicked);
 	if (NextDayButton) NextDayButton->OnClicked.RemoveDynamic(this, &ThisClass::OnNextDayClicked);
@@ -314,8 +318,14 @@ void USSShelterHUD::RefreshStats(
 
 void USSShelterHUD::RefreshDisplay()
 {
-	// 마지막 밤까지 남은 날 (서버실 사건은 FinalDay가 되는 밤에 옴)
-	const int32 NightsLeft = USSEndingState::FinalDay - CurrentDay;
+	// 마지막 밤까지 남은 날 (서버실 사건은 FinalDay가 되는 밤에 옴. 아라와 마주한 뒤 앞당겨졌으면 그날)
+	int32 FinalNight = USSEndingState::FinalDay;
+	if (IsValid(RunSubsystem))
+	{
+		const int32 ScheduledFinal = RunSubsystem->GetEventDirector()->FindScheduledDay(USSEventDirector::GetFinalEventId());
+		if (ScheduledFinal > 0) FinalNight = FMath::Min(FinalNight, ScheduledFinal);
+	}
+	const int32 NightsLeft = FinalNight - CurrentDay;
 	const FText DaysLeft = NightsLeft <= 1
 		? NSLOCTEXT("SS", "FinalNightTonight", "오늘 밤이 마지막 밤")
 		: FText::Format(NSLOCTEXT("SS", "DaysLeft", "마지막 밤까지 {0}일"), NightsLeft);
@@ -648,6 +658,7 @@ void USSShelterHUD::BeginNight()
 {
 	if (bNight) return;
 	bNight = true;
+	SetAmbienceNight(true);
 	SetDayControlsEnabled(false); // 밤엔 낮 행동 금지 (사건 창이 떠 있는 동안 하루가 또 넘어가지 않게)
 
 	if (NightProgressText)
@@ -732,6 +743,7 @@ void USSShelterHUD::EndNight()
 {
 	if (!bNight) return; // 델리게이트와 타이머가 겹쳐도 한 번만
 	bNight = false;
+	SetAmbienceNight(false);
 	PendingNightEventId = NAME_None;
 	if (NightEventCueButton) NightEventCueButton->SetVisibility(ESlateVisibility::Collapsed);
 	if (NightContinueButton) NightContinueButton->SetVisibility(ESlateVisibility::Collapsed);
@@ -757,7 +769,12 @@ void USSShelterHUD::EndNight()
 void USSShelterHUD::SetDayControlsEnabled(bool bEnabled)
 {
 	// 아라 버튼은 그대로 둠 (밤에도 깨어 있는 AI)
-	if (NextDayButton) NextDayButton->SetIsEnabled(bEnabled);
+	if (NextDayButton)
+	{
+		NextDayButton->SetIsEnabled(bEnabled);
+		// 밤에는 아침 버튼만 보여 두 버튼의 테두리가 겹치지 않게 한다.
+		NextDayButton->SetVisibility(bEnabled ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+	}
 	if (FoodRationCheckBox) FoodRationCheckBox->SetIsEnabled(bEnabled);
 	if (WaterRationCheckBox) WaterRationCheckBox->SetIsEnabled(bEnabled);
 	if (ComputerButton) ComputerButton->SetIsEnabled(bEnabled);
@@ -784,13 +801,16 @@ void USSShelterHUD::RefreshRescueButton()
 	const ESSRescueBlock Block = RunSubsystem->GetRescue()->GetBlock();
 	const bool bHidden = Block == ESSRescueBlock::NobodyCaptured || Block == ESSRescueBlock::NoRoute;
 	RescueButton->SetVisibility(bHidden ? ESlateVisibility::Collapsed : ESlateVisibility::Visible);
+
+	// 버튼이 처음 보이는 순간: 왜 생겼는지 기록창에 한 번 남김
+	if (!bHidden) RunSubsystem->GetRescue()->AnnounceRouteOnce();
 	RescueButton->SetIsEnabled(Block == ESSRescueBlock::None && bDayControlsEnabled && !bNight);
 
 	FText Tooltip;
 	switch (Block)
 	{
 	case ESSRescueBlock::None:
-		Tooltip = NSLOCTEXT("SS", "RescueReady", "B2 정비 패널: 남은 행동력을 전부 써서 격리실 전력을 우회한다.");
+		Tooltip = NSLOCTEXT("SS", "RescueReady", "B2 격리실에 누군가 갇혀 있다. 3번 덕트로 정비 패널까지 내려가 격리실 전력을 우회한다. (남은 행동력 전부)");
 		break;
 	case ESSRescueBlock::AlreadyToday:
 		Tooltip = NSLOCTEXT("SS", "RescueToday", "오늘은 이미 패널을 열었다.");
@@ -831,7 +851,9 @@ void USSShelterHUD::OnRescueClicked()
 	}
 
 	PowerPanel = Panel;
-	PowerPanel->SetSession(Session, Target);
+	// 은신처에 같은 얼굴이 남아 있으면 바꿔치기 → 플레이어는 아직 누가 갇혔는지 모름
+	const bool bHideIdentity = RunSubsystem->IsSurvivorRescued(Target->SurvivorId);
+	PowerPanel->SetSession(Session, Target, bHideIdentity);
 	PowerPanel->OnFinished.AddUObject(this, &ThisClass::OnPowerPanelFinished);
 	PowerPanel->OnClosed.AddUObject(this, &ThisClass::OnPowerPanelClosed);
 	PowerPanel->AddToViewport(25);
@@ -870,6 +892,9 @@ bool USSShelterHUD::TryShowEnding()
 {
 	if (!IsValid(RunSubsystem) || !RunSubsystem->GetEnding()->HasEnded()) return false;
 	if (IsValid(EndingWidget)) return true;
+
+	// 엔딩에서는 은신처 배경음을 끔
+	StopAmbience(AmbienceFadeOutSeconds);
 	if (!EndingWidgetClass)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[UI] Assign WBP_Ending in shelter HUD defaults."));
@@ -881,4 +906,32 @@ bool USSShelterHUD::TryShowEnding()
 	EndingWidget->ShowEnding(RunSubsystem->GetEnding()->GetReport());
 	EndingWidget->AddToViewport(60); // 사건 창(50)보다 위
 	return true;
+}
+
+void USSShelterHUD::StartAmbience()
+{
+	if (!ShelterAmbience || IsValid(AmbienceComponent)) return;
+
+	// 맵이 바뀌면 같이 사라지는 2D 소리. 끝나도 다시 쓰지 않으니 자동 삭제
+	AmbienceComponent = UGameplayStatics::SpawnSound2D(this, ShelterAmbience, 1.f, 1.f, 0.f, nullptr, false, true);
+	if (!IsValid(AmbienceComponent)) return;
+
+	// 0에서 낮 음량까지 서서히
+	AmbienceComponent->FadeIn(AmbienceFadeInSeconds, AmbienceVolume);
+	if (bNight) SetAmbienceNight(true);
+}
+
+void USSShelterHUD::SetAmbienceNight(bool bInNight)
+{
+	if (!IsValid(AmbienceComponent)) return;
+
+	// FadeIn으로 정한 낮 음량에 곱하는 비율: 밤엔 작게, 아침엔 원래대로
+	AmbienceComponent->AdjustVolume(AmbienceNightFadeSeconds, bInNight ? NightAmbienceRatio : 1.f);
+}
+
+void USSShelterHUD::StopAmbience(float FadeSeconds)
+{
+	if (!IsValid(AmbienceComponent)) return;
+	AmbienceComponent->FadeOut(FadeSeconds, 0.f);
+	AmbienceComponent = nullptr;
 }

@@ -144,7 +144,7 @@ bool USSPowerPanelWidget::ResolveTileShape(uint8 Mask, ESSPowerTileShape& OutSha
 	return false;
 }
 
-void USSPowerPanelWidget::SetSession(USSRescueSession* InSession, const USSSurvivorDefinition* InTarget)
+void USSPowerPanelWidget::SetSession(USSRescueSession* InSession, const USSSurvivorDefinition* InTarget, bool bHideIdentity)
 {
 	if (IsValid(Session) && SessionChangedHandle.IsValid())
 	{
@@ -160,17 +160,19 @@ void USSPowerPanelWidget::SetSession(USSRescueSession* InSession, const USSSurvi
 		SessionChangedHandle = Session->OnChanged.AddUObject(this, &ThisClass::Refresh);
 	}
 
-	// 구출 대상 카드
+	// 구출 대상 카드. 신원을 가리면 이름 대신 생체 신호, 얼굴은 검은 실루엣
+	bIdentityHidden = bHideIdentity;
 	if (InTarget)
 	{
 		TargetName = InTarget->DisplayName;
 		TargetTexture = InTarget->Portrait ? InTarget->Portrait.Get() : InTarget->ShelterImage.Get();
-		if (TargetNameText) TargetNameText->SetText(InTarget->DisplayName);
+		if (TargetNameText) TargetNameText->SetText(bIdentityHidden ? NSLOCTEXT("SSPowerPanel", "UnknownTarget", "신원 미상 · 생체 신호 1") : InTarget->DisplayName);
 		if (TargetPortrait)
 		{
 			UTexture2D* PortraitTexture = TargetTexture;
 			TargetPortrait->SetVisibility(PortraitTexture ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
 			if (PortraitTexture) TargetPortrait->SetBrushFromTexture(PortraitTexture);
+			TargetPortrait->SetColorAndOpacity(bIdentityHidden ? FLinearColor(0.f, 0.f, 0.f, 0.9f) : FLinearColor::White);
 		}
 	}
 
@@ -456,7 +458,9 @@ void USSPowerPanelWidget::ShowResult(const FSSRescueReport& Report)
 		Subtitle = bOutOfMoves
 			? NSLOCTEXT("SSPowerPanel", "ResultOutTitle", "배선 연결 실패")
 			: NSLOCTEXT("SSPowerPanel", "ResultAbortSubtitle", "덕트로 철수");
-		NameLine = FText::Format(NSLOCTEXT("SSPowerPanel", "StillCapturedName", "{0} · B2 격리"), TargetName);
+		// 실패하면 신원은 계속 가려 둠
+		const FText StillName = bIdentityHidden ? NSLOCTEXT("SSPowerPanel", "UnknownName", "신원 미상") : TargetName;
+		NameLine = FText::Format(NSLOCTEXT("SSPowerPanel", "StillCapturedName", "{0} · B2 격리"), StillName);
 		Description = bOutOfMoves
 			? NSLOCTEXT("SSPowerPanel", "ResultOutBody", "더 손댈 시간이 없었다.")
 			: NSLOCTEXT("SSPowerPanel", "ResultAbortBody", "오늘은 다시 열 수 없다.");

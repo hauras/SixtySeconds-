@@ -22,6 +22,41 @@ FText USSEndingWidget::GetEndingTitle(const FSSEndingReport& Report)
 
 FText USSEndingWidget::GetEndingBody(const FSSEndingReport& Report)
 {
+	const FText Story = GetEndingStory(Report);
+	const FText Survival = GetSurvivalLine(Report);
+	if (Survival.IsEmpty()) return Story;
+	return FText::Format(NSLOCTEXT("SSEnding", "BodyWithSurvival", "{0}\n\n{1}"), Story, Survival);
+}
+
+FText USSEndingWidget::GetSurvivalLine(const FSSEndingReport& Report)
+{
+	// 처음부터 혼자였으면 덧붙일 말이 없음
+	if (Report.PartySize <= 1) return FText::GetEmpty();
+
+	const bool bEveryone = Report.LeavingCount >= Report.PartySize;
+	const bool bAlone = Report.LeavingCount <= 1;
+
+	switch (Report.Ending)
+	{
+	case ESSEnding::Resolve:
+		if (bEveryone) return FText::Format(NSLOCTEXT("SSEnding", "ResolveAll", "{0}명이 함께 격벽 밖으로 걸어 나갔다."), Report.LeavingCount);
+		if (bAlone) return NSLOCTEXT("SSEnding", "ResolveAlone", "격벽 밖으로 나간 사람은 혼자였다.");
+		return NSLOCTEXT("SSEnding", "ResolveSome", "나가는 발소리는 들어올 때보다 적었다.");
+	case ESSEnding::Reversal:
+		if (bEveryone) return NSLOCTEXT("SSEnding", "ReversalAll", "아무도 남겨 두지 않았다. 아라가 마지막으로 인원을 셌다. 빠진 사람은 없었다.");
+		if (bAlone) return NSLOCTEXT("SSEnding", "ReversalAlone", "아라가 읽어 준 명단에서, 아직 숨 쉬는 이름은 하나뿐이었다.");
+		return NSLOCTEXT("SSEnding", "ReversalSome", "아라는 지키지 못한 이름도 하나씩 읽어 주었다.");
+	case ESSEnding::Dominion:
+		if (bEveryone) return FText::Format(NSLOCTEXT("SSEnding", "DominionAll", "아침 인원 점검은 오늘도 {0}명으로 끝났다."), Report.LeavingCount);
+		if (bAlone) return NSLOCTEXT("SSEnding", "DominionAlone", "아라의 아침 보고는 이제 한 사람에게만 향했다.");
+		return NSLOCTEXT("SSEnding", "DominionSome", "아라는 빈 침대도 매일 빠짐없이 점검했다.");
+	default:
+		return FText::GetEmpty();
+	}
+}
+
+FText USSEndingWidget::GetEndingStory(const FSSEndingReport& Report)
+{
 	switch (Report.Ending)
 	{
 	case ESSEnding::Resolve:
@@ -85,8 +120,10 @@ void USSEndingWidget::ShowEnding(const FSSEndingReport& Report)
 	if (EndingBodyText) EndingBodyText->SetText(GetEndingBody(Report));
 	if (EndingStatsText)
 	{
-		EndingStatsText->SetText(FText::Format(NSLOCTEXT("SSEnding", "Stats", "버틴 날 {0}일 · 구한 사람 {1}명 · 패널 경보 {2}회"),
+		EndingStatsText->SetText(FText::Format(NSLOCTEXT("SSEnding", "Stats", "버틴 날 {0}일 · 생존 {1} / {2}명 · 구한 사람 {3}명 · 패널 경보 {4}회"),
 			Report.DaysSurvived,
+			Report.LeavingCount,
+			Report.PartySize,
 			Report.RescuedCount,
 			Report.AlarmCount));
 	}

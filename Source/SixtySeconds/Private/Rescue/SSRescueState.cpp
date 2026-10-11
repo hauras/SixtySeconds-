@@ -157,9 +157,19 @@ void USSRescueState::OnSurvivorCaptured()
 	Run.AddJournal(ESSJournalEvent::Investigation, NSLOCTEXT("SSRescue", "RouteAlone", "환풍구 안쪽에서 무언가 끌려 내려가는 소리가 났다. 3번 덕트가 아래층으로 꺾여 있다. 입구 표지: B2."));
 }
 
+bool USSRescueState::AnnounceRouteOnce()
+{
+	if (bRouteAnnounced) return false;
+	bRouteAnnounced = true;
+
+	GetRun().AddJournal(ESSJournalEvent::Investigation, NSLOCTEXT("SSRescue", "RouteAnnounce", "B2 격리 구역에서 생체 신호가 하나 잡힌다. 누군가 갇혀 있다. 3번 덕트로 정비 패널까지 내려가 격리실 전력을 돌리면 문을 열 수 있다."));
+	return true;
+}
+
 void USSRescueState::ResetRun()
 {
 	Active = nullptr;
+	bRouteAnnounced = false;
 	HelperId = NAME_None;
 	LastDay = 0;
 	SpentActionPoints = 0;

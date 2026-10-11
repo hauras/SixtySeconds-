@@ -217,7 +217,10 @@ void USSCompanionTalkWidget::OnReportClicked()
 	{
 		Say(Testimony);
 		ShowTruthCard();
-		RunSubsystem->GetEnding()->AddHiddenTruth(SSRescueIds::TestimonyTruth(), NSLOCTEXT("SSTalk", "TestimonyJournal", "서하린의 증언: 운영진은 스스로 배우는 아라를 두려워해 폐기를 정했다. 방법은 연구소 전체 정화. 안에 있던 사람은 대피 명단에 없었다."));
+		// 일지에는 증언한 사람 이름으로 남김
+		const FSSSurvivorState* Witness = RunSubsystem->FindRescuedSurvivor(SurvivorId);
+		const FText WitnessName = Witness && IsValid(Witness->Definition) ? Witness->Definition->DisplayName : FText::FromName(SurvivorId);
+		RunSubsystem->GetEnding()->AddHiddenTruth(SSRescueIds::TestimonyTruth(), FText::Format(NSLOCTEXT("SSTalk", "TestimonyJournal", "{0}의 증언: 운영진은 스스로 배우는 아라를 두려워해 폐기를 정했다. 방법은 연구소 전체 정화. 안에 있던 사람은 대피 명단에 없었다."), WitnessName));
 		RefreshChoices();
 		return;
 	}

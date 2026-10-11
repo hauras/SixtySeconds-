@@ -20,6 +20,10 @@ public:
 	// 이 날이 되는 밤에 서버실 사건이 확률과 상관없이 옴
 	static constexpr int32 FinalDay = 12;
 
+	// 숨은 진실을 모두 알면 그날 밤 아라가 먼저 말을 걸고, 그다음 날 밤 서버실이 열림 (SS_Events.csv)
+	static constexpr int32 TruthsForConfront = 2;
+	static FName GetConfrontEventId() { return FName(TEXT("Ara_Confront")); }
+
 	// ── 숨은 진실 (반전 엔딩 조건) ──
 
 	// 알게 된 숨은 진실 추가. 처음 알았으면 true (기록창에 남김)
@@ -45,6 +49,9 @@ public:
 private:
 	// 이 상태를 들고 있는 RunSubsystem
 	USSRunSubsystem& GetRun() const;
+
+	// 엔딩 순간의 인원: 함께 나가는 사람 / 대피실에 있었던 사람 (둘 다 플레이어 포함)
+	void CountSurvivors(int32& OutLeaving, int32& OutPartySize) const;
 
 	// 알게 된 숨은 진실 (알게 된 순서)
 	UPROPERTY(Transient)

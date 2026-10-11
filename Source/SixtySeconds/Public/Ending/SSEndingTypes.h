@@ -28,4 +28,8 @@ struct FSSEndingReport
 	int32 DaysSurvived = 0;
 	int32 RescuedCount = 0;
 	int32 AlarmCount = 0;
+
+	// 함께 나간 사람 (살아 있는 사람만, 플레이어 포함) / 대피실에 함께 있었던 사람 (플레이어 포함)
+	int32 LeavingCount = 0;
+	int32 PartySize = 0;
 };

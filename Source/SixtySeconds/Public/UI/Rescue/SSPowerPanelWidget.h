@@ -84,7 +84,8 @@ class SIXTYSECONDS_API USSPowerPanelWidget : public UUserWidget
 
 public:
 	// 보여줄 패널 작업과 구출 대상 (AddToViewport 전에 부름)
-	void SetSession(USSRescueSession* InSession, const USSSurvivorDefinition* InTarget);
+	// bHideIdentity: 은신처에 같은 얼굴(안드로이드)이 있으면 구하기 전까지 누구인지 가림
+	void SetSession(USSRescueSession* InSession, const USSSurvivorDefinition* InTarget, bool bHideIdentity = false);
 
 	// 타일이 눌렸을 때 (USSPowerTileWidget이 부름)
 	void OnTileClicked(int32 Cell);
@@ -335,6 +336,9 @@ private:
 
 	// 결과 카드에 쓸 대상 이름·그림 (SetSession 때 받아 둠)
 	FText TargetName;
+
+	// 구하기 전까지 신원을 가리나 (성공하면 결과 카드에서 이름이 드러남)
+	bool bIdentityHidden = false;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UTexture2D> TargetTexture;

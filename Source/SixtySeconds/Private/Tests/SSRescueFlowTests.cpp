@@ -145,7 +145,27 @@ bool FSSRescueFlowTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("Aborted"), Report.Outcome == ESSRescueOutcome::Aborted);
 	TestTrue(TEXT("Still captured after abort"), Alone->IsSurvivorCaptured(Technician));
 	const FSSCompanionRecord* TaeoRecord = Alone->GetCompanions()->FindRecord(Technician);
-	TestFalse(TEXT("No testimony for the technician"), TaeoRecord && TaeoRecord->bPendingTestimony);
+	TestFalse(TEXT("No testimony while still captured"), TaeoRecord && TaeoRecord->bPendingTestimony);
+
+	// ── 태오를 구해도 증언 (표적이 누구든 숨은 진실 2를 얻을 수 있게) ──
+	USSRunSubsystem* TaeoRun = MakeRun();
+	TaeoRun->MoveSurvivorToCaptured(Technician);
+	TaeoRun->GetCompanions()->HearClueDirectly(SSRescueIds::RouteClue());
+	USSRescueSession* TaeoSession = TaeoRun->GetRescue()->Start(Technician, 5);
+	if (!TestNotNull(TEXT("Technician rescue started"), TaeoSession)) return false;
+	Solve(TaeoSession);
+	TestTrue(TEXT("Finish technician rescue"), TaeoRun->GetRescue()->Finish(Report));
+	TestTrue(TEXT("Technician unlocked"), Report.Outcome == ESSRescueOutcome::Unlocked);
+	FText TaeoTestimony;
+	TestTrue(TEXT("Rescued technician testifies"), TaeoRun->GetCompanions()->HearTestimony(Technician, TaeoTestimony));
+
+	// 증언을 이미 들었으면 다음에 구출된 사람은 다시 증언하지 않음
+	TaeoRun->GetEnding()->AddHiddenTruth(SSRescueIds::TestimonyTruth(), FText::FromString(TEXT("t")));
+	TaeoRun->MoveSurvivorToCaptured(Researcher);
+	bool bReplaced = false;
+	TaeoRun->ReleaseCapturedSurvivor(Researcher, bReplaced);
+	const FSSCompanionRecord* LateRecord = TaeoRun->GetCompanions()->FindRecord(Researcher);
+	TestFalse(TEXT("Only one testimony per run"), LateRecord && LateRecord->bPendingTestimony);
 
 	// ── 바꿔치기된 하린을 구하면: 은신처의 안드로이드가 진짜로 교체 ──
 	USSRunSubsystem* Swapped = MakeRun();

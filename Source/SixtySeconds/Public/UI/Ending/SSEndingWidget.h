@@ -25,6 +25,12 @@ public:
 	static FText GetEndingTitle(const FSSEndingReport& Report);
 	static FText GetEndingBody(const FSSEndingReport& Report);
 
+	// 엔딩 본문 (인원 한 줄 빼고)
+	static FText GetEndingStory(const FSSEndingReport& Report);
+
+	// 함께 나간 인원에 따라 덧붙는 한 줄 (전원 · 일부 · 혼자). 처음부터 혼자였으면 빈 문장
+	static FText GetSurvivalLine(const FSSEndingReport& Report);
+
 protected:
 	virtual void NativeConstruct() override;
 	virtual void NativeDestruct() override;

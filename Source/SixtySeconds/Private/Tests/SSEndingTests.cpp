@@ -136,8 +136,8 @@ bool FSSEndingResolveTest::RunTest(const FString& Parameters)
 	Knowing->GetEnding()->AddHiddenTruth(SSRescueIds::PanelLogTruth(), FText::GetEmpty());
 	Knowing->GetEnding()->ReachEnding(ESSEnding::Resolve);
 	TestTrue(TEXT("Knew truth"), Knowing->GetEnding()->GetReport().bKnewTruth);
-	const FString PlainBody = USSEndingWidget::GetEndingBody(Run->GetEnding()->GetReport()).ToString();
-	const FString TruthBody = USSEndingWidget::GetEndingBody(Knowing->GetEnding()->GetReport()).ToString();
+	const FString PlainBody = USSEndingWidget::GetEndingStory(Run->GetEnding()->GetReport()).ToString();
+	const FString TruthBody = USSEndingWidget::GetEndingStory(Knowing->GetEnding()->GetReport()).ToString();
 	TestTrue(TEXT("Truth adds a line to the resolve ending"), TruthBody.Len() > PlainBody.Len() && TruthBody.StartsWith(PlainBody));
 
 	// 데려간 하린이 안드로이드면 종료 실패 → 지배 (방해)
@@ -238,6 +238,83 @@ bool FSSAraForcedTargetTest::RunTest(const FString& Parameters)
 	Swapped->GetAra()->SwapTarget();
 	AdvanceTo(Swapped, USSAraDirector::ForceTargetDay + 2);
 	TestFalse(TEXT("No forced target after a swap"), Swapped->GetAra()->HasTarget());
+	return true;
+}
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSSEndingSurvivorsTest, "SS.Ending.Survivors",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FSSEndingSurvivorsTest::RunTest(const FString& Parameters)
+{
+	using namespace SSEndingTest;
+
+	// 모두 살아 있으면 플레이어 포함 3 / 3
+	USSRunSubsystem* Everyone = MakeRun();
+	Everyone->GetEnding()->ReachEnding(ESSEnding::Resolve);
+	TestEqual(TEXT("All three leave"), Everyone->GetEnding()->GetReport().LeavingCount, 3);
+	TestEqual(TEXT("Party of three"), Everyone->GetEnding()->GetReport().PartySize, 3);
+	TestFalse(TEXT("Everyone line"), USSEndingWidget::GetSurvivalLine(Everyone->GetEnding()->GetReport()).IsEmpty());
+
+	// 하린이 바꿔치기됨: 은신처의 하린(안드로이드)은 못 나가고, B2의 진짜도 못 나감. 같은 사람은 한 번만 셈
+	USSRunSubsystem* Swapped = MakeRun();
+	Swapped->CopySurvivorToCaptured(Researcher);
+	Swapped->GetCompanions()->MakeAndroid(Researcher);
+	Swapped->GetEnding()->ReachEnding(ESSEnding::Dominion);
+	TestEqual(TEXT("Android and captured stay behind"), Swapped->GetEnding()->GetReport().LeavingCount, 2);
+	TestEqual(TEXT("Swapped person counted once"), Swapped->GetEnding()->GetReport().PartySize, 3);
+
+	// 동료가 모두 죽으면 플레이어 혼자
+	USSRunSubsystem* Alone = MakeRun();
+	Alone->ModifySurvivorsHealth(-1000.f);
+	Alone->GetEnding()->ReachEnding(ESSEnding::Reversal);
+	TestEqual(TEXT("Only the player leaves"), Alone->GetEnding()->GetReport().LeavingCount, 1);
+	TestEqual(TEXT("Dead still in the party"), Alone->GetEnding()->GetReport().PartySize, 3);
+
+	// 처음부터 혼자면 덧붙는 문장 없음
+	FSSEndingReport Solo;
+	Solo.Ending = ESSEnding::Resolve;
+	Solo.LeavingCount = 1;
+	Solo.PartySize = 1;
+	TestTrue(TEXT("No line for a solo run"), USSEndingWidget::GetSurvivalLine(Solo).IsEmpty());
+
+	// 세 경우의 문장이 서로 다름
+	FSSEndingReport Some = Solo;
+	Some.PartySize = 4;
+	Some.LeavingCount = 2;
+	FSSEndingReport All = Some;
+	All.LeavingCount = 4;
+	FSSEndingReport One = Some;
+	One.LeavingCount = 1;
+	TestFalse(TEXT("Some differs from all"), USSEndingWidget::GetSurvivalLine(Some).EqualTo(USSEndingWidget::GetSurvivalLine(All)));
+	TestFalse(TEXT("Alone differs from some"), USSEndingWidget::GetSurvivalLine(One).EqualTo(USSEndingWidget::GetSurvivalLine(Some)));
+	return true;
+}
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSSEndingConfrontTest, "SS.Ending.Confront",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FSSEndingConfrontTest::RunTest(const FString& Parameters)
+{
+	using namespace SSEndingTest;
+	const FName Confront = USSEndingState::GetConfrontEventId();
+
+	// 진실 하나로는 아라가 말을 걸지 않음
+	USSRunSubsystem* Run = MakeRun();
+	Run->GetEnding()->AddHiddenTruth(SSRescueIds::PanelLogTruth(), FText::GetEmpty());
+	TestEqual(TEXT("No confront with one truth"), Run->GetEventDirector()->FindScheduledDay(Confront), -1);
+
+	// 둘째 진실을 안 날 밤에 대면 예약
+	Run->GetEnding()->AddHiddenTruth(SSRescueIds::TestimonyTruth(), FText::GetEmpty());
+	TestEqual(TEXT("Confront tonight"), Run->GetEventDirector()->FindScheduledDay(Confront), Run->GetCurrentDay());
+
+	// 같은 진실을 다시 들어도 두 번 예약하지 않음
+	Run->GetEventDirector()->CancelScheduled(Confront);
+	Run->GetEnding()->AddHiddenTruth(SSRescueIds::TestimonyTruth(), FText::GetEmpty());
+	TestEqual(TEXT("No second confront"), Run->GetEventDirector()->FindScheduledDay(Confront), -1);
+
+	// 엔딩이 이미 정해졌으면 예약하지 않음
+	USSRunSubsystem* Ended = MakeRun();
+	Ended->GetEnding()->ReachEnding(ESSEnding::Dominion);
+	LearnBothTruths(Ended);
+	TestEqual(TEXT("No confront after the ending"), Ended->GetEventDirector()->FindScheduledDay(Confront), -1);
 	return true;
 }
 #endif
